@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 17 — steiner: feat(tear-off) — 2026-07-17T23:55:00Z
+
+**Phase**: time-leap-development
+**Changed**: Tear-off windows (spec §4.2), the last major v1 feature. moveTabToWindow(tabId,'new',{title}) → container opens a second BrowserWindow with ?tearoff=<tabId> (shared createWindow factory now injected into wireApp from index); renderer main.tsx routes to TearOffApp (slim title bar + TerminalPane) — the PTY NEVER moves, the new window just attaches (replay + live). Tab strip gets a ⤢ button (removeTab without closeSession). Closing a torn-off window with the session alive → CH.reDockTab {tabId,title,cwd,command} → main strip re-adds the tab. PtyManager sessions now carry `command` (re-dock/persist need it); __weft.pidOf for E2E. CRITICAL BUG FOUND & FIXED via E2E: a destroyed tear-off window left a dangling attachment; next PTY output threw 'Object has been destroyed' inside main's data callback → blocking error dialog wedged the app (2min E2E hangs). Fix: guarded safeSend auto-detaches dead senders (+2 unit tests), process-level uncaughtException logger, and a 2s hard-exit fallback on quit so ConPTY agents can't zombie the process.
+**SERN interference**: the wedge above — diagnosed via instrumented step-debug spec; three-layer fix (guard, logger, hard-exit)
+**Divergence meter**: unit 179 pass; e2e 16 pass — tear-off asserts SAME PID pre/post, scrollback replay in the new window, interactivity there, and re-dock with both markers
+**Next target**: Phase 3b formal sweep (screenshots + AC audit + check spec boxes), coverage report, then Phase 4 Future Okabe ×3 review.
+
+---
+
 ## Leap 16 — steiner: feat(error-state+theme) — 2026-07-17T23:10:00Z
 
 **Phase**: time-leap-development

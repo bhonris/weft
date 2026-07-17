@@ -38,6 +38,8 @@ export interface CreateSpec {
   file: string
   args?: string[]
   cwd: string
+  /** The logical command kind ('claude' | 'shell') — carried for re-dock/persist. */
+  command?: string
   env?: Record<string, string>
   cols?: number
   rows?: number
@@ -62,6 +64,7 @@ interface Session {
   tabId: string
   sessionId: string
   cwd: string
+  command: string
   proc: IPtyProcess
   buffer: OutputRingBuffer
   dataListeners: Set<DataListener>
@@ -101,6 +104,7 @@ export class PtyManager {
       tabId: spec.tabId,
       sessionId: spec.sessionId,
       cwd: spec.cwd,
+      command: spec.command ?? 'shell',
       proc,
       buffer: new OutputRingBuffer(this.options.maxBufferChars),
       dataListeners: new Set(),
@@ -189,11 +193,12 @@ export class PtyManager {
   }
 
   /** Identity snapshot used to correlate incoming hook payloads to tabs. */
-  tabRefs(): Array<{ tabId: string; sessionId: string; cwd: string }> {
+  tabRefs(): Array<{ tabId: string; sessionId: string; cwd: string; command: string }> {
     return [...this.sessions.values()].map((s) => ({
       tabId: s.tabId,
       sessionId: s.sessionId,
-      cwd: s.cwd
+      cwd: s.cwd,
+      command: s.command
     }))
   }
 

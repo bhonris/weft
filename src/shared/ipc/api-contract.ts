@@ -66,7 +66,11 @@ export interface WeftApi {
   detachSession(tabId: string): Promise<void>
   renameTab(tabId: string, title: string): Promise<void>
   reorderTabs(tabOrder: string[]): Promise<void>
-  moveTabToWindow(tabId: string, target: 'new' | string): Promise<void>
+  moveTabToWindow(tabId: string, target: 'new' | string, meta?: { title?: string }): Promise<void>
+  /** A torn-off window closed; the surviving session should re-join this strip. */
+  onReDockTab(
+    cb: (e: { tabId: string; title: string; cwd: string; command: SessionCommand }) => void
+  ): Unsubscribe
   onSessionData(cb: (e: { tabId: string; data: string }) => void): Unsubscribe
   onSessionExit(cb: (e: { tabId: string; exitCode: number }) => void): Unsubscribe
   onSessionStatus(
@@ -117,6 +121,8 @@ export type WeftBridge = Pick<
   | 'onSessionExit'
   | 'onSessionStatus'
   | 'onActivateTab'
+  | 'moveTabToWindow'
+  | 'onReDockTab'
   | 'openProject'
   | 'listDir'
   | 'watchDir'

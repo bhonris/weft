@@ -8,6 +8,8 @@ import type { PtyManager } from '../services/pty-manager'
 export interface IpcSenderLike {
   readonly id: number
   send(channel: string, payload: unknown): void
+  /** Electron webContents exposes this; fakes may omit it. */
+  isDestroyed?(): boolean
 }
 
 export interface IpcEventLike {
@@ -37,6 +39,8 @@ export interface RegisterDeps {
   claudePath?: string
   /** Called after a session is explicitly closed (e.g. to forget its status). */
   onSessionClosed?: (tabId: string) => void
+  /** Open a torn-off window hosting `tabId` (spec §4.2). */
+  openTearOff?: (tabId: string, title: string) => void
   /** Status-reporting hook injection (spec §4.4). */
   hooks?: {
     /** Named-pipe/UDS path the forwarder writes to (set as WEFT_STATUS_ENDPOINT). */
@@ -93,6 +97,7 @@ export function registerSessionIpc(deps: RegisterDeps): void {
       file,
       args,
       cwd: opts.cwd,
+      command: opts.command,
       env: buildEnv(baseEnv, tabId, deps.hooks?.endpoint)
     })
     return { tabId, sessionId }
@@ -119,12 +124,32 @@ export function registerSessionIpc(deps: RegisterDeps): void {
   ipcMain.handle(CH.attachSession, (event, tabId) => {
     const id = tabId as string
     const sender = event.sender
+    const attachmentKey = key(sender.id, id)
+
+    // A window can be destroyed without unmounting (tear-off close, crash).
+    // Sending to a dead webContents throws INSIDE the PTY data callback and
+    // would take down main — so every forward is guarded and a dead sender
+    // detaches itself automatically.
+    const safeSend = (channel: string, payload: unknown): void => {
+      if (sender.isDestroyed?.()) {
+        attachments.get(attachmentKey)?.detach()
+        attachments.delete(attachmentKey)
+        return
+      }
+      try {
+        sender.send(channel, payload)
+      } catch {
+        attachments.get(attachmentKey)?.detach()
+        attachments.delete(attachmentKey)
+      }
+    }
+
     const handle = pty.attach(
       id,
-      (data) => sender.send(CH.sessionData, { tabId: id, data }),
-      ({ exitCode }) => sender.send(CH.sessionExit, { tabId: id, exitCode })
+      (data) => safeSend(CH.sessionData, { tabId: id, data }),
+      ({ exitCode }) => safeSend(CH.sessionExit, { tabId: id, exitCode })
     )
-    attachments.set(key(sender.id, id), handle)
+    attachments.set(attachmentKey, handle)
     return { snapshot: handle.snapshot }
   })
 
@@ -135,6 +160,13 @@ export function registerSessionIpc(deps: RegisterDeps): void {
       handle.detach()
       attachments.delete(k)
     }
+  })
+
+  ipcMain.handle(CH.moveTabToWindow, (_event, tabId, target, meta) => {
+    if (target !== 'new') return // v1: tear-off only; re-dock is close-driven.
+    if (!pty.has(tabId as string)) return
+    const title = ((meta as { title?: string } | undefined)?.title ?? 'session').toString()
+    deps.openTearOff?.(tabId as string, title)
   })
 
   ipcMain.handle(CH.openProject, async () => {

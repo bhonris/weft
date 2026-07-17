@@ -96,12 +96,27 @@ body,
   gap: 6px;
 }
 
-.tab__close {
+.tab__close,
+.tab__tearoff {
   padding: 0 4px;
   opacity: 0.6;
+  background: none;
+  border: none;
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
 }
-.tab__close:hover {
+.tab__close:hover,
+.tab__tearoff:hover {
   opacity: 1;
+}
+
+.tab-strip--tearoff {
+  justify-content: flex-start;
+}
+.tab-strip__tearoff-label {
+  font-size: 12px;
+  opacity: 0.85;
 }
 
 .tab-strip__add {

@@ -139,6 +139,19 @@ function TabButton({ tab, active }: { tab: Tab; active: boolean }): React.ReactE
       )}
       <button
         type="button"
+        className="tab__tearoff"
+        aria-label={`tear off ${tab.title}`}
+        title="Move to its own window"
+        onClick={() => {
+          // Move the view, not the session: the PTY stays alive in main.
+          void window.api.moveTabToWindow(tab.tabId, 'new', { title: tab.title })
+          useSessionStore.getState().removeTab(tab.tabId)
+        }}
+      >
+        ⤢
+      </button>
+      <button
+        type="button"
         className="tab__close"
         aria-label={`close ${tab.title}`}
         onClick={() => closeTab(tab.tabId)}
@@ -180,10 +193,19 @@ export function App(): React.ReactElement {
     const offActivate = window.api.onActivateTab((e) =>
       useSessionStore.getState().setActive(e.tabId)
     )
+    const offReDock = window.api.onReDockTab((e) =>
+      useSessionStore.getState().addTab({
+        tabId: e.tabId,
+        title: e.title,
+        cwd: e.cwd,
+        command: e.command
+      })
+    )
     return () => {
       offStatus()
       offExit()
       offActivate()
+      offReDock()
     }
   }, [])
 

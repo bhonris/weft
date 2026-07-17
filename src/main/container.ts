@@ -29,7 +29,14 @@ import { CH } from '@shared/ipc/channels'
  * only place Electron singletons meet the app's logic, so it is excluded from
  * the unit-coverage gate and exercised by E2E instead.
  */
-export async function wireApp(): Promise<{ pty: PtyManager; shutdown: () => void }> {
+export interface WireAppDeps {
+  /** Creates an app BrowserWindow; a query string selects the tear-off view. */
+  createAppWindow: (query?: string) => BrowserWindow
+}
+
+export async function wireApp(
+  wireDeps: WireAppDeps
+): Promise<{ pty: PtyManager; shutdown: () => void }> {
   const pty = new PtyManager(new NodePtyFactory())
 
   // ── Status pipeline (spec §4.4): endpoint + forwarder + server ─────────────
@@ -88,6 +95,24 @@ export async function wireApp(): Promise<{ pty: PtyManager; shutdown: () => void
     pty,
     hooks: { endpoint, settingsJson },
     onSessionClosed: (tabId) => statusServer.forget(tabId),
+    // Tear-off (spec §4.2): the PTY stays in main; a new window re-attaches to
+    // the same stream. Closing the window with the session alive re-docks it.
+    openTearOff: (tabId, title) => {
+      const ref = pty.tabRefs().find((r) => r.tabId === tabId)
+      const win = wireDeps.createAppWindow(
+        `tearoff=${encodeURIComponent(tabId)}&title=${encodeURIComponent(title)}`
+      )
+      win.on('closed', () => {
+        if (!pty.has(tabId)) return // session was closed inside the tear-off
+        const main = BrowserWindow.getAllWindows()[0]
+        main?.webContents.send(CH.reDockTab, {
+          tabId,
+          title,
+          cwd: ref?.cwd ?? '',
+          command: ref?.command === 'claude' ? 'claude' : 'shell'
+        })
+      })
+    },
     // E2E/automation seams: WEFT_E2E_OPEN_DIR bypasses the native folder picker
     // (which no automation can drive), and WEFT_OPEN_PROJECT_COMMAND=shell lets
     // tests open a plain shell instead of booting a real `claude`.
@@ -150,7 +175,8 @@ export async function wireApp(): Promise<{ pty: PtyManager; shutdown: () => void
   // Main-process introspection for the E2E suite (never exposed to the renderer).
   ;(globalThis as Record<string, unknown>)['__weft'] = {
     statusEndpoint: endpoint,
-    tabRefs: () => pty.tabRefs()
+    tabRefs: () => pty.tabRefs(),
+    pidOf: (tabId: string) => pty.pidOf(tabId)
   }
 
   // Clean shutdown: kill every PTY (ConPTY children can otherwise pin the

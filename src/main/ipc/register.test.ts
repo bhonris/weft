@@ -181,6 +181,37 @@ describe('registerSessionIpc', () => {
     expect(ctx.pty.has('id1')).toBe(true)
   })
 
+  it('auto-detaches when the sender webContents has been destroyed', () => {
+    ctx.ipcMain.invoke(CH.createSession, ctx.event, { cwd: 'C:/p', command: 'claude' })
+
+    let destroyed = false
+    const sender = new FakeSender(7) as FakeSender & { isDestroyed: () => boolean }
+    sender.isDestroyed = () => destroyed
+    const event: IpcEventLike = { sender }
+
+    ctx.ipcMain.invoke(CH.attachSession, event, 'id1')
+    expect(ctx.pty.dataListenerCount('id1')).toBe(1)
+
+    destroyed = true // window closed without unmounting (tear-off close)
+    ctx.factory.last.emit('data-after-destroy\n')
+
+    // The guarded send removed the dead attachment instead of throwing.
+    expect(ctx.pty.dataListenerCount('id1')).toBe(0)
+    expect(sender.sent).toEqual([])
+  })
+
+  it('auto-detaches when sending to the sender throws', () => {
+    ctx.ipcMain.invoke(CH.createSession, ctx.event, { cwd: 'C:/p', command: 'claude' })
+    const sender = new FakeSender(8)
+    sender.send = () => {
+      throw new Error('Object has been destroyed')
+    }
+    ctx.ipcMain.invoke(CH.attachSession, { sender }, 'id1')
+
+    expect(() => ctx.factory.last.emit('boom\n')).not.toThrow()
+    expect(ctx.pty.dataListenerCount('id1')).toBe(0)
+  })
+
   it('detachSession is a no-op for an unknown attachment', () => {
     expect(() => ctx.ipcMain.invoke(CH.detachSession, ctx.event, 'ghost')).not.toThrow()
   })

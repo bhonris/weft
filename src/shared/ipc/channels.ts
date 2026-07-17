@@ -23,6 +23,8 @@ export const CH = {
   sessionStatus: 'session:status',
   // Main asks the renderer to activate a tab (notification click routing).
   activateTab: 'tab:activate',
+  // A torn-off window closed with its session alive — main window re-docks it.
+  reDockTab: 'tab:re-dock',
 
   // Filesystem
   listDir: 'fs:list-dir',
