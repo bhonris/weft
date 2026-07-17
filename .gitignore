@@ -1,0 +1,9 @@
+node_modules/
+dist/
+dist-electron/
+out/
+coverage/
+*.tsbuildinfo
+.vite/
+release/
+*.log
