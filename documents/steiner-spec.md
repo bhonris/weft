@@ -143,6 +143,16 @@ The **#1 user pain** Weft targets: *"which of my N sessions needs me right now?"
 
 TypeScript, pnpm, Electron, electron-vite, React, Vite, `@xterm/xterm` (+ `addon-fit`, `addon-webgl`, `addon-search`, `addon-serialize`), `node-pty`, `chokidar`, `electron-store`, `zustand`, `monaco-editor`, `dockview`, `vitest` + `@vitest/coverage-v8`, `@playwright/test` (Electron).
 
+### 4.7 Session resilience across renderer reload (hot-reload & UI crashes)
+
+**A first-class guarantee: a renderer reload never terminates a live `claude` session, and sessions are recoverable after a UI error.** This falls out of PTY-in-main, but is made explicit here so it is deliberately built and tested — not assumed:
+
+- **PTY lifecycle is decoupled from the renderer.** A PTY is killed only on explicit `closeSession` (tab close) or process exit — **never** on window reload, Vite HMR update, or renderer crash. Renderer unmount/dispose unsubscribes its listeners and disposes the xterm instance, but the main-process PTY keeps running.
+- **Main keeps a bounded per-session output ring buffer** (default 8k lines — same cap as inactive-tab scrollback). `attachSession(tabId)` replays this snapshot to a freshly mounted xterm, then streams live `session:data`. After any reload the terminal re-hydrates with prior output and stays interactive.
+- **Idempotent re-attach.** Attaching is safe to call repeatedly (HMR re-runs module code); each attach tears down the prior subscription so there are no duplicate writes or listener leaks.
+- **Renderer error boundary.** A React error boundary wraps the workbench: a render error shows a fallback with a *reload* action instead of a white screen, and does not touch main — after reload, every session re-attaches from its ring buffer.
+- **Dev caveat — main-process edits.** Under `pnpm dev`, editing *renderer* code hot-updates with sessions intact; editing *main-process* code triggers an electron-vite **main restart**, which **does** kill PTYs (a child process cannot outlive its parent). v1 mitigation: prefer renderer edits while sessions are live. A detached PTY host that survives main restarts is a possible future enhancement (see Open Questions), not a v1 default.
+
 ---
 
 ## 5. API contract
@@ -304,6 +314,7 @@ Each badge carries a screen-reader `aria-label` ("proj-b: waiting on input").
 - **Huge single-line / binary output** — xterm guarded against pathological input; line length capped; flow control pauses the firehose.
 - **Notification click when the app is closed** — relaunch the app and route to the tab; if the tab no longer exists, no-op gracefully.
 - **Duplicate/spoofed status** — a `session_id`/`tabId` not bound to a known tab is dropped; two PTYs never claim one `tabId`.
+- **Renderer reload / HMR / UI crash while sessions are live** — the PTY survives in main; the renderer re-attaches on mount and replays the ring buffer. A React render error is caught by an error boundary (fallback + reload), never killing a session. (Editing *main-process* code under `pnpm dev` is the one exception — it restarts main and kills PTYs; see §4.7.)
 
 ---
 
@@ -327,6 +338,7 @@ Per global conventions: tests for every feature/bugfix, **95%+ coverage before c
 - Named-pipe/UDS name collision strategy across concurrent Weft instances (per-instance UUID vs. per-user fixed name)?
 - Do we surface `idle_prompt` as `waiting` immediately, or after a grace period to avoid noisy toasts?
 - Windows toast action-center behavior when many notifications stack — coalesce per tab?
+- Should PTYs be hosted in a **detached helper process/daemon** so they survive a main-process restart (dev main-code edits, and future main crashes/updates), rather than dying with main? Bigger architecture change; deferred past v1 but revisit if main-restart session loss proves painful in daily use.
 
 ---
 
@@ -353,6 +365,10 @@ Per global conventions: tests for every feature/bugfix, **95%+ coverage before c
 - [ ] Spawning when `claude` is not on PATH shows the actionable error state with a Retry action and does not crash the tab or app (a subsequent successful Retry spawns the session).
 - [ ] If the status endpoint is unavailable or no hook fires, the affected tab shows `unknown` status while terminal input/output continues to function.
 - [ ] Overall statement coverage is >= 95% per the vitest `@vitest/coverage-v8` report, and the Playwright-for-Electron E2E suite passes (launch → open tab → run command → assert output → restore-on-restart).
+- [ ] A renderer window reload (or Vite HMR update) does not invoke `closeSession`: the PTY process PID in the PtyManager registry is unchanged, and after reload the xterm re-attaches to the same `sessionId`.
+- [ ] `window.api.attachSession(tabId)` replays the main-side per-session ring buffer (bounded, default 8k lines) to a freshly mounted xterm before streaming live data, so a reloaded terminal shows prior output and remains interactive.
+- [ ] Repeated attach/detach cycles (simulating HMR) leave exactly one active `session:data` subscription per mounted terminal — asserted listener count is stable across cycles (no duplicate writes, no leak).
+- [ ] A thrown error in a renderer component is caught by an error boundary that renders a fallback with a reload action and does not terminate any PTY; after reload, sessions re-attach and remain interactive (Playwright-for-Electron: force a render error, reload, assert the session still echoes input).
 
 ---
 

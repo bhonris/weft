@@ -11,7 +11,7 @@ test_cmd: pnpm test
 dev_server_port: 5173
 coverage_pct: 100
 divergence_readings: []
-current_focus: "Implement PtyManager in main/services with an injectable PtyFactory interface (production adapter lazy-imports node-pty; tests use a FakePty EventEmitter). Cover: create session (spawn claude --session-id <uuid> with cwd + CLAUDE_IDE_TAB env + inline --settings hooks), write, resize (throttled <=1/50ms via core/terminal/resize-throttle), close (pty.kill + deregister), data/exit events. Then install node-pty native."
+current_focus: "Implement PtyManager in main/services with an injectable PtyFactory interface (production adapter lazy-imports node-pty; tests use a FakePty EventEmitter). Cover: create session (spawn claude --session-id <uuid> with cwd + CLAUDE_IDE_TAB env + inline --settings hooks), write, resize (throttled <=1/50ms via core/terminal/resize-throttle), close (pty.kill + deregister), data/exit events. HARD REQUIREMENT (user-driven, spec §4.7): PTY lifecycle is decoupled from the renderer — a PTY dies ONLY on explicit closeSession/process-exit, NEVER on renderer reload/HMR/crash. PtyManager MUST keep a bounded per-session output ring buffer (default 8k lines); add window.api.attachSession(tabId)/detachSession(tabId) (+ channels) that replays the ring buffer to a freshly mounted xterm then streams live data; make attach idempotent (one session:data subscription per mount, no leaks); add a renderer error boundary (fallback + reload) around the workbench. Then install node-pty native."
 blocked_on: null
 last_test_run: "40 pass, 0 fail"
 closed_worldlines: [divergence-analysis, worldline-selection]
