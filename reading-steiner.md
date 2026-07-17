@@ -1,6 +1,6 @@
 phase: time-leap-development
-leap_count: 22
-expansion_cycle: 2
+leap_count: 23
+expansion_cycle: 3
 session_id: 2026-07-18T00:30:00Z
 prev_head: 67fe8ec6268622c6795427f69a368f49848f840a
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md."
@@ -24,16 +24,16 @@ decisions:
   - stack: "TypeScript, Electron 34 + electron-vite 3, pnpm, React 19 + Vite 6 renderer, zustand 5, xterm.js 5.5, chokidar 4, electron-store 10, monaco 0.52, dockview 4, zod 3, node-pty (deferred native install)"
 review_items:
   must_fix: []
-  nice_to_have:
-    - "frame-parser-buffer-cap: unbounded buffer on newline-less stream; cap ~1MB (frame-parser.ts:16-25)"
-    - "uds-perms-unlink: POSIX socket in /tmp world-connectable + never unlinked; chmod 0600 + unlink on close (net-transport.ts, pipe-name.ts)"
-    - "readfile-size-guard: viewer loads whole file; stat-cap ~5MB with friendly error (diff-service.ts:27-29)"
-    - "git-quotepath: non-ASCII filenames break diff baseline; add -c core.quotepath=false (diff-service.ts:37-48)"
-    - "dead-code-sweep: remove renameTab/reorderTabs channels+api, needsMigration, isOk, _prev param on mapHookToStatus; fix depth comment; anchor node_modules regex; addSessionTab helper; safeSend dedupe (multiple files)"
-    - "reveal-affordance: revealInOs plumbed but no UI caller; add Reveal button to ViewerPane header (ViewerPane.tsx)"
-    - "spawn-failure-store-refactor: module-level mutable spawnFailureListener → move into store (App.tsx:30-31)"
-    - "e2e-hardening: strip WEFT_* from inherited env in specs; replace persistence waitForTimeout(500) with store poll; multi-tab+rename+theme restart coverage; correlator path-normalization tests"
+  nice_to_have: []
   closed:
+    - "frame-parser-buffer-cap: fixed (1MB cap + recovery test)"
+    - "uds-perms-unlink: fixed (chmod 0600 + unlink on close)"
+    - "readfile-size-guard: fixed (5MB stat guard + viewer error)"
+    - "git-quotepath: fixed (-c core.quotepath=false)"
+    - "dead-code-sweep: fixed (channels/api/needsMigration/isOk/_prev removed; regex+comment fixed; addSessionTab; dropAttachment)"
+    - "reveal-affordance: fixed (ViewerPane Reveal button)"
+    - "spawn-failure-store-refactor: fixed (zustand store state)"
+    - "e2e-hardening: fixed (launchWeft strips WEFT_*, config.json poll, multi-tab/rename/theme restart E2E, correlator normalization)"
     - "reload-respawns-sessions: fixed — listSessions IPC + reconcile/adopt restore; E2E real-reload same-PID proof"
     - "double-attach-leak: fixed — detach-before-overwrite + unit test"
     - "pty-ops-after-exit-throw: fixed — exit guards + throttle-timer try/catch + exit surfaced in attach; E2E error badge"

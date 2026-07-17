@@ -14,9 +14,9 @@ pnpm install          # installs deps; downloads the Electron binary
 pnpm rebuild:native   # rebuilds node-pty for Electron's ABI (run once after install)
 pnpm dev              # launch the app in development (electron-vite)
 pnpm build            # production build of main + preload + renderer
-pnpm test             # unit/integration suite (vitest) — 212 tests
+pnpm test             # unit/integration suite (vitest) — 214 tests
 pnpm test:cov         # with the 95% statement coverage gate (currently ~98%)
-pnpm test:e2e         # builds, then drives the REAL Electron app (19 Playwright tests)
+pnpm test:e2e         # builds, then drives the REAL Electron app (22 Playwright tests)
 ```
 
 > **Prerequisite:** a working `claude` CLI on your PATH (Windows 10+ for ConPTY).
@@ -56,6 +56,10 @@ Click **+** (or `Ctrl+T`) and pick a folder: Weft spawns `claude --session-id <u
 rooted there and shows it as a tab with a live status badge. The terminal inside
 the tab is a normal Claude Code session — type your prompt and press Enter,
 exactly as you would running `claude` in a terminal yourself.
+
+**Shell tabs:** hold **Shift** while clicking **+** to open a plain shell
+(PowerShell/bash) in the chosen folder instead of Claude — handy for running
+builds or git alongside your Claude sessions.
 
 - **Rename:** double-click the tab title, type, Enter (Esc cancels).
 - **Reorder:** drag a tab onto another.
@@ -121,7 +125,16 @@ the viewer; double-click to open with the OS default app.
 Single-clicking a file opens a read-only Monaco pane over the terminal area.
 The **Diff vs HEAD** toggle shows a side-by-side diff of the working file
 against its last git commit — untracked files render as all-additions
-("Claude created this file"). Close with `×`; the terminal beneath is untouched.
+("Claude created this file"); non-ASCII filenames work. **Reveal** shows the
+file in the OS file manager. Files over 5 MB are refused with a friendly error
+(use double-click → OS default app for those). Close with `×`; the terminal
+beneath is untouched.
+
+### Find in terminal
+
+`Ctrl+Shift+F` opens a search bar over the active terminal (searches scrollback
+as you type). **Enter**/↓ next match, ↑ previous, **Esc** closes and puts focus
+back in the terminal.
 
 ### Workspace persistence
 

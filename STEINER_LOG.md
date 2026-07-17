@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Worldline 2 Stabilised — Leap 23 — steiner: worldline-2-stable — 2026-07-18T04:00:00Z
+
+**Phase**: cycle-2 checkpoint → worldline-expansion (cycle 3)
+**Changed**: Final Expansion-2 items: correlator cwd matching normalizes separators/trailing-slash/case (Windows hooks report C:\\proj vs stored C:/proj — 4 new assertions); persistence E2E extended (2 tabs + renames + dark theme survive restart, order preserved). All 35 spec checkboxes (25 v1 + 10 expansion — the 11th folded into e2e-hygiene) checked. USAGE gained shell-tabs + find-in-terminal + Reveal/5MB sections; README/USAGE test counts refreshed (214 unit + 22 e2e). DOSSIER cycle-2 close-out; every cycle-1 review item closed, none carried.
+**SERN interference**: none
+**Divergence meter**: 214 unit + 22 e2e, 0 fail
+**Next target**: Cycle 3 — open-source hygiene (LICENSE file, CONTRIBUTING.md, GitHub Actions CI) + electron-builder packaging config; then Okabe budget check (≥0.8 of 30 → graceful EL_PSY_KONGROO unless tokens remain).
+
+---
+
 ## Leap 22 — steiner: feat(expansion-2) hardening sweep + shell tabs + terminal search — 2026-07-18T03:30:00Z
 
 **Phase**: time-leap-development (cycle 2)

@@ -38,4 +38,12 @@ describe('correlate', () => {
   it('returns null for a payload with no identifiers', () => {
     expect(correlate(ev({}), tabs)).toBeNull()
   })
+
+  it('matches cwd across separator, trailing-slash, and case differences', () => {
+    const winTabs = [{ tabId: 'w1', sessionId: 'ws1', cwd: 'C:\\Users\\me\\Proj' }]
+    expect(correlate(ev({ cwd: 'c:/users/me/proj' }), winTabs)).toBe('w1')
+    expect(correlate(ev({ cwd: 'C:\\Users\\me\\Proj\\' }), winTabs)).toBe('w1')
+    expect(correlate(ev({ cwd: 'C:/Users/me/Proj/' }), winTabs)).toBe('w1')
+    expect(correlate(ev({ cwd: 'C:/Users/me/Other' }), winTabs)).toBeNull()
+  })
 })
