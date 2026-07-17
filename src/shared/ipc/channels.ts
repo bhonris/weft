@@ -5,6 +5,8 @@
 export const CH = {
   // Terminal / session (renderer -> main, invoke)
   createSession: 'session:create',
+  // Live sessions in main — the renderer reconciles against this on reload.
+  listSessions: 'session:list',
   writeToSession: 'session:write',
   resizeSession: 'session:resize',
   closeSession: 'session:close',

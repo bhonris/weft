@@ -1,6 +1,7 @@
 import type { WorkspaceState } from '@shared/ipc/api-contract'
 import { loadWorkspace } from '@core/persistence/validate'
 import { defaultWorkspace } from '@core/persistence/default-workspace'
+import { workspaceStateSchema } from '@core/persistence/schema'
 
 const WORKSPACE_KEY = 'workspace'
 
@@ -41,7 +42,10 @@ export class WorkspaceStore {
     const result = loadWorkspace(raw)
 
     if (!result.ok) {
-      this.onWarn(`workspace load failed (${result.error}); using defaults`)
+      // Preserve the corrupt blob before falling back — silent data loss is
+      // worse than a bad file (the user can hand-recover from config.bak).
+      this.backup(raw)
+      this.onWarn(`workspace load failed (${result.error}); using defaults (backup written)`)
       return defaultWorkspace()
     }
 
@@ -56,6 +60,13 @@ export class WorkspaceStore {
   }
 
   save(state: WorkspaceState): void {
-    this.store.set(WORKSPACE_KEY, state)
+    // The renderer is semi-trusted: never persist a blob that would fail
+    // validation on the next launch (silent workspace loss).
+    const parsed = workspaceStateSchema.safeParse(state)
+    if (!parsed.success) {
+      this.onWarn(`rejected invalid workspace save: ${parsed.error.issues[0]?.message ?? '?'}`)
+      return
+    }
+    this.store.set(WORKSPACE_KEY, parsed.data)
   }
 }

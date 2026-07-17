@@ -14,10 +14,12 @@ export const tabStateSchema = z.object({
 })
 
 export const windowBoundsSchema = z.object({
-  x: z.number(),
-  y: z.number(),
-  width: z.number(),
-  height: z.number()
+  // .int() rejects NaN/Infinity (Number.isInteger) — a hand-edited or hostile
+  // blob must never hand NaN geometry to BrowserWindow.
+  x: z.number().int(),
+  y: z.number().int(),
+  width: z.number().int(),
+  height: z.number().int()
 })
 
 export const workspaceStateSchema = z.object({

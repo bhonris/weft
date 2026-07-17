@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 20 — steiner: fix(convergence) all 10 must-fix resolved — 2026-07-18T02:00:00Z
+
+**Phase**: worldline-convergence
+**Changed**: ALL 10 must-fix items fixed, each with tests. (1) reload-respawns-sessions: new listSessions IPC; restoreWorkspace now RECONCILES — re-attaches live tabs under original tabIds, spawns only dead ones, ADOPTS unclaimed live sessions (never strands work); 8 new unit tests + decisive E2E: real page.reload() → same PID, exactly 1 PTY, scrollback replayed, still interactive. (2) double-attach-leak: detach-before-overwrite in attachSession + attach→attach unit test. (3) pty-ops-after-exit: write/resize guard on exited, try/catch inside throttle timer callback, AttachHandle carries exited/exitCode, TerminalPane renders dead-terminal notice; E2E exit 3 → ✕ badge + typing into dead terminal safe. (4) ipc-arg-validation: createSession shape-check (throws), write/resize sanity checks (drop). (5) forwarder: null/array/primitive stdin guard + REAL integration test spawning forward.cjs as a child process against a live NetTransport pipe (3 scenarios incl. dead-endpoint no-wedge). (6) main-window: getMainWindow() (non-tearoff URL) for focus/re-dock/bounds + revives a main window if a tear-off closes with none. (7) status hardening: non-string message stripped, >500 chars truncated; NotificationService per-tab 10s cooldown (injectable clock). (8) WorkspaceStore: schema-validated saves (reject bad blobs) + config.bak written on corruption fallback. (9) WatchService: error listener (EPERM junctions) → onError dep. (10) clampBoundsToDisplays (pure, 60px min overlap) + z.int() bounds schema; index clamps against screen.getAllDisplays.
+**SERN interference**: none
+**Divergence meter**: 212 unit + 19 e2e, 0 fail; coverage 97.96/96.25/98.64
+**Next target**: Phase 6 worldline-checkpoint — prod-build smoke, README, USAGE full pass, DOSSIER close-out, lessons_learned, Mayuri review; nice_to_have items either quick-hit or carried to expansion.
+
+---
+
 ## Leap 19 — steiner: christina-review — 2026-07-18T01:10:00Z
 
 **Phase**: christinas-analysis → worldline-convergence

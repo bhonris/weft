@@ -58,13 +58,29 @@ describe('WorkspaceStore', () => {
     expect(ws.load()).toEqual(defaultWorkspace())
   })
 
-  it('falls back to defaults and warns on a corrupt blob', () => {
+  it('falls back to defaults, warns, and BACKS UP the corrupt blob', () => {
     const store = new FakeStore()
     store.set('workspace', 'garbage')
     const onWarn = vi.fn()
-    const ws = new WorkspaceStore({ store, onWarn })
+    const backup = vi.fn()
+    const ws = new WorkspaceStore({ store, onWarn, backup })
 
     expect(ws.load()).toEqual(defaultWorkspace())
     expect(onWarn).toHaveBeenCalledOnce()
+    expect(backup).toHaveBeenCalledWith('garbage') // recoverable, not silently lost
+  })
+
+  it('rejects an invalid save instead of persisting a blob that breaks next launch', () => {
+    const store = new FakeStore()
+    const onWarn = vi.fn()
+    const ws = new WorkspaceStore({ store, onWarn })
+
+    ws.save({ version: 1, tabs: 'nope' } as never)
+    expect(store.data.has('workspace')).toBe(false)
+    expect(onWarn).toHaveBeenCalledOnce()
+
+    // A valid save still goes through afterwards.
+    ws.save(defaultWorkspace())
+    expect(store.data.get('workspace')).toEqual(defaultWorkspace())
   })
 })

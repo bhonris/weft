@@ -44,6 +44,13 @@ export interface DiffPayload {
   modified: string
 }
 
+export interface LiveSession {
+  tabId: string
+  cwd: string
+  command: SessionCommand
+  exited: boolean
+}
+
 export type OpenProjectResult =
   | { tabId: string; cwd: string; title: string; command: SessionCommand }
   | { error: string; cwd: string; title: string; command: SessionCommand }
@@ -52,6 +59,8 @@ export type OpenProjectResult =
 export interface WeftApi {
   // Terminal / session
   createSession(opts: CreateSessionOpts): Promise<{ tabId: string }>
+  /** Sessions currently alive in main — used to re-attach (not respawn) on reload. */
+  listSessions(): Promise<LiveSession[]>
   writeToSession(tabId: string, data: string): void
   resizeSession(tabId: string, cols: number, rows: number): void
   closeSession(tabId: string): Promise<void>
@@ -61,7 +70,9 @@ export interface WeftApi {
    * via `onSessionData`. Safe to call after a reload/HMR — the PTY is never
    * respawned (spec §4.7).
    */
-  attachSession(tabId: string): Promise<{ snapshot: string }>
+  attachSession(
+    tabId: string
+  ): Promise<{ snapshot: string; exited: boolean; exitCode: number | null }>
   /** Detach this view; leaves the PTY running (only `closeSession` kills it). */
   detachSession(tabId: string): Promise<void>
   renameTab(tabId: string, title: string): Promise<void>
@@ -112,6 +123,7 @@ export interface WeftApi {
 export type WeftBridge = Pick<
   WeftApi,
   | 'createSession'
+  | 'listSessions'
   | 'writeToSession'
   | 'resizeSession'
   | 'closeSession'

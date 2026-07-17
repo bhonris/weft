@@ -1,16 +1,19 @@
 import { describe, it, expect, vi } from 'vitest'
 import { NotificationService, type ToastRequest } from './notification-service'
 
-function setup(focused: boolean) {
+function setup(focused: boolean, opts: { cooldownMs?: number } = {}) {
   const toasts: ToastRequest[] = []
   const focusTab = vi.fn()
+  let now = 0
   const svc = new NotificationService({
     isAppFocused: () => focused,
     showToast: (t) => toasts.push(t),
     focusTab,
-    getTitle: (id) => (id === 't1' ? 'my-proj' : undefined)
+    getTitle: (id) => (id === 't1' ? 'my-proj' : undefined),
+    now: () => now,
+    ...(opts.cooldownMs !== undefined ? { cooldownMs: opts.cooldownMs } : {})
   })
-  return { svc, toasts, focusTab }
+  return { svc, toasts, focusTab, advance: (ms: number) => (now += ms) }
 }
 
 describe('NotificationService', () => {
@@ -62,5 +65,21 @@ describe('NotificationService', () => {
     const { svc, toasts } = setup(false)
     svc.handleStatus({ tabId: 'ghost', status: 'done' })
     expect(toasts[0]!.title).toBe('Weft session — done')
+  })
+
+  it('rate-limits toasts per tab (spam guard for alternating hook events)', () => {
+    const { svc, toasts, advance } = setup(false, { cooldownMs: 10_000 })
+    svc.handleStatus({ tabId: 't1', status: 'waiting' })
+    svc.handleStatus({ tabId: 't1', status: 'done' })
+    svc.handleStatus({ tabId: 't1', status: 'waiting' })
+    expect(toasts).toHaveLength(1) // flood suppressed
+
+    advance(10_001)
+    svc.handleStatus({ tabId: 't1', status: 'done' })
+    expect(toasts).toHaveLength(2) // cooldown elapsed
+
+    // Independent per tab.
+    svc.handleStatus({ tabId: 'other', status: 'waiting' })
+    expect(toasts).toHaveLength(3)
   })
 })

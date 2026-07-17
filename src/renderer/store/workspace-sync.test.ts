@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { buildWorkspaceState, restoreWorkspace } from './workspace-sync'
 import type { Tab } from './session-store'
-import type { WorkspaceState } from '@shared/ipc/api-contract'
+import type { LiveSession, WorkspaceState } from '@shared/ipc/api-contract'
 
 const tab = (id: string, over: Partial<Tab> = {}): Tab => ({
   tabId: id,
@@ -44,19 +44,63 @@ describe('buildWorkspaceState', () => {
   })
 })
 
-describe('restoreWorkspace', () => {
+describe('restoreWorkspace (reload reconciliation, spec §4.7)', () => {
   const saved: WorkspaceState = buildWorkspaceState([tab('a'), tab('b', { command: 'shell' })])
 
-  it('respawns a fresh session per saved tab, preserving order and titles', async () => {
+  const api = (live: LiveSession[], createImpl?: () => Promise<{ tabId: string }>) => {
     let n = 0
-    const createSession = vi.fn(async () => ({ tabId: `new-${++n}` }))
-    const restored = await restoreWorkspace({ createSession }, saved)
+    return {
+      listSessions: vi.fn(async () => live),
+      createSession: vi.fn(createImpl ?? (async () => ({ tabId: `new-${++n}` })))
+    }
+  }
 
-    expect(createSession).toHaveBeenNthCalledWith(1, { cwd: 'C:/p/a', command: 'claude' })
-    expect(createSession).toHaveBeenNthCalledWith(2, { cwd: 'C:/p/b', command: 'shell' })
+  it('re-attaches saved tabs whose sessions are still alive — NO respawn', async () => {
+    const a = api([
+      { tabId: 'a', cwd: 'C:/p/a', command: 'claude', exited: false },
+      { tabId: 'b', cwd: 'C:/p/b', command: 'shell', exited: false }
+    ])
+    const restored = await restoreWorkspace(a, saved)
+
+    expect(a.createSession).not.toHaveBeenCalled()
     expect(restored).toEqual([
-      { tabId: 'new-1', title: 'proj-a', cwd: 'C:/p/a', command: 'claude' },
-      { tabId: 'new-2', title: 'proj-b', cwd: 'C:/p/b', command: 'shell' }
+      { tabId: 'a', title: 'proj-a', cwd: 'C:/p/a', command: 'claude' },
+      { tabId: 'b', title: 'proj-b', cwd: 'C:/p/b', command: 'shell' }
+    ])
+  })
+
+  it('spawns fresh sessions on a true restart (nothing live)', async () => {
+    const a = api([])
+    const restored = await restoreWorkspace(a, saved)
+    expect(a.createSession).toHaveBeenNthCalledWith(1, { cwd: 'C:/p/a', command: 'claude' })
+    expect(a.createSession).toHaveBeenNthCalledWith(2, { cwd: 'C:/p/b', command: 'shell' })
+    expect(restored.map((r) => r.tabId)).toEqual(['new-1', 'new-2'])
+  })
+
+  it('mixes: re-attaches the live tab, respawns the dead one', async () => {
+    const a = api([{ tabId: 'a', cwd: 'C:/p/a', command: 'claude', exited: false }])
+    const restored = await restoreWorkspace(a, saved)
+    expect(a.createSession).toHaveBeenCalledTimes(1)
+    expect(restored[0]).toMatchObject({ tabId: 'a' }) // reused
+    expect(restored[1]).toMatchObject({ tabId: 'new-1' }) // respawned
+  })
+
+  it('does not re-attach an exited live session — respawns instead', async () => {
+    const a = api([{ tabId: 'a', cwd: 'C:/p/a', command: 'claude', exited: true }])
+    const restored = await restoreWorkspace(a, saved)
+    expect(a.createSession).toHaveBeenCalledTimes(2)
+    expect(restored.map((r) => r.tabId)).toEqual(['new-1', 'new-2'])
+  })
+
+  it('adopts live sessions that no saved tab claims (created just before reload)', async () => {
+    const a = api([
+      { tabId: 'a', cwd: 'C:/p/a', command: 'claude', exited: false },
+      { tabId: 'orphan', cwd: 'C:/work/fresh-project', command: 'shell', exited: false }
+    ])
+    const restored = await restoreWorkspace(a, buildWorkspaceState([tab('a')]))
+    expect(restored).toEqual([
+      { tabId: 'a', title: 'proj-a', cwd: 'C:/p/a', command: 'claude' },
+      { tabId: 'orphan', title: 'fresh-project', cwd: 'C:/work/fresh-project', command: 'shell' }
     ])
   })
 
@@ -65,19 +109,29 @@ describe('restoreWorkspace', () => {
       .fn<() => Promise<{ tabId: string }>>()
       .mockRejectedValueOnce(new Error('cwd gone'))
       .mockResolvedValueOnce({ tabId: 'ok' })
-    const restored = await restoreWorkspace({ createSession }, saved)
-    expect(restored).toEqual([
-      { tabId: 'ok', title: 'proj-b', cwd: 'C:/p/b', command: 'shell' }
-    ])
+    const restored = await restoreWorkspace(
+      { listSessions: async () => [], createSession },
+      saved
+    )
+    expect(restored).toEqual([{ tabId: 'ok', title: 'proj-b', cwd: 'C:/p/b', command: 'shell' }])
   })
 
-  it('returns empty for an empty workspace', async () => {
-    const createSession = vi.fn()
+  it('falls back to spawn-per-tab when listSessions is unavailable', async () => {
+    let n = 0
     const restored = await restoreWorkspace(
-      { createSession },
-      buildWorkspaceState([])
+      {
+        listSessions: async () => {
+          throw new Error('no such handler')
+        },
+        createSession: async () => ({ tabId: `new-${++n}` })
+      },
+      saved
     )
-    expect(restored).toEqual([])
-    expect(createSession).not.toHaveBeenCalled()
+    expect(restored).toHaveLength(2)
+  })
+
+  it('returns empty for an empty workspace with nothing live', async () => {
+    const a = api([])
+    expect(await restoreWorkspace(a, buildWorkspaceState([]))).toEqual([])
   })
 })

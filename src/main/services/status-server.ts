@@ -67,6 +67,16 @@ export class StatusServer {
   }
 
   private handle(frame: Record<string, unknown>): void {
+    // The pipe is writable by any same-user process: sanitize before trusting.
+    // A non-string message would throw later (Notification body); a huge one
+    // would be broadcast to every window. Strip/truncate here.
+    if (frame['message'] !== undefined) {
+      if (typeof frame['message'] !== 'string') {
+        delete frame['message']
+      } else if (frame['message'].length > 500) {
+        frame['message'] = frame['message'].slice(0, 500)
+      }
+    }
     const payload = frame as unknown as HookPayload
     if (typeof payload.event !== 'string') {
       this.deps.onDrop?.('missing event field', frame)

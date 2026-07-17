@@ -57,10 +57,14 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
     // Keystrokes → PTY.
     const keyListener = term.onData((data) => window.api.writeToSession(tabId, data))
 
-    // Attach: replay buffered output, then fit to the container.
-    void window.api.attachSession(tabId).then(({ snapshot }) => {
+    // Attach: replay buffered output, then fit to the container. A session
+    // that already exited renders its exit line so it never looks live.
+    void window.api.attachSession(tabId).then(({ snapshot, exited, exitCode }) => {
       if (disposed) return
       if (snapshot) term.write(snapshot)
+      if (exited) {
+        term.write(`\r\n\x1b[90m[process exited: ${exitCode ?? '?'}]\x1b[0m\r\n`)
+      }
       applyFit()
     })
 

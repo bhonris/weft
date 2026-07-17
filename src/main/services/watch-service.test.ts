@@ -3,9 +3,11 @@ import { WatchService, type WatcherLike, type FsChangeEvent } from './watch-serv
 
 class FakeWatcher implements WatcherLike {
   cb: ((event: string, path: string) => void) | null = null
+  errCb: ((err: unknown) => void) | null = null
   closed = false
-  on(_event: 'all', cb: (event: string, path: string) => void): void {
-    this.cb = cb
+  on(event: 'all' | 'error', cb: unknown): void {
+    if (event === 'all') this.cb = cb as (event: string, path: string) => void
+    else this.errCb = cb as (err: unknown) => void
   }
   async close(): Promise<void> {
     this.closed = true
@@ -13,17 +15,24 @@ class FakeWatcher implements WatcherLike {
   fire(event: string, path: string): void {
     this.cb?.(event, path)
   }
+  fail(err: unknown): void {
+    this.errCb?.(err)
+  }
 }
 
 function setup() {
   const watchers: FakeWatcher[] = []
-  const svc = new WatchService(() => {
-    const w = new FakeWatcher()
-    watchers.push(w)
-    return w
-  })
+  const errors: Array<{ path: string; err: unknown }> = []
+  const svc = new WatchService(
+    () => {
+      const w = new FakeWatcher()
+      watchers.push(w)
+      return w
+    },
+    (path, err) => errors.push({ path, err })
+  )
   const events: FsChangeEvent[] = []
-  return { svc, watchers, events, onEvent: (e: FsChangeEvent) => events.push(e) }
+  return { svc, watchers, events, errors, onEvent: (e: FsChangeEvent) => events.push(e) }
 }
 
 describe('WatchService', () => {
@@ -46,12 +55,26 @@ describe('WatchService', () => {
     ])
   })
 
-  it('ignores unmapped chokidar events (ready, raw, error)', () => {
+  it('ignores unmapped chokidar events (ready, raw)', () => {
     const { svc, watchers, events, onEvent } = setup()
     svc.watch('/p', onEvent)
     watchers[0]!.fire('ready', '')
-    watchers[0]!.fire('error', 'boom')
     expect(events).toEqual([])
+  })
+
+  it('routes watcher errors to the error handler instead of throwing', () => {
+    const { svc, watchers, errors, onEvent } = setup()
+    svc.watch('C:/junction', onEvent)
+    expect(() => watchers[0]!.fail(new Error('EPERM: operation not permitted'))).not.toThrow()
+    expect(errors).toHaveLength(1)
+    expect(errors[0]!.path).toBe('C:/junction')
+  })
+
+  it('a service constructed without an error handler still survives errors', () => {
+    const w = new FakeWatcher()
+    const svc = new WatchService(() => w)
+    svc.watch('/p', () => {})
+    expect(() => w.fail(new Error('boom'))).not.toThrow()
   })
 
   it('unwatch closes and forgets the watcher; double-unwatch is a no-op', async () => {

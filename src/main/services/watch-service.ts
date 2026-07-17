@@ -9,6 +9,7 @@ export interface FsChangeEvent {
 /** The chokidar surface we depend on — injectable for tests. */
 export interface WatcherLike {
   on(event: 'all', cb: (eventName: string, path: string) => void): void
+  on(event: 'error', cb: (err: unknown) => void): void
   close(): Promise<void>
 }
 
@@ -31,15 +32,21 @@ export class WatchService {
   private readonly watchers = new Map<string, WatcherLike>()
   private counter = 0
 
-  constructor(private readonly factory: WatcherFactory) {}
+  constructor(
+    private readonly factory: WatcherFactory,
+    private readonly onError: (path: string, err: unknown) => void = () => {}
+  ) {}
 
   watch(path: string, onEvent: (e: FsChangeEvent) => void): { watchId: string } {
     const watchId = `w${++this.counter}`
     const watcher = this.factory(path)
-    watcher.on('all', (eventName, changedPath) => {
+    watcher.on('all', (eventName: string, changedPath: string) => {
       const type = EVENT_MAP[eventName]
       if (type) onEvent({ watchId, type, path: changedPath })
     })
+    // An unhandled 'error' (e.g. EPERM on Windows junctions during a scan)
+    // would be an uncaught exception in main — always subscribe.
+    watcher.on('error', (err: unknown) => this.onError(path, err))
     this.watchers.set(watchId, watcher)
     return { watchId }
   }

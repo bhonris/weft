@@ -4,7 +4,8 @@ import type {
   DirEntry,
   DiffPayload,
   WorkspaceState,
-  OpenProjectResult
+  OpenProjectResult,
+  LiveSession
 } from '@shared/ipc/api-contract'
 
 /** The ipcRenderer surface the bridge needs — satisfied by electron and a fake. */
@@ -30,11 +31,16 @@ export function createWeftApi(ipc: IpcRendererLike): WeftBridge {
   return {
     createSession: (opts) =>
       ipc.invoke(CH.createSession, opts) as Promise<{ tabId: string }>,
+    listSessions: () => ipc.invoke(CH.listSessions) as Promise<LiveSession[]>,
     writeToSession: (tabId, data) => ipc.send(CH.writeToSession, tabId, data),
     resizeSession: (tabId, cols, rows) => ipc.send(CH.resizeSession, tabId, cols, rows),
     closeSession: (tabId) => ipc.invoke(CH.closeSession, tabId) as Promise<void>,
     attachSession: (tabId) =>
-      ipc.invoke(CH.attachSession, tabId) as Promise<{ snapshot: string }>,
+      ipc.invoke(CH.attachSession, tabId) as Promise<{
+        snapshot: string
+        exited: boolean
+        exitCode: number | null
+      }>,
     detachSession: (tabId) => ipc.invoke(CH.detachSession, tabId) as Promise<void>,
     onSessionData: (cb) => subscribe(CH.sessionData, cb),
     onSessionExit: (cb) => subscribe(CH.sessionExit, cb),

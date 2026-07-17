@@ -1,6 +1,7 @@
 import { join } from 'node:path'
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, screen } from 'electron'
 import { wireApp } from './container'
+import { clampBoundsToDisplays } from '@core/persistence/clamp-bounds'
 
 const isDev = !!process.env['ELECTRON_RENDERER_URL']
 
@@ -52,7 +53,14 @@ function createWindow(query?: string, bounds?: Bounds): BrowserWindow {
 }
 
 app.whenReady().then(async () => {
-  const { shutdown, initialBounds } = await wireApp({ createAppWindow: createWindow })
+  const { shutdown, initialBounds: savedBounds } = await wireApp({
+    createAppWindow: createWindow
+  })
+  // Never restore a window onto a monitor that no longer exists.
+  const initialBounds = clampBoundsToDisplays(
+    savedBounds,
+    screen.getAllDisplays().map((d) => d.workArea)
+  )
   app.on('before-quit', () => {
     shutdown()
     // Windows ConPTY agents can wedge a graceful quit after kill; guarantee

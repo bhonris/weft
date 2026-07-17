@@ -34,6 +34,15 @@ export interface WireAppDeps {
   createAppWindow: (query?: string) => BrowserWindow
 }
 
+/** The main (non-tear-off) window, or null. Never assume getAllWindows()[0]. */
+function getMainWindow(): BrowserWindow | null {
+  return (
+    BrowserWindow.getAllWindows().find(
+      (w) => !w.isDestroyed() && !w.webContents.getURL().includes('tearoff=')
+    ) ?? null
+  )
+}
+
 export async function wireApp(wireDeps: WireAppDeps): Promise<{
   pty: PtyManager
   shutdown: () => void
@@ -63,7 +72,7 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
       return ref ? basename(ref.cwd) || ref.cwd : undefined
     },
     focusTab: (tabId) => {
-      const win = BrowserWindow.getAllWindows()[0]
+      const win = getMainWindow()
       if (!win) return
       if (win.isMinimized()) win.restore()
       win.show()
@@ -106,12 +115,22 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
       )
       win.on('closed', () => {
         if (!pty.has(tabId)) return // session was closed inside the tear-off
-        const main = BrowserWindow.getAllWindows()[0]
-        main?.webContents.send(CH.reDockTab, {
+        const payload = {
           tabId,
           title,
           cwd: ref?.cwd ?? '',
-          command: ref?.command === 'claude' ? 'claude' : 'shell'
+          command: ref?.command === 'claude' ? 'claude' : ('shell' as const)
+        }
+        const main = getMainWindow()
+        if (main) {
+          main.webContents.send(CH.reDockTab, payload)
+          return
+        }
+        // Main was closed while this tear-off lived on: never strand a live
+        // session — recreate a main window and re-dock once it's ready.
+        const revived = wireDeps.createAppWindow()
+        revived.webContents.once('did-finish-load', () => {
+          revived.webContents.send(CH.reDockTab, payload)
         })
       })
     },
@@ -133,13 +152,15 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
   })
 
   const execFileAsync = promisify(execFile)
-  const watchService = new WatchService((path) =>
-    chokidarWatch(path, {
-      ignoreInitial: true,
-      ignored: (p: string) => /node_modules|[\\/]\.git([\\/]|$)/.test(p),
-      // Two levels is enough for the visible tree; deeper levels load lazily.
-      depth: 4
-    })
+  const watchService = new WatchService(
+    (path) =>
+      chokidarWatch(path, {
+        ignoreInitial: true,
+        ignored: (p: string) => /[\\/](node_modules|\.git)([\\/]|$)/.test(p),
+        // Watch a few levels deep for the visible tree; deeper levels load lazily.
+        depth: 4
+      }),
+    (path, err) => console.warn(`[weft-watch] error watching ${path}:`, err)
   )
   registerFsIpc({
     ipcMain,
@@ -182,7 +203,7 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
   // Clean shutdown: persist the main window's bounds, kill every PTY (ConPTY
   // children can otherwise pin the process open), release the pipe endpoint.
   const shutdown = (): void => {
-    const main = BrowserWindow.getAllWindows()[0]
+    const main = getMainWindow()
     if (main && !main.isDestroyed()) {
       workspaceStore.save({ ...workspaceStore.load(), windowBounds: main.getBounds() })
     }

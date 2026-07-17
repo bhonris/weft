@@ -57,6 +57,9 @@ type ExitListener = (e: { exitCode: number }) => void
 /** A handle returned by {@link PtyManager.attach}: the replay snapshot + a detach fn. */
 export interface AttachHandle {
   snapshot: string
+  /** True when the process already exited — the view should render it as dead. */
+  exited: boolean
+  exitCode: number | null
   detach: () => void
 }
 
@@ -110,7 +113,16 @@ export class PtyManager {
       dataListeners: new Set(),
       exitListeners: new Set(),
       resizeThrottle: new Throttle<[number, number]>(
-        (cols, rows) => proc.resize(cols, rows),
+        (cols, rows) => {
+          // The trailing call runs inside a timer — a dead PTY here would be
+          // an uncatchable throw, so guard and swallow.
+          if (session.exited) return
+          try {
+            proc.resize(cols, rows)
+          } catch {
+            /* PTY died between the check and the call — ignore. */
+          }
+        },
         this.options.resizeIntervalMs ?? 50,
         this.options.throttleDeps ?? realThrottleDeps
       ),
@@ -131,11 +143,15 @@ export class PtyManager {
   }
 
   write(tabId: string, data: string): void {
-    this.require(tabId).proc.write(data)
+    const session = this.require(tabId)
+    if (session.exited) return // typing into a dead terminal is a no-op
+    session.proc.write(data)
   }
 
   resize(tabId: string, cols: number, rows: number): void {
-    this.require(tabId).resizeThrottle.call(cols, rows)
+    const session = this.require(tabId)
+    if (session.exited) return
+    session.resizeThrottle.call(cols, rows)
   }
 
   /** Explicitly terminate and deregister a session (tab close). */
@@ -161,11 +177,23 @@ export class PtyManager {
     if (onExit) session.exitListeners.add(onExit)
     return {
       snapshot: session.buffer.snapshot(),
+      exited: session.exited,
+      exitCode: session.exitCode,
       detach: () => {
         session.dataListeners.delete(onData)
         if (onExit) session.exitListeners.delete(onExit)
       }
     }
+  }
+
+  /** Live sessions for renderer reconciliation after a reload. */
+  listSessions(): Array<{ tabId: string; cwd: string; command: string; exited: boolean }> {
+    return [...this.sessions.values()].map((s) => ({
+      tabId: s.tabId,
+      cwd: s.cwd,
+      command: s.command,
+      exited: s.exited
+    }))
   }
 
   has(tabId: string): boolean {

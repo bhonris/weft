@@ -181,6 +181,69 @@ describe('registerSessionIpc', () => {
     expect(ctx.pty.has('id1')).toBe(true)
   })
 
+  it('re-attaching the same (sender, tab) detaches the old listeners — exactly one subscription', () => {
+    ctx.ipcMain.invoke(CH.createSession, ctx.event, { cwd: 'C:/p', command: 'claude' })
+    ctx.ipcMain.invoke(CH.attachSession, ctx.event, 'id1')
+    // Simulate a reload that never ran React cleanup: attach again, same sender.
+    ctx.ipcMain.invoke(CH.attachSession, ctx.event, 'id1')
+
+    expect(ctx.pty.dataListenerCount('id1')).toBe(1)
+    ctx.factory.last.emit('once\n')
+    const sender = ctx.event.sender as FakeSender
+    const dataMessages = sender.sent.filter((m) => m.channel === CH.sessionData)
+    expect(dataMessages).toHaveLength(1) // not doubled
+  })
+
+  it('attachSession reports exit state for already-dead sessions', () => {
+    ctx.ipcMain.invoke(CH.createSession, ctx.event, { cwd: 'C:/p', command: 'claude' })
+    ctx.factory.last.exit(3)
+    const res = ctx.ipcMain.invoke(CH.attachSession, ctx.event, 'id1') as {
+      exited: boolean
+      exitCode: number | null
+    }
+    expect(res.exited).toBe(true)
+    expect(res.exitCode).toBe(3)
+  })
+
+  it('listSessions returns live session identities', () => {
+    ctx.ipcMain.invoke(CH.createSession, ctx.event, { cwd: 'C:/p', command: 'claude' })
+    const res = ctx.ipcMain.invoke(CH.listSessions, ctx.event) as unknown[]
+    expect(res).toEqual([{ tabId: 'id1', cwd: 'C:/p', command: 'claude', exited: false }])
+  })
+
+  it('drops malformed write/resize args instead of throwing (boundary validation)', () => {
+    ctx.ipcMain.invoke(CH.createSession, ctx.event, { cwd: 'C:/p', command: 'claude' })
+    expect(() => {
+      ctx.ipcMain.fire(CH.writeToSession, ctx.event, 'id1', 12345 as unknown as string)
+      ctx.ipcMain.fire(CH.writeToSession, ctx.event, null, 'x')
+      ctx.ipcMain.fire(CH.resizeSession, ctx.event, 'id1', Number.NaN, 24)
+      ctx.ipcMain.fire(CH.resizeSession, ctx.event, 'id1', 0, 24)
+      ctx.ipcMain.fire(CH.resizeSession, ctx.event, 'id1', -5, 24)
+      ctx.ipcMain.fire(CH.resizeSession, ctx.event, 'id1', 80.5, 24)
+      ctx.ipcMain.fire(CH.resizeSession, ctx.event, 'id1', 999999, 24)
+    }).not.toThrow()
+    expect(ctx.factory.last.writes).toEqual([])
+    expect(ctx.factory.last.resizes).toEqual([])
+  })
+
+  it('rejects malformed createSession options', () => {
+    expect(() =>
+      ctx.ipcMain.invoke(CH.createSession, ctx.event, { cwd: '', command: 'claude' })
+    ).toThrow(/invalid/)
+    expect(() =>
+      ctx.ipcMain.invoke(CH.createSession, ctx.event, { cwd: 'C:/p', command: 'rm -rf' })
+    ).toThrow(/invalid/)
+    expect(() =>
+      ctx.ipcMain.invoke(CH.createSession, ctx.event, {
+        cwd: 'C:/p',
+        command: 'claude',
+        args: ['ok', 42]
+      })
+    ).toThrow(/invalid/)
+    expect(() => ctx.ipcMain.invoke(CH.createSession, ctx.event, null)).toThrow(/invalid/)
+    expect(ctx.factory.spawns).toHaveLength(0)
+  })
+
   it('auto-detaches when the sender webContents has been destroyed', () => {
     ctx.ipcMain.invoke(CH.createSession, ctx.event, { cwd: 'C:/p', command: 'claude' })
 

@@ -123,6 +123,68 @@ describe('PtyManager — lifecycle', () => {
     expect(() => mgr.isExited('ghost')).toThrow(/no session/)
   })
 
+  it('write and resize on an exited session are safe no-ops', () => {
+    const factory = new FakeFactory()
+    const mgr = new PtyManager(factory)
+    mgr.create(spec())
+    factory.last.exit(1)
+
+    expect(() => mgr.write('t1', 'ghost input')).not.toThrow()
+    expect(() => mgr.resize('t1', 100, 40)).not.toThrow()
+    expect(factory.last.writes).toEqual([])
+    expect(factory.last.resizes).toEqual([])
+  })
+
+  it('a trailing throttled resize after exit is swallowed (timer-callback guard)', () => {
+    let t = 0
+    const timers: Array<{ cb: () => void; at: number }> = []
+    const factory = new FakeFactory()
+    const mgr = new PtyManager(factory, {
+      resizeIntervalMs: 50,
+      throttleDeps: {
+        now: () => t,
+        setTimer: (cb, ms) => {
+          timers.push({ cb, at: t + ms })
+          return timers.length
+        },
+        clearTimer: () => {}
+      }
+    })
+    mgr.create(spec())
+    mgr.resize('t1', 80, 24) // leading fire
+    mgr.resize('t1', 90, 30) // trailing scheduled
+    factory.last.exit(1) // dies before the trailing fires
+    t = 100
+    expect(() => timers.forEach((x) => x.cb())).not.toThrow()
+    expect(factory.last.resizes).toEqual([[80, 24]]) // trailing suppressed
+  })
+
+  it('listSessions reports identity and exit state', () => {
+    const factory = new FakeFactory()
+    const mgr = new PtyManager(factory)
+    mgr.create(spec({ command: 'claude' }))
+    mgr.create(spec({ tabId: 't2', sessionId: 's2', command: 'shell' }))
+    factory.ptys[1]!.exit(0)
+
+    expect(mgr.listSessions()).toEqual([
+      { tabId: 't1', cwd: 'C:/proj', command: 'claude', exited: false },
+      { tabId: 't2', cwd: 'C:/proj', command: 'shell', exited: true }
+    ])
+  })
+
+  it('attach on an exited session reports exited + exitCode', () => {
+    const factory = new FakeFactory()
+    const mgr = new PtyManager(factory)
+    mgr.create(spec())
+    factory.last.emit('final output\n')
+    factory.last.exit(7)
+
+    const handle = mgr.attach('t1', () => {})
+    expect(handle.snapshot).toBe('final output\n')
+    expect(handle.exited).toBe(true)
+    expect(handle.exitCode).toBe(7)
+  })
+
   it('tracks exit and fans it out to listeners', () => {
     const factory = new FakeFactory()
     const mgr = new PtyManager(factory)

@@ -25,6 +25,8 @@ process.stdin.on('data', (d) => { input += d })
 process.stdin.on('end', () => {
   let payload = {}
   try { payload = JSON.parse(input) } catch (_e) { payload = {} }
+  // JSON.parse can legally yield null/array/primitive - never crash the hook.
+  if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) payload = {}
   payload.event = event
   if (process.env.CLAUDE_IDE_TAB) payload.tabId = process.env.CLAUDE_IDE_TAB
   const sock = net.connect(endpoint, () => {

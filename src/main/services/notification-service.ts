@@ -16,6 +16,10 @@ export interface NotificationDeps {
   focusTab: (tabId: string) => void
   /** Human label for the tab (project name). */
   getTitle: (tabId: string) => string | undefined
+  /** Injectable clock for the per-tab cooldown (defaults to Date.now). */
+  now?: () => number
+  /** Minimum ms between toasts for the same tab (spam guard; default 10s). */
+  cooldownMs?: number
 }
 
 /**
@@ -25,11 +29,20 @@ export interface NotificationDeps {
  * the badge is already visible. Pure decision logic; OS I/O is injected.
  */
 export class NotificationService {
+  private readonly lastToastAt = new Map<string, number>()
+
   constructor(private readonly deps: NotificationDeps) {}
 
   handleStatus(change: StatusChange): void {
     if (change.status !== 'waiting' && change.status !== 'done') return
     if (this.deps.isAppFocused()) return
+
+    // Spam guard: alternating hook events must not flood the action center.
+    const now = (this.deps.now ?? Date.now)()
+    const last = this.lastToastAt.get(change.tabId)
+    const cooldown = this.deps.cooldownMs ?? 10_000
+    if (last !== undefined && now - last < cooldown) return
+    this.lastToastAt.set(change.tabId, now)
 
     const project = this.deps.getTitle(change.tabId) ?? 'Weft session'
     const needsYou = change.status === 'waiting'

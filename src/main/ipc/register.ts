@@ -103,17 +103,38 @@ export function registerSessionIpc(deps: RegisterDeps): void {
     return { tabId, sessionId }
   }
 
+  // ── Boundary validation: the renderer is semi-trusted; malformed IPC args
+  // must be dropped, never allowed to throw inside main (spec §security).
+  const isValidCreateOpts = (o: unknown): o is CreateSessionOpts => {
+    if (o === null || typeof o !== 'object') return false
+    const opts = o as Record<string, unknown>
+    if (typeof opts['cwd'] !== 'string' || opts['cwd'].length === 0) return false
+    if (opts['command'] !== 'claude' && opts['command'] !== 'shell') return false
+    if (opts['args'] !== undefined) {
+      if (!Array.isArray(opts['args'])) return false
+      if (!(opts['args'] as unknown[]).every((a) => typeof a === 'string')) return false
+    }
+    return true
+  }
+  const isValidSize = (n: unknown): n is number =>
+    typeof n === 'number' && Number.isInteger(n) && n > 0 && n < 10_000
+
   ipcMain.handle(CH.createSession, (_event, opts) => {
-    const { tabId } = createSession(opts as CreateSessionOpts)
+    if (!isValidCreateOpts(opts)) throw new Error('invalid createSession options')
+    const { tabId } = createSession(opts)
     return { tabId }
   })
 
+  ipcMain.handle(CH.listSessions, () => pty.listSessions())
+
   ipcMain.on(CH.writeToSession, (_event, tabId, data) => {
-    if (pty.has(tabId as string)) pty.write(tabId as string, data as string)
+    if (typeof tabId !== 'string' || typeof data !== 'string') return
+    if (pty.has(tabId)) pty.write(tabId, data)
   })
 
   ipcMain.on(CH.resizeSession, (_event, tabId, cols, rows) => {
-    if (pty.has(tabId as string)) pty.resize(tabId as string, cols as number, rows as number)
+    if (typeof tabId !== 'string' || !isValidSize(cols) || !isValidSize(rows)) return
+    if (pty.has(tabId)) pty.resize(tabId, cols, rows)
   })
 
   ipcMain.handle(CH.closeSession, (_event, tabId) => {
@@ -144,13 +165,17 @@ export function registerSessionIpc(deps: RegisterDeps): void {
       }
     }
 
+    // Re-attach for the same (sender, tab) — e.g. a reload that never ran
+    // React cleanup — must not leak the previous listeners.
+    attachments.get(attachmentKey)?.detach()
+
     const handle = pty.attach(
       id,
       (data) => safeSend(CH.sessionData, { tabId: id, data }),
       ({ exitCode }) => safeSend(CH.sessionExit, { tabId: id, exitCode })
     )
     attachments.set(attachmentKey, handle)
-    return { snapshot: handle.snapshot }
+    return { snapshot: handle.snapshot, exited: handle.exited, exitCode: handle.exitCode }
   })
 
   ipcMain.handle(CH.detachSession, (event, tabId) => {
