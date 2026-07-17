@@ -119,5 +119,7 @@ export type WeftBridge = Pick<
   | 'openWithDefault'
   | 'loadWorkspace'
   | 'saveWorkspace'
+  | 'readFileText'
+  | 'getDiff'
 >
 

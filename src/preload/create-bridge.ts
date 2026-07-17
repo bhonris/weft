@@ -1,5 +1,11 @@
 import { CH } from '@shared/ipc/channels'
-import type { WeftBridge, DirEntry, WorkspaceState, SessionCommand } from '@shared/ipc/api-contract'
+import type {
+  WeftBridge,
+  DirEntry,
+  DiffPayload,
+  WorkspaceState,
+  SessionCommand
+} from '@shared/ipc/api-contract'
 
 /** The ipcRenderer surface the bridge needs — satisfied by electron and a fake. */
 export interface IpcRendererLike {
@@ -45,6 +51,8 @@ export function createWeftApi(ipc: IpcRendererLike): WeftBridge {
     revealInOs: (path) => ipc.invoke(CH.revealInOs, path) as Promise<void>,
     openWithDefault: (path) => ipc.invoke(CH.openWithDefault, path) as Promise<void>,
     loadWorkspace: () => ipc.invoke(CH.loadWorkspace) as Promise<WorkspaceState>,
-    saveWorkspace: (state) => ipc.invoke(CH.saveWorkspace, state) as Promise<void>
+    saveWorkspace: (state) => ipc.invoke(CH.saveWorkspace, state) as Promise<void>,
+    readFileText: (path) => ipc.invoke(CH.readFileText, path) as Promise<string>,
+    getDiff: (path) => ipc.invoke(CH.getDiff, path) as Promise<DiffPayload>
   }
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { DirEntry } from '@shared/ipc/api-contract'
+import { useViewerStore } from '../store/viewer-store'
 
 /**
  * Lazy file tree for the active project's cwd. Directories load their children
@@ -46,9 +47,12 @@ function ExplorerNode({ entry, depth }: { entry: DirEntry; depth: number }): Rea
   const [children, setChildren] = useState<DirEntry[] | null>(null)
   const isDir = entry.kind === 'dir'
 
+  const openInViewer = useViewerStore((s) => s.openFile)
+
   const onClick = async (): Promise<void> => {
     if (!isDir) {
-      await window.api.openWithDefault(entry.path)
+      // Single click: in-app read-only Monaco viewer (spec §2 diff-on-demand).
+      openInViewer(entry.path, entry.name)
       return
     }
     if (!open && children === null) {
@@ -68,6 +72,10 @@ function ExplorerNode({ entry, depth }: { entry: DirEntry; depth: number }): Rea
         className={`explorer__item explorer__item--${entry.kind}`}
         style={{ paddingLeft: `${8 + depth * 14}px` }}
         onClick={() => void onClick()}
+        onDoubleClick={() => {
+          // Double click: hand off to the OS default handler.
+          if (!isDir) void window.api.openWithDefault(entry.path)
+        }}
         title={entry.path}
       >
         <span className="explorer__glyph">{isDir ? (open ? '▾' : '▸') : '·'}</span>

@@ -1,4 +1,6 @@
 import { promises as fsPromises } from 'node:fs'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -14,6 +16,7 @@ import { NetTransport } from './platform/net-transport'
 import { statusEndpointPath } from '@core/pipe/pipe-name'
 import { buildHookSettingsJson } from '@core/status/hook-settings'
 import { WorkspaceStore } from './services/workspace-store'
+import { DiffService } from './services/diff-service'
 import { registerSessionIpc } from './ipc/register'
 import { registerFsIpc } from './ipc/register-fs'
 import { registerWorkspaceIpc } from './ipc/register-workspace'
@@ -99,9 +102,13 @@ export async function wireApp(): Promise<{ pty: PtyManager; shutdown: () => void
     }
   })
 
+  const execFileAsync = promisify(execFile)
   registerFsIpc({
     ipcMain,
     fsService: new FsService(fsPromises),
+    diffService: new DiffService(fsPromises, (file, args, opts) =>
+      execFileAsync(file, args, opts)
+    ),
     reveal: (path) => shell.showItemInFolder(path),
     open: async (path) => {
       await shell.openPath(path)

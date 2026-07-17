@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 13 — steiner: feat(monaco-viewer) — 2026-07-17T21:50:00Z
+
+**Phase**: time-leap-development
+**Changed**: Monaco read-only viewer + "Diff vs HEAD". Main: DiffService (readFileText; getDiff = git ls-files → git show HEAD:<rel> baseline vs current; untracked/non-repo → empty baseline = all-additions view; injectable fs+exec, 4 unit tests). register-fs adds readFileText/getDiff handlers; bridge + WeftBridge extended. Renderer: viewer-store (zustand), monaco-setup (lazy chunk, editor worker only — no LSP in v1), ViewerPane (read-only editor / side-by-side diffEditor, View|Diff toggle, close; overlays terminal area). Explorer: single-click → in-app viewer, double-click → OS default (tests updated). tsconfig.web gains vite/client types for ?worker import.
+**SERN interference**: none (one tsconfig types fix)
+**Divergence meter**: unit 160 pass; e2e 9 pass incl. real-git diff assertion
+**Next target**: chokidar fs watcher (explorer reflects external changes ≤1s, AC) + tab rename/reorder UI + keybindings; then spawn-error state, light theme, tear-off; then Phase 3b sweep.
+
+---
+
 ## Leap 12 — steiner: feat(workspace-persistence) — 2026-07-17T21:20:00Z
 
 **Phase**: time-leap-development

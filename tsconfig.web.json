@@ -11,7 +11,7 @@
     "declaration": true,
     "outDir": "./dist-types/web",
     "rootDir": "./src",
-    "types": ["node"],
+    "types": ["node", "vite/client"],
     "skipLibCheck": true,
     "verbatimModuleSyntax": true,
     "paths": {

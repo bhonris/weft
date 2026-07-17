@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react'
 import { Explorer } from './Explorer'
+import { useViewerStore } from '../store/viewer-store'
 import type { DirEntry } from '@shared/ipc/api-contract'
 
 const listDir = vi.fn<(path: string) => Promise<DirEntry[]>>()
@@ -9,6 +10,7 @@ const openWithDefault = vi.fn(async () => {})
 beforeEach(() => {
   listDir.mockReset()
   openWithDefault.mockClear()
+  useViewerStore.setState({ file: null, mode: 'view' })
   Object.defineProperty(window, 'api', {
     value: { listDir, openWithDefault },
     configurable: true
@@ -56,11 +58,20 @@ describe('Explorer', () => {
     expect(listDir).toHaveBeenCalledTimes(2)
   })
 
-  it('opens a file with the OS default handler', async () => {
+  it('single click opens a file in the in-app viewer', async () => {
     listDir.mockResolvedValueOnce([entry('notes.txt', 'file')])
     render(<Explorer root="/p" />)
     await waitFor(() => screen.getByText('notes.txt'))
     fireEvent.click(screen.getByText('notes.txt'))
+    expect(useViewerStore.getState().file).toEqual({ path: '/p/notes.txt', name: 'notes.txt' })
+    expect(openWithDefault).not.toHaveBeenCalled()
+  })
+
+  it('double click opens a file with the OS default handler', async () => {
+    listDir.mockResolvedValueOnce([entry('notes.txt', 'file')])
+    render(<Explorer root="/p" />)
+    await waitFor(() => screen.getByText('notes.txt'))
+    fireEvent.doubleClick(screen.getByText('notes.txt'))
     await waitFor(() => expect(openWithDefault).toHaveBeenCalledWith('/p/notes.txt'))
   })
 

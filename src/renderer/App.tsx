@@ -3,6 +3,7 @@ import { useSessionStore, type Tab } from './store/session-store'
 import { buildWorkspaceState, restoreWorkspace } from './store/workspace-sync'
 import { TerminalPane } from './components/TerminalPane'
 import { Explorer } from './components/Explorer'
+import { ViewerPane } from './components/ViewerPane'
 import { WorkbenchErrorBoundary } from './components/WorkbenchErrorBoundary'
 import type { SessionStatus } from '@shared/status/hook-events'
 
@@ -131,6 +132,7 @@ export function App(): React.ReactElement {
             ) : (
               <div className="terminal-host__placeholder">No active session</div>
             )}
+            <ViewerPane />
           </section>
         </main>
         <footer className="status-bar" data-testid="status-bar">
