@@ -88,8 +88,12 @@ export function registerSessionIpc(deps: RegisterDeps): void {
     const file = isClaude ? (deps.claudePath ?? 'claude') : shellPath
     const hookArgs =
       isClaude && deps.hooks ? ['--settings', deps.hooks.settingsJson] : []
+    // Resume relaunches the prior conversation under a FRESH pinned id, so
+    // hook correlation stays deterministic for the new process.
+    const resumeArgs =
+      isClaude && opts.resumeSessionId ? ['--resume', opts.resumeSessionId] : []
     const args = isClaude
-      ? ['--session-id', sessionId, ...hookArgs, ...(opts.args ?? [])]
+      ? ['--session-id', sessionId, ...resumeArgs, ...hookArgs, ...(opts.args ?? [])]
       : opts.args ?? []
     pty.create({
       tabId,
@@ -114,6 +118,18 @@ export function registerSessionIpc(deps: RegisterDeps): void {
       if (!Array.isArray(opts['args'])) return false
       if (!(opts['args'] as unknown[]).every((a) => typeof a === 'string')) return false
     }
+    if (opts['resumeSessionId'] !== undefined) {
+      // Conversation ids are UUID-shaped; anything else is dropped (it would
+      // otherwise flow into claude's argv). The leading character must be
+      // alphanumeric so a flag-shaped string ("--dangerously-…") can never
+      // masquerade as an id.
+      if (
+        typeof opts['resumeSessionId'] !== 'string' ||
+        !/^[a-zA-Z0-9][a-zA-Z0-9-]{7,63}$/.test(opts['resumeSessionId'])
+      ) {
+        return false
+      }
+    }
     return true
   }
   const isValidSize = (n: unknown): n is number =>
@@ -121,8 +137,8 @@ export function registerSessionIpc(deps: RegisterDeps): void {
 
   ipcMain.handle(CH.createSession, (_event, opts) => {
     if (!isValidCreateOpts(opts)) throw new Error('invalid createSession options')
-    const { tabId } = createSession(opts)
-    return { tabId }
+    const { tabId, sessionId } = createSession(opts)
+    return { tabId, sessionId }
   })
 
   ipcMain.handle(CH.listSessions, () => pty.listSessions())
@@ -202,8 +218,8 @@ export function registerSessionIpc(deps: RegisterDeps): void {
         : (deps.defaultCommand ?? 'claude')
     const title = basename(dir) || dir
     try {
-      const { tabId } = createSession({ cwd: dir, command })
-      return { tabId, cwd: dir, title, command }
+      const { tabId, sessionId } = createSession({ cwd: dir, command })
+      return { tabId, sessionId, cwd: dir, title, command }
     } catch (e) {
       // Actionable failure (e.g. `claude` not on PATH) — never crash the app.
       const error = e instanceof Error ? e.message : String(e)

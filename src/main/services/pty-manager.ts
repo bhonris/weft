@@ -187,9 +187,16 @@ export class PtyManager {
   }
 
   /** Live sessions for renderer reconciliation after a reload. */
-  listSessions(): Array<{ tabId: string; cwd: string; command: string; exited: boolean }> {
+  listSessions(): Array<{
+    tabId: string
+    sessionId: string
+    cwd: string
+    command: string
+    exited: boolean
+  }> {
     return [...this.sessions.values()].map((s) => ({
       tabId: s.tabId,
+      sessionId: s.sessionId,
       cwd: s.cwd,
       command: s.command,
       exited: s.exited

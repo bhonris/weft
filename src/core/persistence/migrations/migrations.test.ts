@@ -4,13 +4,14 @@ import { v0ToV1 } from './v0-to-v1'
 
 describe('migrate', () => {
   it('returns the same blob when already current', () => {
-    const blob = { version: 1, tabs: [] }
-    expect(migrate(blob, 1)).toBe(blob)
+    const blob = { version: 2, tabs: [] }
+    expect(migrate(blob, 2)).toBe(blob)
   })
 
   it('runs the v0->v1 step for a legacy blob', () => {
     const out = migrate({ theme: 'dark' }, 0)
-    expect(out['version']).toBe(1)
+    expect(out['version']).toBe(2) // full chain: v0 -> v1 -> v2
+    expect(out['resumeEnabled']).toBe(false)
   })
 
   it('throws when a migration step is missing', () => {

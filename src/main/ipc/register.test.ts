@@ -110,7 +110,7 @@ describe('registerSessionIpc', () => {
       cwd: 'C:/proj',
       command: 'claude'
     })
-    expect(res).toEqual({ tabId: 'id1' })
+    expect(res).toEqual({ tabId: 'id1', sessionId: 'id2' })
     expect(ctx.factory.spawns[0]).toMatchObject({
       file: 'claude',
       args: ['--session-id', 'id2'],
@@ -120,6 +120,31 @@ describe('registerSessionIpc', () => {
       PATH: '/usr/bin',
       CLAUDE_IDE_TAB: 'id1'
     })
+  })
+
+  it('createSession with resumeSessionId adds --resume while keeping a fresh pinned id', () => {
+    ctx.ipcMain.invoke(CH.createSession, ctx.event, {
+      cwd: 'C:/proj',
+      command: 'claude',
+      resumeSessionId: 'aaaabbbb-1111-2222-3333-ccccddddeeee'
+    })
+    expect(ctx.factory.spawns[0]!.args).toEqual([
+      '--session-id',
+      'id2',
+      '--resume',
+      'aaaabbbb-1111-2222-3333-ccccddddeeee'
+    ])
+  })
+
+  it('rejects a malformed resumeSessionId (would flow into argv)', () => {
+    expect(() =>
+      ctx.ipcMain.invoke(CH.createSession, ctx.event, {
+        cwd: 'C:/proj',
+        command: 'claude',
+        resumeSessionId: '--dangerously-skip-permissions'
+      })
+    ).toThrow(/invalid/)
+    expect(ctx.factory.spawns).toHaveLength(0)
   })
 
   it('createSession spawns a shell when command is shell', () => {
@@ -208,7 +233,7 @@ describe('registerSessionIpc', () => {
   it('listSessions returns live session identities', () => {
     ctx.ipcMain.invoke(CH.createSession, ctx.event, { cwd: 'C:/p', command: 'claude' })
     const res = ctx.ipcMain.invoke(CH.listSessions, ctx.event) as unknown[]
-    expect(res).toEqual([{ tabId: 'id1', cwd: 'C:/p', command: 'claude', exited: false }])
+    expect(res).toEqual([{ tabId: 'id1', sessionId: 'id2', cwd: 'C:/p', command: 'claude', exited: false }])
   })
 
   it('drops malformed write/resize args instead of throwing (boundary validation)', () => {
@@ -291,6 +316,7 @@ describe('registerSessionIpc', () => {
     const res = await c.ipcMain.invoke(CH.openProject, c.event)
     expect(res).toEqual({
       tabId: 'id1',
+      sessionId: 'id2',
       cwd: 'C:/Users/me/my-app',
       title: 'my-app',
       command: 'claude'

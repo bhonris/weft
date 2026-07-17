@@ -30,6 +30,8 @@ export interface WorkspaceState {
   tabOrder: string[]
   explorerRoots: string[]
   theme: 'system' | 'light' | 'dark'
+  /** v2: restored claude tabs relaunch with `--resume <sessionId>`. */
+  resumeEnabled: boolean
   windowBounds?: { x: number; y: number; width: number; height: number }
 }
 
@@ -37,6 +39,8 @@ export interface CreateSessionOpts {
   cwd: string
   command: SessionCommand
   args?: string[]
+  /** Resume this prior conversation (`claude --resume <id>`); claude only. */
+  resumeSessionId?: string
 }
 
 export interface DiffPayload {
@@ -46,19 +50,20 @@ export interface DiffPayload {
 
 export interface LiveSession {
   tabId: string
+  sessionId: string
   cwd: string
   command: SessionCommand
   exited: boolean
 }
 
 export type OpenProjectResult =
-  | { tabId: string; cwd: string; title: string; command: SessionCommand }
+  | { tabId: string; sessionId: string; cwd: string; title: string; command: SessionCommand }
   | { error: string; cwd: string; title: string; command: SessionCommand }
 
 /** The typed preload bridge exposed as `window.api`. */
 export interface WeftApi {
   // Terminal / session
-  createSession(opts: CreateSessionOpts): Promise<{ tabId: string }>
+  createSession(opts: CreateSessionOpts): Promise<{ tabId: string; sessionId: string }>
   /** Sessions currently alive in main — used to re-attach (not respawn) on reload. */
   listSessions(): Promise<LiveSession[]>
   writeToSession(tabId: string, data: string): void

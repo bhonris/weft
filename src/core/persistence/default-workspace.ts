@@ -8,6 +8,7 @@ export function defaultWorkspace(): WorkspaceState {
     tabs: [],
     tabOrder: [],
     explorerRoots: [],
-    theme: 'system'
+    theme: 'system',
+    resumeEnabled: false
   }
 }

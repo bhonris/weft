@@ -167,8 +167,8 @@ describe('PtyManager — lifecycle', () => {
     factory.ptys[1]!.exit(0)
 
     expect(mgr.listSessions()).toEqual([
-      { tabId: 't1', cwd: 'C:/proj', command: 'claude', exited: false },
-      { tabId: 't2', cwd: 'C:/proj', command: 'shell', exited: true }
+      { tabId: 't1', sessionId: 's1', cwd: 'C:/proj', command: 'claude', exited: false },
+      { tabId: 't2', sessionId: 's2', cwd: 'C:/proj', command: 'shell', exited: true }
     ])
   })
 

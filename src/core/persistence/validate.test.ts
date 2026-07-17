@@ -4,7 +4,8 @@ import { defaultWorkspace } from './default-workspace'
 import { migrations } from './migrations'
 
 const validV1 = {
-  version: 1,
+  version: 2,
+  resumeEnabled: false,
   tabs: [
     {
       tabId: 't1',
@@ -40,7 +41,7 @@ describe('loadWorkspace', () => {
     expect(r.ok).toBe(true)
     if (r.ok) {
       expect(r.value.state.theme).toBe('dark')
-      expect(r.value.fromVersion).toBe(1)
+      expect(r.value.fromVersion).toBe(2)
       expect(r.value.migrated).toBe(false)
     }
   })
@@ -49,20 +50,21 @@ describe('loadWorkspace', () => {
     const r = loadWorkspace({ theme: 'light', tabs: [] })
     expect(r.ok).toBe(true)
     if (r.ok) {
-      expect(r.value.state.version).toBe(1)
+      expect(r.value.state.version).toBe(2)
       expect(r.value.state.theme).toBe('light')
+      expect(r.value.state.resumeEnabled).toBe(false)
       expect(r.value.fromVersion).toBe(0)
       expect(r.value.migrated).toBe(true)
     }
   })
 
   it('errors when the migrated shape is still invalid', () => {
-    const r = loadWorkspace({ version: 1, tabs: 'not-an-array' })
+    const r = loadWorkspace({ version: 2, tabs: 'not-an-array' })
     expect(r.ok).toBe(false)
   })
 
   it('errors when the migrated theme is invalid', () => {
-    const r = loadWorkspace({ version: 1, tabs: [], tabOrder: [], explorerRoots: [], theme: 'x' })
+    const r = loadWorkspace({ version: 2, resumeEnabled: false, tabs: [], tabOrder: [], explorerRoots: [], theme: 'x' })
     expect(r.ok).toBe(false)
   })
 

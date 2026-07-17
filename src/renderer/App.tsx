@@ -23,6 +23,7 @@ const STATUS_GLYPH: Record<SessionStatus, string> = {
 /** Add a spawned session as a tab and clear any spawn-failure banner. */
 function addSessionTab(t: {
   tabId: string
+  sessionId?: string
   title: string
   cwd: string
   command: 'claude' | 'shell'
@@ -51,11 +52,17 @@ async function openProject(command?: 'claude' | 'shell'): Promise<void> {
 /** Retry a failed spawn in the same cwd (e.g. after fixing PATH). */
 async function retrySpawn(failure: SpawnFailure): Promise<void> {
   try {
-    const { tabId } = await window.api.createSession({
+    const { tabId, sessionId } = await window.api.createSession({
       cwd: failure.cwd,
       command: failure.command
     })
-    addSessionTab({ tabId, title: failure.title, cwd: failure.cwd, command: failure.command })
+    addSessionTab({
+      tabId,
+      sessionId,
+      title: failure.title,
+      cwd: failure.cwd,
+      command: failure.command
+    })
   } catch (e) {
     useSessionStore.getState().setSpawnFailure({
       ...failure,
@@ -161,6 +168,8 @@ export function App(): React.ReactElement {
   const spawnFailure = useSessionStore((s) => s.spawnFailure)
   const setSpawnFailure = useSessionStore((s) => s.setSpawnFailure)
   const [gitBranch, setGitBranch] = useState<string | null>(null)
+  const resumeEnabled = useSessionStore((s) => s.resumeEnabled)
+  const setResumeEnabled = useSessionStore((s) => s.setResumeEnabled)
 
   // Git branch for the active project (blank for non-repos).
   useEffect(() => {
@@ -241,6 +250,7 @@ export function App(): React.ReactElement {
       restoreStarted = true
       void window.api.loadWorkspace().then(async (saved) => {
         useSessionStore.getState().setTheme(saved.theme)
+        useSessionStore.getState().setResumeEnabled(saved.resumeEnabled)
         const restored = await restoreWorkspace(window.api, saved)
         if (disposed) return
         const add = useSessionStore.getState().addTab
@@ -248,8 +258,14 @@ export function App(): React.ReactElement {
       })
     }
     const unsub = useSessionStore.subscribe((state, prev) => {
-      if (state.tabs !== prev.tabs || state.theme !== prev.theme) {
-        void window.api.saveWorkspace(buildWorkspaceState(state.tabs, state.theme))
+      if (
+        state.tabs !== prev.tabs ||
+        state.theme !== prev.theme ||
+        state.resumeEnabled !== prev.resumeEnabled
+      ) {
+        void window.api.saveWorkspace(
+          buildWorkspaceState(state.tabs, state.theme, state.resumeEnabled)
+        )
       }
     })
     return () => {
@@ -323,6 +339,15 @@ export function App(): React.ReactElement {
             </span>
           )}
           <span className="status-bar__spacer" />
+          <button
+            type="button"
+            className="status-bar__theme"
+            aria-label={`resume: ${resumeEnabled ? 'on' : 'off'}`}
+            title="Resume prior Claude conversations when restoring tabs after a restart (opt-in — resuming spends tokens)"
+            onClick={() => setResumeEnabled(!resumeEnabled)}
+          >
+            ↻ resume {resumeEnabled ? 'on' : 'off'}
+          </button>
           <button
             type="button"
             className="status-bar__theme"

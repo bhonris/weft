@@ -4,6 +4,8 @@ import type { SessionCommand } from '@shared/ipc/api-contract'
 
 export interface Tab {
   tabId: string
+  /** The pinned claude session id (enables --resume across restarts). */
+  sessionId?: string
   title: string
   cwd: string
   command: SessionCommand
@@ -27,8 +29,15 @@ export interface SessionState {
   /** Last failed spawn (claude not found, …) — drives the retry banner. */
   spawnFailure: SpawnFailure | null
   setSpawnFailure: (failure: SpawnFailure | null) => void
+  /** Restored claude tabs relaunch with --resume (opt-in; costs tokens). */
+  resumeEnabled: boolean
+  setResumeEnabled: (enabled: boolean) => void
   addTab: (
-    tab: Omit<Tab, 'status' | 'command'> & { status?: SessionStatus; command?: SessionCommand }
+    tab: Omit<Tab, 'status' | 'command' | 'sessionId'> & {
+      status?: SessionStatus
+      command?: SessionCommand
+      sessionId?: string
+    }
   ) => void
   removeTab: (tabId: string) => void
   setActive: (tabId: string) => void
@@ -48,6 +57,8 @@ export const useSessionStore = create<SessionState>((set) => ({
   setTheme: (theme) => set({ theme }),
   spawnFailure: null,
   setSpawnFailure: (spawnFailure) => set({ spawnFailure }),
+  resumeEnabled: false,
+  setResumeEnabled: (resumeEnabled) => set({ resumeEnabled }),
 
   addTab: (tab) =>
     set((s) => {

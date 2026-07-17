@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 29–31 — cycle 5 under way: END GOAL v0.2.0 "Daily Driver" — 2026-07-18T07:00:00Z
+
+**Phase**: time-leap-development (cycle 5, budget extended to 40 by operator)
+**Changed**: L29 deps pruned (dockview/webgl/serialize gone, suite green). L30 GitService (exec-injected, 4 tests) + getGitBranch IPC + status-bar ⎇ branch display, E2E-asserted in the git fixture. L31 conversation resume: schema v2 (resumeEnabled + REAL per-tab sessionId persisted; v1→v2 migration; all persistence tests updated), createSession returns sessionId end-to-end, restore passes `--resume <savedId>` for dead claude tabs when the status-bar ↻ resume toggle (persisted, E2E across restart) is on — never for shell tabs or legacy placeholder ids. Boundary: resumeSessionId validated with a leading-alphanumeric regex after the unit test CAUGHT that a naive charset regex would let `--dangerously-skip-permissions` masquerade as an id and reach claude's argv.
+**SERN interference**: none — the failing test was the defense working
+**Divergence meter**: 222 unit + 23 e2e, 0 fail
+**Next target**: Monaco edit+save (validated saveFile IPC, dirty indicator, Ctrl+S, E2E), then v0.2.0 stamp.
+
+---
+
 ## EL PSY KONGROO — Leap 28 — the worldline is sealed — 2026-07-18T06:00:00Z
 
 **Final state**: v0.1.0. 28 leaps, 4 expansion cycles, 40+ steiner commits.

@@ -1,11 +1,13 @@
 import { WORKSPACE_VERSION } from '../schema'
 import { v0ToV1 } from './v0-to-v1'
+import { v1ToV2 } from './v1-to-v2'
 
 export type Migration = (blob: Record<string, unknown>) => Record<string, unknown>
 
 /** Ordered chain: key N migrates a version-N blob to version N+1. */
 export const migrations: Record<number, Migration> = {
-  0: v0ToV1
+  0: v0ToV1,
+  1: v1ToV2
 }
 
 /**

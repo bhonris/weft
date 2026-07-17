@@ -30,7 +30,7 @@ export function createWeftApi(ipc: IpcRendererLike): WeftBridge {
 
   return {
     createSession: (opts) =>
-      ipc.invoke(CH.createSession, opts) as Promise<{ tabId: string }>,
+      ipc.invoke(CH.createSession, opts) as Promise<{ tabId: string; sessionId: string }>,
     listSessions: () => ipc.invoke(CH.listSessions) as Promise<LiveSession[]>,
     writeToSession: (tabId, data) => ipc.send(CH.writeToSession, tabId, data),
     resizeSession: (tabId, cols, rows) => ipc.send(CH.resizeSession, tabId, cols, rows),

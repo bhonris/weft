@@ -98,6 +98,10 @@ test('multi-tab order, renamed titles, and the theme override all survive a rest
   await page1.getByRole('button', { name: /^theme:/ }).click()
   await expect(page1.getByRole('button', { name: /^theme:/ })).toContainText('dark')
 
+  // Enable conversation resume (v0.2.0 daily-driver toggle).
+  await page1.getByRole('button', { name: /^resume:/ }).click()
+  await expect(page1.getByRole('button', { name: /^resume:/ })).toContainText('on')
+
   const configPath = join(userDataDir, 'config.json')
   await expect
     .poll(
@@ -128,6 +132,8 @@ test('multi-tab order, renamed titles, and the theme override all survive a rest
   await expect
     .poll(() => page2.evaluate(() => document.documentElement.dataset['theme']))
     .toBe('dark')
+  // The resume opt-in survived the restart too.
+  await expect(page2.getByRole('button', { name: /^resume:/ })).toContainText('on')
 
   await app2.close()
 })

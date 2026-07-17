@@ -15,7 +15,7 @@ const tab = (id: string, over: Partial<Tab> = {}): Tab => ({
 describe('buildWorkspaceState', () => {
   it('serializes tabs, order, and defaults at the current version', () => {
     const ws = buildWorkspaceState([tab('a'), tab('b', { command: 'shell' })])
-    expect(ws.version).toBe(1)
+    expect(ws.version).toBe(2)
     expect(ws.tabs).toEqual([
       {
         tabId: 'a',
@@ -36,6 +36,7 @@ describe('buildWorkspaceState', () => {
     ])
     expect(ws.tabOrder).toEqual(['a', 'b'])
     expect(ws.theme).toBe('system')
+    expect(ws.resumeEnabled).toBe(false)
   })
 
   it('persists an explicit theme override', () => {
@@ -128,6 +129,42 @@ describe('restoreWorkspace (reload reconciliation, spec §4.7)', () => {
       saved
     )
     expect(restored).toHaveLength(2)
+  })
+
+  it('passes --resume for dead claude tabs with a REAL session id when enabled', async () => {
+    const savedResume = {
+      ...buildWorkspaceState(
+        [
+          { ...tab('a'), sessionId: 'real-session-uuid' },
+          { ...tab('b', { command: 'shell' as const }), sessionId: 'shell-sess' }
+        ],
+        'system',
+        true
+      )
+    }
+    const a = api([])
+    await restoreWorkspace(a, savedResume)
+    // claude tab resumes; shell tab never does
+    expect(a.createSession).toHaveBeenNthCalledWith(1, {
+      cwd: 'C:/p/a',
+      command: 'claude',
+      resumeSessionId: 'real-session-uuid'
+    })
+    expect(a.createSession).toHaveBeenNthCalledWith(2, { cwd: 'C:/p/b', command: 'shell' })
+  })
+
+  it('does not resume when disabled or when the id is a legacy placeholder', async () => {
+    const a1 = api([])
+    await restoreWorkspace(
+      a1,
+      buildWorkspaceState([{ ...tab('a'), sessionId: 'real-id' }], 'system', false)
+    )
+    expect(a1.createSession).toHaveBeenCalledWith({ cwd: 'C:/p/a', command: 'claude' })
+
+    const a2 = api([])
+    // sessionId === tabId → placeholder, nothing to resume even when enabled
+    await restoreWorkspace(a2, buildWorkspaceState([tab('a')], 'system', true))
+    expect(a2.createSession).toHaveBeenCalledWith({ cwd: 'C:/p/a', command: 'claude' })
   })
 
   it('returns empty for an empty workspace with nothing live', async () => {
