@@ -1,5 +1,5 @@
-phase: christinas-analysis
-leap_count: 18
+phase: worldline-convergence
+leap_count: 19
 expansion_cycle: 1
 session_id: 2026-07-18T00:30:00Z
 prev_head: 67fe8ec6268622c6795427f69a368f49848f840a
@@ -23,8 +23,26 @@ decisions:
   - testing: "vitest + @vitest/coverage-v8 (95%/90% thresholds), projects api (node + jsdom); business logic pure & tested via injected fakes (FakePty, FakePlatform, fake store); Playwright for Electron E2E; manual ConPTY/TUI verification on Windows"
   - stack: "TypeScript, Electron 34 + electron-vite 3, pnpm, React 19 + Vite 6 renderer, zustand 5, xterm.js 5.5, chokidar 4, electron-store 10, monaco 0.52, dockview 4, zod 3, node-pty (deferred native install)"
 review_items:
-  must_fix: []
-  nice_to_have: []
+  must_fix:
+    - "reload-respawns-sessions: UI reload re-runs restore and createSession-per-tab, orphaning live PTYs — violates §4.7. Reconcile against main via new listSessions IPC; re-attach live tabs, spawn only missing. E2E: UI reload → same PID, scrollback replayed, tabRefs count 1 (App.tsx:245-266, workspace-sync.ts:46-60)"
+    - "double-attach-leak: attachSession overwrites prior handle without detach → duplicated output after reload (register.ts:147-153); detach old handle first + attach→attach unit test"
+    - "pty-ops-after-exit-throw: write/resize on exited session throws (resize inside throttle timer → uncaughtException); guard exited in PtyManager.write/resize, surface exitCode in AttachHandle, render exit line on re-attach; E2E exit→error badge (pty-manager.ts:133-139)"
+    - "ipc-arg-validation: renderer-supplied cols/rows/data/createSession opts unvalidated → malformed message throws in main; validate + drop at boundary (register.ts:111-117)"
+    - "forwarder-untested+null-crash: forward.cjs never executed by any test AND crashes on non-object JSON stdin; fix null-guard + real relay integration test (spawn node forward.cjs against live NetTransport) (hook-forwarder.ts:26-29)"
+    - "main-window-assumption: getAllWindows()[0] used for re-dock/toast/bounds — wrong window when main closed with tear-offs open → zombie session; resolve real main window (no tearoff query) (container.ts:66-71,108-115,185)"
+    - "status-payload-hardening: payload.message trusted as string → object throws in Notification, huge strings broadcast; string-only + truncate ~500; per-tab toast cooldown (status-server.ts:80-86, notification-service.ts:36-41)"
+    - "save-validation-backup: saveWorkspace persists unvalidated blob; corruption fallback loses workspace with NO backup; validate in save, write config.bak before default-fallback (workspace-store.ts:43-46)"
+    - "watcher-error-unhandled: chokidar error events have no listener → uncaught exception on Windows junction EPERM; add error handler (watch-service.ts:36-45)"
+    - "bounds-clamp: restored windowBounds unclamped (off-screen after monitor change) + zod accepts NaN; clamp to displays + z.int().finite() (index.ts:27-30, schema.ts:16-21)"
+  nice_to_have:
+    - "frame-parser-buffer-cap: unbounded buffer on newline-less stream; cap ~1MB (frame-parser.ts:16-25)"
+    - "uds-perms-unlink: POSIX socket in /tmp world-connectable + never unlinked; chmod 0600 + unlink on close (net-transport.ts, pipe-name.ts)"
+    - "readfile-size-guard: viewer loads whole file; stat-cap ~5MB with friendly error (diff-service.ts:27-29)"
+    - "git-quotepath: non-ASCII filenames break diff baseline; add -c core.quotepath=false (diff-service.ts:37-48)"
+    - "dead-code-sweep: remove renameTab/reorderTabs channels+api, needsMigration, isOk, _prev param on mapHookToStatus; fix depth comment; anchor node_modules regex; addSessionTab helper; safeSend dedupe (multiple files)"
+    - "reveal-affordance: revealInOs plumbed but no UI caller; add Reveal button to ViewerPane header (ViewerPane.tsx)"
+    - "spawn-failure-store-refactor: module-level mutable spawnFailureListener → move into store (App.tsx:30-31)"
+    - "e2e-hardening: strip WEFT_* from inherited env in specs; replace persistence waitForTimeout(500) with store poll; multi-tab+rename+theme restart coverage; correlator path-normalization tests"
   closed: []
 max_iterations: 30
 push_to_github: false

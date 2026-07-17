@@ -35,5 +35,19 @@ TypeScript · pnpm · Electron + electron-vite · React + Vite (renderer) · xte
 - [x] Status endpoint down → `unknown` status; terminal still works
 - [x] Statement coverage ≥95%; Playwright-Electron E2E passes
 
+## Review — Cycle 1
+Future Okabe ×3 (simplicity / correctness+security / test quality): **10 must-fix, 8 nice-to-have.**
+- reload-respawns-sessions — UI reload respawns saved tabs, orphaning live PTYs (§4.7 violation; the API-level E2E masked it)
+- double-attach-leak — attachSession overwrites handle without detach → duplicated output
+- pty-ops-after-exit-throw — write/resize on exited session throws inside throttle timer
+- ipc-arg-validation — renderer-supplied args reach node-pty unvalidated
+- forwarder-untested+null-crash — forward.cjs relay never executed by tests; crashes on non-object stdin
+- main-window-assumption — getAllWindows()[0] misroutes re-dock/toast when tear-offs outlive main
+- status-payload-hardening — non-string/huge message from pipe can throw/spam
+- save-validation-backup — corrupt save → silent workspace loss without backup
+- watcher-error-unhandled — chokidar error → uncaught exception (Windows junctions)
+- bounds-clamp — off-screen window restore; NaN passes schema
+Reviewers verified clean: no TCP anywhere, personal ~/.claude/settings.json untouched, preload surface minimal, React/xterm/Monaco escape output, frame parser + ring buffer + correlator logic sound.
+
 ## Lab Members engaged
-Faris (market research), Okabe (spec author), Kurisu × 2 (Beta worldline selected), Daru (persistence, PtyManager/terminal foundation)
+Faris (market research), Okabe (spec author), Kurisu × 2 (Beta worldline selected), Daru (implementation leaps 3–18), Moeka (context carried in-line), Future Okabe × 3 (cycle-1 review)

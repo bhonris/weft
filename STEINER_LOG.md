@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 19 — steiner: christina-review — 2026-07-18T01:10:00Z
+
+**Phase**: christinas-analysis → worldline-convergence
+**Changed**: Future Okabe ×3 parallel review (simplicity / correctness+security / test quality). 10 must-fix + 8 nice-to-have consolidated into review_items. Headline finding (all three converged): the REAL UI reload path respawns sessions and orphans live PTYs — the API-level reload E2E masked it because it bypassed React's restore flow. Also: double-attach listener leak, write/resize-after-exit throws masked by the uncaughtException swallow, unvalidated IPC args, the forwarder relay never actually executed by any test, main-window-index assumption misrouting re-dock/toasts. Reviewers verified clean: no TCP, ~/.claude untouched, minimal preload surface, escaping sound.
+**SERN interference**: none
+**Divergence meter**: unchanged (185 unit + 17 e2e green — the gaps are in the seams coverage can't see)
+**Next target**: Phase 5 convergence — fix all 10 must-fix items, each with a test that fails first; keep the suite green throughout.
+
+---
+
 ## Leap 18 — steiner: divergence-meter-stable — 2026-07-18T00:30:00Z
 
 **Phase**: 3b divergence-meter-reading → christinas-analysis
