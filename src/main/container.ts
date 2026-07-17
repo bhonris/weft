@@ -34,9 +34,11 @@ export interface WireAppDeps {
   createAppWindow: (query?: string) => BrowserWindow
 }
 
-export async function wireApp(
-  wireDeps: WireAppDeps
-): Promise<{ pty: PtyManager; shutdown: () => void }> {
+export async function wireApp(wireDeps: WireAppDeps): Promise<{
+  pty: PtyManager
+  shutdown: () => void
+  initialBounds?: { x: number; y: number; width: number; height: number } | undefined
+}> {
   const pty = new PtyManager(new NodePtyFactory())
 
   // ── Status pipeline (spec §4.4): endpoint + forwarder + server ─────────────
@@ -155,9 +157,7 @@ export async function wireApp(
   // Workspace persistence: electron-store JSON blob + pre-migration backup.
   const { default: ElectronStore } = await import('electron-store')
   const electronStore = new ElectronStore()
-  registerWorkspaceIpc({
-    ipcMain,
-    store: new WorkspaceStore({
+  const workspaceStore = new WorkspaceStore({
       store: {
         get: (key) => electronStore.get(key),
         set: (key, value) => electronStore.set(key, value)
@@ -169,8 +169,8 @@ export async function wireApp(
         )
       },
       onWarn: (message) => console.warn(`[weft-workspace] ${message}`)
-    })
   })
+  registerWorkspaceIpc({ ipcMain, store: workspaceStore })
 
   // Main-process introspection for the E2E suite (never exposed to the renderer).
   ;(globalThis as Record<string, unknown>)['__weft'] = {
@@ -179,13 +179,20 @@ export async function wireApp(
     pidOf: (tabId: string) => pty.pidOf(tabId)
   }
 
-  // Clean shutdown: kill every PTY (ConPTY children can otherwise pin the
-  // process open on Windows) and release the pipe/UDS endpoint.
+  // Clean shutdown: persist the main window's bounds, kill every PTY (ConPTY
+  // children can otherwise pin the process open), release the pipe endpoint.
   const shutdown = (): void => {
+    const main = BrowserWindow.getAllWindows()[0]
+    if (main && !main.isDestroyed()) {
+      workspaceStore.save({ ...workspaceStore.load(), windowBounds: main.getBounds() })
+    }
     for (const tabId of pty.tabIds()) pty.close(tabId)
     void statusServer.stop()
     void watchService.closeAll()
   }
 
-  return { pty, shutdown }
+  // Restore the prior window geometry on launch (spec AC 15).
+  const initialBounds = workspaceStore.load().windowBounds
+
+  return { pty, shutdown, initialBounds }
 }

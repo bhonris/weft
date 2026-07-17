@@ -51,4 +51,11 @@ describe('FrameParser', () => {
     p.end()
     expect(onFrame).not.toHaveBeenCalled()
   })
+
+  it('silently drops malformed lines when no onError is provided (default)', () => {
+    const frames: unknown[] = []
+    const p = new FrameParser((f) => frames.push(f)) // default onError
+    expect(() => p.push('garbage\n{"ok":1}\n')).not.toThrow()
+    expect(frames).toEqual([{ ok: 1 }])
+  })
 })

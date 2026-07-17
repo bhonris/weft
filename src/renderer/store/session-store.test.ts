@@ -10,7 +10,7 @@ describe('useSessionStore', () => {
     useSessionStore.getState().addTab({ tabId: 't1', title: 'proj', cwd: 'C:/a' })
     const s = useSessionStore.getState()
     expect(s.tabs).toHaveLength(1)
-    expect(s.tabs[0]).toMatchObject({ tabId: 't1', title: 'proj', status: 'working' })
+    expect(s.tabs[0]).toMatchObject({ tabId: 't1', title: 'proj', status: 'unknown' })
     expect(s.activeTabId).toBe('t1')
   })
 
@@ -104,5 +104,12 @@ describe('useSessionStore', () => {
   it('cycleTab with no tabs is a no-op', () => {
     useSessionStore.getState().cycleTab(1)
     expect(useSessionStore.getState().activeTabId).toBeNull()
+  })
+
+  it('setTheme updates the theme choice', () => {
+    useSessionStore.getState().setTheme('dark')
+    expect(useSessionStore.getState().theme).toBe('dark')
+    useSessionStore.getState().setTheme('system')
+    expect(useSessionStore.getState().theme).toBe('system')
   })
 })

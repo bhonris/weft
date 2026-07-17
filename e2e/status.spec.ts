@@ -93,7 +93,7 @@ test('a payload with an unknown session id changes nothing', async () => {
     session_id: 'not-a-real-session'
   })
 
-  // Badge stays at the spawn default (working) — no waiting badge appears.
+  // Badge stays at the spawn default (unknown) — no waiting badge appears.
   await expect(page.locator('.tab__badge--waiting')).toHaveCount(0)
-  await expect(page.locator('.tab__badge--working')).toBeVisible()
+  await expect(page.locator('.tab__badge--unknown')).toBeVisible()
 })

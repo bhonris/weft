@@ -65,4 +65,44 @@ describe('createWeftApi', () => {
     expect(listeners.has(CH.sessionExit)).toBe(true)
     expect(listeners.has(CH.sessionStatus)).toBe(true)
   })
+
+  it('routes every remaining bridge method to its channel', async () => {
+    const { ipc, invoke, listeners } = fakeIpc()
+    const api = createWeftApi(ipc)
+
+    await api.listDir('/p')
+    await api.watchDir('/p')
+    await api.unwatchDir('w1')
+    await api.revealInOs('/p/a')
+    await api.openWithDefault('/p/a')
+    await api.readFileText('/p/a')
+    await api.getDiff('/p/a')
+    await api.loadWorkspace()
+    await api.saveWorkspace({
+      version: 1,
+      tabs: [],
+      tabOrder: [],
+      explorerRoots: [],
+      theme: 'system'
+    })
+    await api.moveTabToWindow('t1', 'new', { title: 'x' })
+
+    expect(invoke).toHaveBeenCalledWith(CH.listDir, '/p')
+    expect(invoke).toHaveBeenCalledWith(CH.watchDir, '/p')
+    expect(invoke).toHaveBeenCalledWith(CH.unwatchDir, 'w1')
+    expect(invoke).toHaveBeenCalledWith(CH.revealInOs, '/p/a')
+    expect(invoke).toHaveBeenCalledWith(CH.openWithDefault, '/p/a')
+    expect(invoke).toHaveBeenCalledWith(CH.readFileText, '/p/a')
+    expect(invoke).toHaveBeenCalledWith(CH.getDiff, '/p/a')
+    expect(invoke).toHaveBeenCalledWith(CH.loadWorkspace)
+    expect(invoke).toHaveBeenCalledWith(CH.saveWorkspace, expect.objectContaining({ version: 1 }))
+    expect(invoke).toHaveBeenCalledWith(CH.moveTabToWindow, 't1', 'new', { title: 'x' })
+
+    api.onFsChange(() => {})
+    api.onActivateTab(() => {})
+    api.onReDockTab(() => {})
+    expect(listeners.has(CH.fsChange)).toBe(true)
+    expect(listeners.has(CH.activateTab)).toBe(true)
+    expect(listeners.has(CH.reDockTab)).toBe(true)
+  })
 })

@@ -276,6 +276,13 @@ describe('PtyManager — resize throttling', () => {
         [80, 24],
         [100, 40]
       ])
+      // Real clearTimer path: the window is still "hot" after the trailing
+      // fire, so these coalesce into a pending call — cancelled by close().
+      mgr.resize('t1', 120, 50)
+      mgr.resize('t1', 130, 55)
+      mgr.close('t1')
+      vi.advanceTimersByTime(100)
+      expect(factory.last.resizes).toHaveLength(2) // pending call never fired
     } finally {
       vi.useRealTimers()
     }

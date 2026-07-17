@@ -32,6 +32,10 @@ test('the workspace survives an app restart: tabs and cwds are restored', async 
   await page1.getByRole('button', { name: 'open project' }).click()
   await expect(page1.getByTestId('tab')).toHaveCount(1)
   await expect(page1.getByTestId('tab')).toContainText(projectName)
+  // Give the window a distinctive size so bounds restore is observable.
+  await app1.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]!.setBounds({ x: 80, y: 80, width: 977, height: 653 })
+  })
   // The save is debounce-free (fires on tab change); still, give IPC a beat.
   await page1.waitForTimeout(500)
   await app1.close()
@@ -47,6 +51,14 @@ test('the workspace survives an app restart: tabs and cwds are restored', async 
   await expect(page2.locator('.terminal-pane .xterm')).toBeVisible()
   // And the explorer shows the restored project's files.
   await expect(page2.getByText('marker.txt')).toBeVisible()
+
+  // Window geometry survived the restart too (AC 15).
+  const bounds = await app2.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0]!.getBounds()
+  )
+  // Windows rounds window sizes to DPI-scale multiples; assert within 8px.
+  expect(Math.abs(bounds.width - 977)).toBeLessThanOrEqual(8)
+  expect(Math.abs(bounds.height - 653)).toBeLessThanOrEqual(8)
 
   await app2.close()
 })

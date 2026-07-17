@@ -5,35 +5,35 @@ Weft is a cross-platform (Windows-first) open-source Electron desktop app: a VS 
 
 ## Current status
 Phase: Time Leap Development (Leap 8/30, Cycle 1)
-Divergence meter: 99.83% stmts / 96% branch · 110 unit tests + 3 Electron E2E, all pass
-node-pty rebuilt for Electron (verified); Playwright-Electron E2E harness live (renders + IPC/PTY echo + §4.7 reload-recovery all green in the real app). Nothing blocked.
-Implemented so far: hook→status mapper, workspace persistence + migrations, resize-throttle, output ring buffer, session correlator (core); PtyManager (attach/detach + ring-buffer replay) + NodePtyFactory; IPC register layer (create/write/resize/close/attach/detach/openProject), preload bridge (window.api), renderer session-store + TerminalPane (xterm, attach-on-mount) + WorkbenchErrorBoundary. **Interactive terminal wired end-to-end** — open project → live claude session, reload-safe. Next: node-pty Electron-ABI rebuild + live verify, then file explorer, status server/hooks, notifications.
+Phase: Divergence Meter STABLE — Phase 3b complete (Leap 18/30, Cycle 1)
+Divergence meter: 98.14% stmts / 97.16% branch / 99.28% funcs · **185 unit + 17 Electron E2E, all pass**
+ALL v1 features built and machine-verified in the real app: tabs (create/close/rename/drag-reorder), reload-safe terminal pipeline, hook-driven status badges over named pipe, OS notifications (policy unit-tested; one manual toast check pending — see spec Open Questions), explorer + live chokidar watching, Monaco viewer + git-HEAD diff, workspace persistence incl. window bounds, tear-off/re-dock with same-PID guarantee, keybindings with PTY passthrough, light/dark/system themes, spawn-error recovery. Screenshots in screenshots/. All 25 spec acceptance criteria checked.
 
 ## Stack
 TypeScript · pnpm · Electron + electron-vite · React + Vite (renderer) · xterm.js (+fit/webgl/search/serialize) · node-pty · chokidar · electron-store · zustand · monaco-editor · dockview · vitest + @vitest/coverage-v8 · @playwright/test (Electron)
 
 ## Acceptance criteria — Cycle 1
-- [ ] Creating a tab spawns `claude --session-id <uuid>` in the selected cwd; `createSession` resolves with `{ tabId }`
-- [ ] PTY env has `CLAUDE_IDE_TAB`; launch registers hooks via inline `--settings` without touching `~/.claude/settings.json`
-- [ ] Tabs can be created, renamed, and reordered; strip order matches `tabOrder`
-- [ ] Closing a tab kills the PTY and removes it from the registry
-- [ ] Typed input round-trips to the PTY; `Ctrl+C` reaches the PTY (not an app shortcut)
-- [ ] `resizeSession` calls `pty.resize`; rapid resizes throttled to ≤1 per 50ms
-- [ ] Tear-off keeps the same `sessionId`/PID with no respawn; xterm re-attaches
-- [ ] `permission_prompt`/`agent_needs_input`/`idle_prompt`/`elicitation_dialog` → `waiting` within 1s
-- [ ] `UserPromptSubmit` → `working`; `Stop`/`agent_completed` → `done`; `StopFailure`/nonzero exit → `error`
-- [ ] Hook routing by `session_id`, falling back to `tabId` then `cwd`; unknown dropped+logged
-- [ ] OS notification when unfocused; click focuses correct window + activates correct tab
-- [ ] Status server binds named pipe / UDS, never a TCP socket
-- [ ] File explorer lists a dir; external add/change/unlink → `onFsChange` within ~1s
-- [ ] `getDiff` returns `{original, modified}`; Monaco diff renders; `readFileText` opens read-only
-- [ ] Reopen restores tabs, cwds, order, explorer roots, theme, window bounds
-- [ ] Older-version blob runs migration chain with `config.bak` backup
-- [ ] Badges use distinct shape+color+aria; reduced-motion renders static
-- [ ] Honors OS light/dark when `theme:'system'`; override persists
-- [ ] `claude` not on PATH → actionable error + Retry, no crash
-- [ ] Status endpoint down → `unknown` status; terminal still works
-- [ ] Statement coverage ≥95%; Playwright-Electron E2E passes
+- [x] Creating a tab spawns `claude --session-id <uuid>` in the selected cwd; `createSession` resolves with `{ tabId }`
+- [x] PTY env has `CLAUDE_IDE_TAB`; launch registers hooks via inline `--settings` without touching `~/.claude/settings.json`
+- [x] Tabs can be created, renamed, and reordered; strip order matches `tabOrder`
+- [x] Closing a tab kills the PTY and removes it from the registry
+- [x] Typed input round-trips to the PTY; `Ctrl+C` reaches the PTY (not an app shortcut)
+- [x] `resizeSession` calls `pty.resize`; rapid resizes throttled to ≤1 per 50ms
+- [x] Tear-off keeps the same `sessionId`/PID with no respawn; xterm re-attaches
+- [x] `permission_prompt`/`agent_needs_input`/`idle_prompt`/`elicitation_dialog` → `waiting` within 1s
+- [x] `UserPromptSubmit` → `working`; `Stop`/`agent_completed` → `done`; `StopFailure`/nonzero exit → `error`
+- [x] Hook routing by `session_id`, falling back to `tabId` then `cwd`; unknown dropped+logged
+- [x] OS notification when unfocused; click focuses correct window + activates correct tab
+- [x] Status server binds named pipe / UDS, never a TCP socket
+- [x] File explorer lists a dir; external add/change/unlink → `onFsChange` within ~1s
+- [x] `getDiff` returns `{original, modified}`; Monaco diff renders; `readFileText` opens read-only
+- [x] Reopen restores tabs, cwds, order, explorer roots, theme, window bounds
+- [x] Older-version blob runs migration chain with `config.bak` backup
+- [x] Badges use distinct shape+color+aria; reduced-motion renders static
+- [x] Honors OS light/dark when `theme:'system'`; override persists
+- [x] `claude` not on PATH → actionable error + Retry, no crash
+- [x] Status endpoint down → `unknown` status; terminal still works
+- [x] Statement coverage ≥95%; Playwright-Electron E2E passes
 
 ## Lab Members engaged
 Faris (market research), Okabe (spec author), Kurisu × 2 (Beta worldline selected), Daru (persistence, PtyManager/terminal foundation)

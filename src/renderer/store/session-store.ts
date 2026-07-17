@@ -40,7 +40,9 @@ export const useSessionStore = create<SessionState>((set) => ({
   addTab: (tab) =>
     set((s) => {
       if (s.tabs.some((t) => t.tabId === tab.tabId)) return s
-      const next: Tab = { status: 'working', command: 'claude', ...tab }
+      // 'unknown' until a hook actually reports — never claim a state we
+      // haven't observed (spec AC: endpoint down / no hook → unknown).
+      const next: Tab = { status: 'unknown', command: 'claude', ...tab }
       return { tabs: [...s.tabs, next], activeTabId: tab.tabId }
     }),
 

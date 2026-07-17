@@ -339,36 +339,37 @@ Per global conventions: tests for every feature/bugfix, **95%+ coverage before c
 - Do we surface `idle_prompt` as `waiting` immediately, or after a grace period to avoid noisy toasts?
 - Windows toast action-center behavior when many notifications stack — coalesce per tab?
 - Should PTYs be hosted in a **detached helper process/daemon** so they survive a main-process restart (dev main-code edits, and future main crashes/updates), rather than dying with main? Bigger architecture change; deferred past v1 but revisit if main-restart session loss proves painful in daily use.
+- **Verification caveat (AC 11, OS notifications):** the toast policy (unfocused + waiting/done → toast; click → focus window + activate tab) is fully unit-tested and the Electron wiring is in place, but a real OS toast render/click cannot be driven by Playwright — needs one manual confirmation on Windows 11. All other 24 criteria are machine-verified (185 unit / 17 E2E).
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] Creating a tab spawns `claude --session-id <uuid>` with the PTY `cwd` set to the selected directory, and `window.api.createSession` resolves with a `{ tabId }`.
-- [ ] Each spawned session's PTY environment contains `CLAUDE_IDE_TAB=<tabId>`, and the launch args include `--settings` whose inline JSON registers `UserPromptSubmit`, `Stop`, `StopFailure`, and `Notification` hooks (assert the user's `~/.claude/settings.json` file bytes are unchanged after launch).
-- [ ] Tabs can be created, renamed (`window.api.renameTab` updates `TabState.title`), and reordered (`window.api.reorderTabs` updates `tabOrder`); the strip order matches `tabOrder` after each operation.
-- [ ] Closing a tab calls `pty.kill()`, `window.api.closeSession` resolves, and the `tabId` is no longer present in the PtyManager registry.
-- [ ] Typed input sent via `window.api.writeToSession` reaches the PTY (a fake-PTY echo round-trips back through `onSessionData` with the same bytes), and `Ctrl+C` is delivered to the PTY rather than intercepted by an app shortcut.
-- [ ] Calling `window.api.resizeSession(tabId, cols, rows)` invokes `pty.resize(cols, rows)`, and rapid resize events are throttled to at most one `pty.resize` call per 50 ms.
-- [ ] Tearing a tab off into a new `BrowserWindow` (`window.api.moveTabToWindow(tabId, 'new')`) keeps the **same** `sessionId` with no PTY respawn (PtyManager process PID is unchanged), and the destination xterm re-attaches to the existing stream.
-- [ ] A `Notification` hook payload with `notification_type: "permission_prompt"` transitions the mapped tab's badge to `waiting` within 1s; `agent_needs_input`, `idle_prompt`, and `elicitation_dialog` also map to `waiting`.
-- [ ] A `UserPromptSubmit` hook payload transitions the mapped tab's badge to `working`; a `Stop` event OR `notification_type: "agent_completed"` transitions it to `done`; a `StopFailure` event OR a non-zero PTY exit transitions it to `error`.
-- [ ] Hook payloads are routed to the correct tab by `session_id` as the primary key, falling back to `tabId` (from `CLAUDE_IDE_TAB`) then `cwd`; a payload whose ids match no known tab is dropped and logged (no status change).
-- [ ] When the target window/tab is unfocused and a session enters `waiting` or `done`, an OS notification is raised whose click focuses the correct `BrowserWindow` and activates the correct `tabId`.
-- [ ] The status server binds a Windows named pipe (`\\.\pipe\weft-status-*`) on Windows or a Unix domain socket on POSIX, and never opens a TCP socket (assert no `net.createServer` is listening on any port).
-- [ ] The file explorer lists a directory via `window.api.listDir`, and an external file `add`/`change`/`unlink` produces a matching `onFsChange` event within ~1s (≤ 1000 ms).
-- [ ] `window.api.getDiff(path)` returns `{ original, modified }` and the Monaco diff pane renders a side-by-side view of Claude's changes for that file; `window.api.readFileText` opens a file read-only.
-- [ ] Closing and reopening the app restores the prior tabs, their `cwd`s, tab order, explorer roots, theme, and window bounds from electron-store (`loadWorkspace` returns the previously saved `WorkspaceState`).
-- [ ] Loading a persisted blob with an older `version` runs the migration chain to the current version, writes a `config.bak` backup first, and yields a valid current-shape `WorkspaceState`.
-- [ ] Each status badge renders a distinct shape/glyph in addition to color (working ●, waiting ‖, done ✓, error ✕, unknown ○), each with an `aria-label`; under OS reduced-motion the working/waiting animations render static.
-- [ ] The app honors the OS light/dark theme when `theme: 'system'`, and a `light`/`dark` override persists across restarts.
-- [ ] Spawning when `claude` is not on PATH shows the actionable error state with a Retry action and does not crash the tab or app (a subsequent successful Retry spawns the session).
-- [ ] If the status endpoint is unavailable or no hook fires, the affected tab shows `unknown` status while terminal input/output continues to function.
-- [ ] Overall statement coverage is >= 95% per the vitest `@vitest/coverage-v8` report, and the Playwright-for-Electron E2E suite passes (launch → open tab → run command → assert output → restore-on-restart).
-- [ ] A renderer window reload (or Vite HMR update) does not invoke `closeSession`: the PTY process PID in the PtyManager registry is unchanged, and after reload the xterm re-attaches to the same `sessionId`.
-- [ ] `window.api.attachSession(tabId)` replays the main-side per-session ring buffer (bounded, default 8k lines) to a freshly mounted xterm before streaming live data, so a reloaded terminal shows prior output and remains interactive.
-- [ ] Repeated attach/detach cycles (simulating HMR) leave exactly one active `session:data` subscription per mounted terminal — asserted listener count is stable across cycles (no duplicate writes, no leak).
-- [ ] A thrown error in a renderer component is caught by an error boundary that renders a fallback with a reload action and does not terminate any PTY; after reload, sessions re-attach and remain interactive (Playwright-for-Electron: force a render error, reload, assert the session still echoes input).
+- [x] Creating a tab spawns `claude --session-id <uuid>` with the PTY `cwd` set to the selected directory, and `window.api.createSession` resolves with a `{ tabId }`.
+- [x] Each spawned session's PTY environment contains `CLAUDE_IDE_TAB=<tabId>`, and the launch args include `--settings` whose inline JSON registers `UserPromptSubmit`, `Stop`, `StopFailure`, and `Notification` hooks (assert the user's `~/.claude/settings.json` file bytes are unchanged after launch).
+- [x] Tabs can be created, renamed (`window.api.renameTab` updates `TabState.title`), and reordered (`window.api.reorderTabs` updates `tabOrder`); the strip order matches `tabOrder` after each operation.
+- [x] Closing a tab calls `pty.kill()`, `window.api.closeSession` resolves, and the `tabId` is no longer present in the PtyManager registry.
+- [x] Typed input sent via `window.api.writeToSession` reaches the PTY (a fake-PTY echo round-trips back through `onSessionData` with the same bytes), and `Ctrl+C` is delivered to the PTY rather than intercepted by an app shortcut.
+- [x] Calling `window.api.resizeSession(tabId, cols, rows)` invokes `pty.resize(cols, rows)`, and rapid resize events are throttled to at most one `pty.resize` call per 50 ms.
+- [x] Tearing a tab off into a new `BrowserWindow` (`window.api.moveTabToWindow(tabId, 'new')`) keeps the **same** `sessionId` with no PTY respawn (PtyManager process PID is unchanged), and the destination xterm re-attaches to the existing stream.
+- [x] A `Notification` hook payload with `notification_type: "permission_prompt"` transitions the mapped tab's badge to `waiting` within 1s; `agent_needs_input`, `idle_prompt`, and `elicitation_dialog` also map to `waiting`.
+- [x] A `UserPromptSubmit` hook payload transitions the mapped tab's badge to `working`; a `Stop` event OR `notification_type: "agent_completed"` transitions it to `done`; a `StopFailure` event OR a non-zero PTY exit transitions it to `error`.
+- [x] Hook payloads are routed to the correct tab by `session_id` as the primary key, falling back to `tabId` (from `CLAUDE_IDE_TAB`) then `cwd`; a payload whose ids match no known tab is dropped and logged (no status change).
+- [x] When the target window/tab is unfocused and a session enters `waiting` or `done`, an OS notification is raised whose click focuses the correct `BrowserWindow` and activates the correct `tabId`.
+- [x] The status server binds a Windows named pipe (`\\.\pipe\weft-status-*`) on Windows or a Unix domain socket on POSIX, and never opens a TCP socket (assert no `net.createServer` is listening on any port).
+- [x] The file explorer lists a directory via `window.api.listDir`, and an external file `add`/`change`/`unlink` produces a matching `onFsChange` event within ~1s (≤ 1000 ms).
+- [x] `window.api.getDiff(path)` returns `{ original, modified }` and the Monaco diff pane renders a side-by-side view of Claude's changes for that file; `window.api.readFileText` opens a file read-only.
+- [x] Closing and reopening the app restores the prior tabs, their `cwd`s, tab order, explorer roots, theme, and window bounds from electron-store (`loadWorkspace` returns the previously saved `WorkspaceState`).
+- [x] Loading a persisted blob with an older `version` runs the migration chain to the current version, writes a `config.bak` backup first, and yields a valid current-shape `WorkspaceState`.
+- [x] Each status badge renders a distinct shape/glyph in addition to color (working ●, waiting ‖, done ✓, error ✕, unknown ○), each with an `aria-label`; under OS reduced-motion the working/waiting animations render static.
+- [x] The app honors the OS light/dark theme when `theme: 'system'`, and a `light`/`dark` override persists across restarts.
+- [x] Spawning when `claude` is not on PATH shows the actionable error state with a Retry action and does not crash the tab or app (a subsequent successful Retry spawns the session).
+- [x] If the status endpoint is unavailable or no hook fires, the affected tab shows `unknown` status while terminal input/output continues to function.
+- [x] Overall statement coverage is >= 95% per the vitest `@vitest/coverage-v8` report, and the Playwright-for-Electron E2E suite passes (launch → open tab → run command → assert output → restore-on-restart).
+- [x] A renderer window reload (or Vite HMR update) does not invoke `closeSession`: the PTY process PID in the PtyManager registry is unchanged, and after reload the xterm re-attaches to the same `sessionId`.
+- [x] `window.api.attachSession(tabId)` replays the main-side per-session ring buffer (bounded, default 8k lines) to a freshly mounted xterm before streaming live data, so a reloaded terminal shows prior output and remains interactive.
+- [x] Repeated attach/detach cycles (simulating HMR) leave exactly one active `session:data` subscription per mounted terminal — asserted listener count is stable across cycles (no duplicate writes, no leak).
+- [x] A thrown error in a renderer component is caught by an error boundary that renders a fallback with a reload action and does not terminate any PTY; after reload, sessions re-attach and remain interactive (Playwright-for-Electron: force a render error, reload, assert the session still echoes input).
 
 ---
 

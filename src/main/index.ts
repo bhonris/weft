@@ -15,11 +15,19 @@ process.on('uncaughtException', (err) => {
 const userDataOverride = process.env['WEFT_USER_DATA_DIR']
 if (userDataOverride) app.setPath('userData', userDataOverride)
 
+interface Bounds {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 /** Create an app window; `query` selects the tear-off view (e.g. tearoff=<id>). */
-function createWindow(query?: string): BrowserWindow {
+function createWindow(query?: string, bounds?: Bounds): BrowserWindow {
   const win = new BrowserWindow({
-    width: query ? 960 : 1280,
-    height: query ? 640 : 800,
+    ...(bounds ?? {}),
+    width: bounds?.width ?? (query ? 960 : 1280),
+    height: bounds?.height ?? (query ? 640 : 800),
     show: false,
     backgroundColor: '#1e1e1e',
     title: 'Weft',
@@ -44,14 +52,14 @@ function createWindow(query?: string): BrowserWindow {
 }
 
 app.whenReady().then(async () => {
-  const { shutdown } = await wireApp({ createAppWindow: createWindow })
+  const { shutdown, initialBounds } = await wireApp({ createAppWindow: createWindow })
   app.on('before-quit', () => {
     shutdown()
     // Windows ConPTY agents can wedge a graceful quit after kill; guarantee
     // process death so neither users nor E2E runs are left with zombies.
     setTimeout(() => app.exit(0), 2000)
   })
-  createWindow()
+  createWindow(undefined, initialBounds)
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })

@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 18 — steiner: divergence-meter-stable — 2026-07-18T00:30:00Z
+
+**Phase**: 3b divergence-meter-reading → christinas-analysis
+**Changed**: Closed the last two honest AC gaps found in the audit: (1) window-bounds persist/restore (saved into the workspace blob on quit, applied at createWindow; E2E asserts ±8px across restart — Windows DPI rounds), (2) badge default now `unknown` until a hook actually reports (was `working` — a lie before observation; store + E2E updated). Phase 3b evidence: 17/17 Playwright-Electron E2E across every user story, 4 screenshots (empty/terminal/diff/final) in screenshots/, coverage raised to 98.14% stmts / 97.16% branch / 99.28% funcs (185 tests; function-coverage top-ups for bridge/viewer-store/frame-parser/pty-manager/session-store). All 25 spec ACs checked; AC 11 (real OS toast render/click) noted in Open Questions as the one manual-verification item.
+**SERN interference**: none (one wrong test expectation about throttle hot-window fixed)
+**Divergence meter**: 98.14% / 97.16% / 99.28% · 185 unit + 17 e2e, 0 fail
+**Next target**: Phase 4 — Future Okabe ×3 review (simplicity / correctness+security / test quality), consolidate into review_items, then convergence fixes.
+
+---
+
 ## Leap 17 — steiner: feat(tear-off) — 2026-07-17T23:55:00Z
 
 **Phase**: time-leap-development
