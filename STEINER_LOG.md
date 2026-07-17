@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 15 — steiner: feat(tabs-ux) — 2026-07-17T22:45:00Z
+
+**Phase**: time-leap-development
+**Changed**: Tab UX + keyboard layer. Pure core/keybindings/keybinding-router (Ctrl+T new / Ctrl+W close / Ctrl+Tab cycle ±Shift / Ctrl+1..9 jump; EVERYTHING else passthrough incl. Ctrl+C/R/D and Alt/Meta/Ctrl+Shift combos; 4 test groups). App: window keydown capture dispatches chords; TerminalPane attachCustomKeyEventHandler keeps reserved chords out of the PTY. Store: moveTab (drag-insert reorder) + cycleTab (wrapping). TabButton: double-click inline rename (Enter/blur commit, Esc cancel), HTML5 drag-and-drop reorder. openProject/closeTab hoisted to module fns.
+**SERN interference**: none
+**Divergence meter**: unit 174 pass; e2e 13 pass (rename, Ctrl+1/2 jump, Ctrl+W close, passthrough proof, drag reorder)
+**Next target**: spawn-error state (claude not on PATH → actionable error + Retry, AC) + OS light/dark theme honor + reduced-motion working-spinner; then tear-off window; then Phase 3b sweep + coverage audit.
+
+---
+
 ## Leap 14 — steiner: feat(fs-watching) — 2026-07-17T22:15:00Z
 
 **Phase**: time-leap-development

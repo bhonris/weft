@@ -1,10 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useSessionStore, type Tab } from './store/session-store'
 import { buildWorkspaceState, restoreWorkspace } from './store/workspace-sync'
 import { TerminalPane } from './components/TerminalPane'
 import { Explorer } from './components/Explorer'
 import { ViewerPane } from './components/ViewerPane'
 import { WorkbenchErrorBoundary } from './components/WorkbenchErrorBoundary'
+import { routeKey } from '@core/keybindings/keybinding-router'
 import type { SessionStatus } from '@shared/status/hook-events'
 
 // Module-level guard: React StrictMode double-invokes effects in dev; the
@@ -19,25 +20,87 @@ const STATUS_GLYPH: Record<SessionStatus, string> = {
   unknown: '○'
 }
 
+/** Open the OS folder picker and add the resulting session as a tab. */
+async function openProject(): Promise<void> {
+  const result = await window.api.openProject()
+  if (result) {
+    useSessionStore.getState().addTab({
+      tabId: result.tabId,
+      title: result.title,
+      cwd: result.cwd,
+      command: result.command
+    })
+  }
+}
+
+function closeTab(tabId: string): void {
+  void window.api.closeSession(tabId)
+  useSessionStore.getState().removeTab(tabId)
+}
+
 function TabButton({ tab, active }: { tab: Tab; active: boolean }): React.ReactElement {
   const setActive = useSessionStore((s) => s.setActive)
-  const removeTab = useSessionStore((s) => s.removeTab)
+  const rename = useSessionStore((s) => s.rename)
+  const moveTab = useSessionStore((s) => s.moveTab)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(tab.title)
+
+  const commit = (): void => {
+    const title = draft.trim()
+    if (title.length > 0) rename(tab.tabId, title)
+    setEditing(false)
+  }
+
   return (
-    <div className={`tab${active ? ' tab--active' : ''}`} data-testid="tab">
-      <button type="button" className="tab__label" onClick={() => setActive(tab.tabId)}>
-        <span className={`tab__badge tab__badge--${tab.status}`} aria-label={`status: ${tab.status}`}>
-          {STATUS_GLYPH[tab.status]}
-        </span>
-        {tab.title}
-      </button>
+    <div
+      className={`tab${active ? ' tab--active' : ''}`}
+      data-testid="tab"
+      draggable={!editing}
+      onDragStart={(e) => e.dataTransfer.setData('text/weft-tab', tab.tabId)}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault()
+        const dragId = e.dataTransfer.getData('text/weft-tab')
+        if (dragId) moveTab(dragId, tab.tabId)
+      }}
+    >
+      {editing ? (
+        <input
+          className="tab__rename"
+          aria-label="rename tab"
+          value={draft}
+          autoFocus
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit()
+            if (e.key === 'Escape') setEditing(false)
+          }}
+        />
+      ) : (
+        <button
+          type="button"
+          className="tab__label"
+          onClick={() => setActive(tab.tabId)}
+          onDoubleClick={() => {
+            setDraft(tab.title)
+            setEditing(true)
+          }}
+        >
+          <span
+            className={`tab__badge tab__badge--${tab.status}`}
+            aria-label={`status: ${tab.status}`}
+          >
+            {STATUS_GLYPH[tab.status]}
+          </span>
+          {tab.title}
+        </button>
+      )}
       <button
         type="button"
         className="tab__close"
         aria-label={`close ${tab.title}`}
-        onClick={() => {
-          void window.api.closeSession(tab.tabId)
-          removeTab(tab.tabId)
-        }}
+        onClick={() => closeTab(tab.tabId)}
       >
         ×
       </button>
@@ -48,7 +111,6 @@ function TabButton({ tab, active }: { tab: Tab; active: boolean }): React.ReactE
 export function App(): React.ReactElement {
   const tabs = useSessionStore((s) => s.tabs)
   const activeTabId = useSessionStore((s) => s.activeTabId)
-  const addTab = useSessionStore((s) => s.addTab)
   const activeTab = tabs.find((t) => t.tabId === activeTabId) ?? null
 
   // Hook-driven status → badges; PTY exit → done/error (spec §4.4).
@@ -66,6 +128,38 @@ export function App(): React.ReactElement {
       offExit()
       offActivate()
     }
+  }, [])
+
+  // Reserved chords (Ctrl+T/W/Tab/1..9); everything else reaches the PTY.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      const action = routeKey(e)
+      if (action.kind === 'passthrough') return
+      e.preventDefault()
+      e.stopPropagation()
+      const s = useSessionStore.getState()
+      switch (action.kind) {
+        case 'new-tab':
+          void openProject()
+          break
+        case 'close-tab':
+          if (s.activeTabId) closeTab(s.activeTabId)
+          break
+        case 'next-tab':
+          s.cycleTab(1)
+          break
+        case 'prev-tab':
+          s.cycleTab(-1)
+          break
+        case 'jump-tab': {
+          const target = s.tabs[action.index]
+          if (target) s.setActive(target.tabId)
+          break
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
   }, [])
 
   // Restore the previous workspace once on launch; then persist tab changes.
@@ -90,18 +184,6 @@ export function App(): React.ReactElement {
       unsub()
     }
   }, [])
-
-  const openProject = async (): Promise<void> => {
-    const result = await window.api.openProject()
-    if (result) {
-      addTab({
-        tabId: result.tabId,
-        title: result.title,
-        cwd: result.cwd,
-        command: result.command
-      })
-    }
-  }
 
   return (
     <WorkbenchErrorBoundary>
@@ -138,7 +220,9 @@ export function App(): React.ReactElement {
         <footer className="status-bar" data-testid="status-bar">
           <span>Weft</span>
           <span className="status-bar__spacer" />
-          <span>{tabs.length} session{tabs.length === 1 ? '' : 's'}</span>
+          <span>
+            {tabs.length} session{tabs.length === 1 ? '' : 's'}
+          </span>
         </footer>
       </div>
     </WorkbenchErrorBoundary>

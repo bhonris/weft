@@ -64,4 +64,45 @@ describe('useSessionStore', () => {
     setActive('t1')
     expect(useSessionStore.getState().activeTabId).toBe('t1')
   })
+
+  it('moveTab reorders by inserting at the target position', () => {
+    const { addTab, moveTab } = useSessionStore.getState()
+    addTab({ tabId: 'a', title: 'a', cwd: 'C:/a' })
+    addTab({ tabId: 'b', title: 'b', cwd: 'C:/b' })
+    addTab({ tabId: 'c', title: 'c', cwd: 'C:/c' })
+
+    moveTab('c', 'a') // drag c onto a → c takes a's slot
+    expect(useSessionStore.getState().tabs.map((t) => t.tabId)).toEqual(['c', 'a', 'b'])
+
+    moveTab('c', 'b') // drag c onto b
+    expect(useSessionStore.getState().tabs.map((t) => t.tabId)).toEqual(['a', 'c', 'b'])
+  })
+
+  it('moveTab is a no-op for self-drops and unknown ids', () => {
+    const { addTab, moveTab } = useSessionStore.getState()
+    addTab({ tabId: 'a', title: 'a', cwd: 'C:/a' })
+    addTab({ tabId: 'b', title: 'b', cwd: 'C:/b' })
+    moveTab('a', 'a')
+    moveTab('ghost', 'a')
+    moveTab('a', 'ghost')
+    expect(useSessionStore.getState().tabs.map((t) => t.tabId)).toEqual(['a', 'b'])
+  })
+
+  it('cycleTab wraps in both directions', () => {
+    const { addTab, setActive, cycleTab } = useSessionStore.getState()
+    addTab({ tabId: 'a', title: 'a', cwd: 'C:/a' })
+    addTab({ tabId: 'b', title: 'b', cwd: 'C:/b' })
+    addTab({ tabId: 'c', title: 'c', cwd: 'C:/c' })
+    setActive('c')
+
+    cycleTab(1) // wraps to first
+    expect(useSessionStore.getState().activeTabId).toBe('a')
+    cycleTab(-1) // wraps back to last
+    expect(useSessionStore.getState().activeTabId).toBe('c')
+  })
+
+  it('cycleTab with no tabs is a no-op', () => {
+    useSessionStore.getState().cycleTab(1)
+    expect(useSessionStore.getState().activeTabId).toBeNull()
+  })
 })

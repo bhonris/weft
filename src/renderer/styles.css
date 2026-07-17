@@ -88,6 +88,16 @@ body,
 .tab__badge {
   font-size: 11px;
 }
+
+.tab__rename {
+  width: 120px;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  color: var(--fg);
+  font: inherit;
+  padding: 1px 4px;
+}
 .tab__badge--working {
   color: #4a9eff;
 }

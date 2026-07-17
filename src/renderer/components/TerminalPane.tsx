@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
+import { routeKey } from '@core/keybindings/keybinding-router'
 import '@xterm/xterm/css/xterm.css'
 
 interface Props {
@@ -32,6 +33,9 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
     })
     const fit = new FitAddon()
     term.loadAddon(fit)
+    // Reserved app chords (Ctrl+T/W/Tab/1..9) must NOT be swallowed by the
+    // terminal; everything else (Ctrl+C, arrows, …) reaches the PTY.
+    term.attachCustomKeyEventHandler((e) => routeKey(e).kind === 'passthrough')
     term.open(host)
 
     let disposed = false

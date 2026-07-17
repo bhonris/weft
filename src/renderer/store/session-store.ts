@@ -20,6 +20,10 @@ export interface SessionState {
   setActive: (tabId: string) => void
   setStatus: (tabId: string, status: SessionStatus) => void
   rename: (tabId: string, title: string) => void
+  /** Move `dragId` to `targetId`'s position (drag-and-drop reorder). */
+  moveTab: (dragId: string, targetId: string) => void
+  /** Activate the tab `step` positions away from the active one (wraps). */
+  cycleTab: (step: 1 | -1) => void
 }
 
 /** Renderer-side mirror of the tabs; the authoritative PTY state lives in main. */
@@ -52,5 +56,25 @@ export const useSessionStore = create<SessionState>((set) => ({
   rename: (tabId, title) =>
     set((s) => ({
       tabs: s.tabs.map((t) => (t.tabId === tabId ? { ...t, title } : t))
-    }))
+    })),
+
+  moveTab: (dragId, targetId) =>
+    set((s) => {
+      if (dragId === targetId) return s
+      const dragged = s.tabs.find((t) => t.tabId === dragId)
+      const targetIdx = s.tabs.findIndex((t) => t.tabId === targetId)
+      if (!dragged || targetIdx === -1) return s
+      const without = s.tabs.filter((t) => t.tabId !== dragId)
+      const insertAt = without.findIndex((t) => t.tabId === targetId)
+      without.splice(insertAt, 0, dragged)
+      return { tabs: without }
+    }),
+
+  cycleTab: (step) =>
+    set((s) => {
+      if (s.tabs.length === 0) return s
+      const idx = s.tabs.findIndex((t) => t.tabId === s.activeTabId)
+      const next = (idx + step + s.tabs.length) % s.tabs.length
+      return { activeTabId: s.tabs[next]!.tabId }
+    })
 }))
