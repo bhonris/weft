@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 16 — steiner: feat(error-state+theme) — 2026-07-17T23:10:00Z
+
+**Phase**: time-leap-development
+**Changed**: Spawn-failure AC + theme AC + reduced-motion AC. openProject now resolves an `{error,cwd,title,command}` result instead of rejecting (OpenProjectResult union); claudePath injectable (WEFT_CLAUDE_BIN seam). Renderer: spawn-error banner (role=alert) with Retry (fresh createSession in same cwd) + dismiss; module-level failure listener. Theme: store gains theme/setTheme; document dataset applied; CSS vars for light under [data-theme=light] AND (prefers-color-scheme: light + data-theme=system); status-bar cycle button (system→light→dark); theme persisted via buildWorkspaceState(tabs, theme) and restored on launch. Working badge pulses (weft-pulse), static under prefers-reduced-motion.
+**SERN interference**: none
+**Divergence meter**: unit 177 pass; e2e 15 pass (missing-binary banner + Retry + dismiss; theme cycle with computed --bg assertion)
+**Next target**: tear-off windows (moveTabToWindow 'new' → second BrowserWindow re-attaches SAME PTY, PID unchanged; close → re-dock) — the last major v1 feature. Then Phase 3b formal sweep + spec AC checkboxes + Phase 4 review.
+
+---
+
 ## Leap 15 — steiner: feat(tabs-ux) — 2026-07-17T22:45:00Z
 
 **Phase**: time-leap-development

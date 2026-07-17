@@ -10,9 +10,13 @@ export interface Tab {
   status: SessionStatus
 }
 
+export type ThemeChoice = 'system' | 'light' | 'dark'
+
 export interface SessionState {
   tabs: Tab[]
   activeTabId: string | null
+  theme: ThemeChoice
+  setTheme: (theme: ThemeChoice) => void
   addTab: (
     tab: Omit<Tab, 'status' | 'command'> & { status?: SessionStatus; command?: SessionCommand }
   ) => void
@@ -30,6 +34,8 @@ export interface SessionState {
 export const useSessionStore = create<SessionState>((set) => ({
   tabs: [],
   activeTabId: null,
+  theme: 'system',
+  setTheme: (theme) => set({ theme }),
 
   addTab: (tab) =>
     set((s) => {

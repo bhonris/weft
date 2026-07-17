@@ -4,7 +4,7 @@ import type {
   DirEntry,
   DiffPayload,
   WorkspaceState,
-  SessionCommand
+  OpenProjectResult
 } from '@shared/ipc/api-contract'
 
 /** The ipcRenderer surface the bridge needs — satisfied by electron and a fake. */
@@ -40,13 +40,7 @@ export function createWeftApi(ipc: IpcRendererLike): WeftBridge {
     onSessionExit: (cb) => subscribe(CH.sessionExit, cb),
     onSessionStatus: (cb) => subscribe(CH.sessionStatus, cb),
     onActivateTab: (cb) => subscribe(CH.activateTab, cb),
-    openProject: () =>
-      ipc.invoke(CH.openProject) as Promise<{
-        tabId: string
-        cwd: string
-        title: string
-        command: SessionCommand
-      } | null>,
+    openProject: () => ipc.invoke(CH.openProject) as Promise<OpenProjectResult | null>,
     listDir: (path) => ipc.invoke(CH.listDir, path) as Promise<DirEntry[]>,
     watchDir: (path) => ipc.invoke(CH.watchDir, path) as Promise<{ watchId: string }>,
     unwatchDir: (watchId) => ipc.invoke(CH.unwatchDir, watchId) as Promise<void>,

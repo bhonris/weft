@@ -37,6 +37,11 @@ describe('buildWorkspaceState', () => {
     expect(ws.tabOrder).toEqual(['a', 'b'])
     expect(ws.theme).toBe('system')
   })
+
+  it('persists an explicit theme override', () => {
+    expect(buildWorkspaceState([], 'dark').theme).toBe('dark')
+    expect(buildWorkspaceState([], 'light').theme).toBe('light')
+  })
 })
 
 describe('restoreWorkspace', () => {

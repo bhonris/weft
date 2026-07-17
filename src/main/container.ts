@@ -92,6 +92,7 @@ export async function wireApp(): Promise<{ pty: PtyManager; shutdown: () => void
     // (which no automation can drive), and WEFT_OPEN_PROJECT_COMMAND=shell lets
     // tests open a plain shell instead of booting a real `claude`.
     defaultCommand: process.env['WEFT_OPEN_PROJECT_COMMAND'] === 'shell' ? 'shell' : 'claude',
+    claudePath: process.env['WEFT_CLAUDE_BIN'] ?? 'claude',
     pickDirectory: async () => {
       const forced = process.env['WEFT_E2E_OPEN_DIR']
       if (forced) return forced

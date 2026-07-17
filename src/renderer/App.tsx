@@ -20,15 +20,56 @@ const STATUS_GLYPH: Record<SessionStatus, string> = {
   unknown: '○'
 }
 
+export interface SpawnFailure {
+  message: string
+  cwd: string
+  title: string
+  command: 'claude' | 'shell'
+}
+
+type SpawnFailureListener = (failure: SpawnFailure | null) => void
+let spawnFailureListener: SpawnFailureListener = () => {}
+
 /** Open the OS folder picker and add the resulting session as a tab. */
 async function openProject(): Promise<void> {
   const result = await window.api.openProject()
-  if (result) {
-    useSessionStore.getState().addTab({
-      tabId: result.tabId,
-      title: result.title,
+  if (!result) return
+  if ('error' in result) {
+    spawnFailureListener({
+      message: result.error,
       cwd: result.cwd,
+      title: result.title,
       command: result.command
+    })
+    return
+  }
+  spawnFailureListener(null)
+  useSessionStore.getState().addTab({
+    tabId: result.tabId,
+    title: result.title,
+    cwd: result.cwd,
+    command: result.command
+  })
+}
+
+/** Retry a failed spawn in the same cwd (e.g. after fixing PATH). */
+async function retrySpawn(failure: SpawnFailure): Promise<void> {
+  try {
+    const { tabId } = await window.api.createSession({
+      cwd: failure.cwd,
+      command: failure.command
+    })
+    spawnFailureListener(null)
+    useSessionStore.getState().addTab({
+      tabId,
+      title: failure.title,
+      cwd: failure.cwd,
+      command: failure.command
+    })
+  } catch (e) {
+    spawnFailureListener({
+      ...failure,
+      message: e instanceof Error ? e.message : String(e)
     })
   }
 }
@@ -111,7 +152,23 @@ function TabButton({ tab, active }: { tab: Tab; active: boolean }): React.ReactE
 export function App(): React.ReactElement {
   const tabs = useSessionStore((s) => s.tabs)
   const activeTabId = useSessionStore((s) => s.activeTabId)
+  const theme = useSessionStore((s) => s.theme)
+  const setTheme = useSessionStore((s) => s.setTheme)
   const activeTab = tabs.find((t) => t.tabId === activeTabId) ?? null
+  const [spawnFailure, setSpawnFailure] = useState<SpawnFailure | null>(null)
+
+  // Module-level open/retry helpers report spawn failures into this component.
+  useEffect(() => {
+    spawnFailureListener = setSpawnFailure
+    return () => {
+      spawnFailureListener = () => {}
+    }
+  }, [])
+
+  // Apply the theme choice to the document (CSS handles system/light/dark).
+  useEffect(() => {
+    document.documentElement.dataset['theme'] = theme
+  }, [theme])
 
   // Hook-driven status → badges; PTY exit → done/error (spec §4.4).
   useEffect(() => {
@@ -168,6 +225,7 @@ export function App(): React.ReactElement {
     if (!restoreStarted) {
       restoreStarted = true
       void window.api.loadWorkspace().then(async (saved) => {
+        useSessionStore.getState().setTheme(saved.theme)
         const restored = await restoreWorkspace(window.api, saved)
         if (disposed) return
         const add = useSessionStore.getState().addTab
@@ -175,8 +233,8 @@ export function App(): React.ReactElement {
       })
     }
     const unsub = useSessionStore.subscribe((state, prev) => {
-      if (state.tabs !== prev.tabs) {
-        void window.api.saveWorkspace(buildWorkspaceState(state.tabs))
+      if (state.tabs !== prev.tabs || state.theme !== prev.theme) {
+        void window.api.saveWorkspace(buildWorkspaceState(state.tabs, state.theme))
       }
     })
     return () => {
@@ -204,6 +262,25 @@ export function App(): React.ReactElement {
             <span className="tab-strip__empty">Open a project to begin</span>
           )}
         </header>
+        {spawnFailure && (
+          <div className="spawn-error" role="alert" data-testid="spawn-error">
+            <span>
+              Could not start <strong>{spawnFailure.command}</strong> in{' '}
+              {spawnFailure.cwd}: {spawnFailure.message}
+              {spawnFailure.command === 'claude' && (
+                <> — is the `claude` CLI installed and on your PATH?</>
+              )}
+            </span>
+            <span className="spawn-error__actions">
+              <button type="button" onClick={() => void retrySpawn(spawnFailure)}>
+                Retry
+              </button>
+              <button type="button" onClick={() => setSpawnFailure(null)} aria-label="dismiss error">
+                ×
+              </button>
+            </span>
+          </div>
+        )}
         <main className="workbench">
           <aside className="explorer" data-testid="explorer">
             <Explorer root={activeTab?.cwd ?? null} />
@@ -220,6 +297,17 @@ export function App(): React.ReactElement {
         <footer className="status-bar" data-testid="status-bar">
           <span>Weft</span>
           <span className="status-bar__spacer" />
+          <button
+            type="button"
+            className="status-bar__theme"
+            aria-label={`theme: ${theme}`}
+            title="Cycle theme (system → light → dark)"
+            onClick={() =>
+              setTheme(theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system')
+            }
+          >
+            {theme === 'system' ? '◐' : theme === 'light' ? '☀' : '☾'} {theme}
+          </button>
           <span>
             {tabs.length} session{tabs.length === 1 ? '' : 's'}
           </span>

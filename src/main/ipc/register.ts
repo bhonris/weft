@@ -33,6 +33,8 @@ export interface RegisterDeps {
   shellPath?: string
   /** Command used by openProject (default 'claude'; tests may use 'shell'). */
   defaultCommand?: 'claude' | 'shell'
+  /** Path/name of the claude binary (default 'claude'; E2E injects a broken one). */
+  claudePath?: string
   /** Called after a session is explicitly closed (e.g. to forget its status). */
   onSessionClosed?: (tabId: string) => void
   /** Status-reporting hook injection (spec §4.4). */
@@ -79,7 +81,7 @@ export function registerSessionIpc(deps: RegisterDeps): void {
     const tabId = genId()
     const sessionId = genId()
     const isClaude = opts.command === 'claude'
-    const file = isClaude ? 'claude' : shellPath
+    const file = isClaude ? (deps.claudePath ?? 'claude') : shellPath
     const hookArgs =
       isClaude && deps.hooks ? ['--settings', deps.hooks.settingsJson] : []
     const args = isClaude
@@ -139,7 +141,14 @@ export function registerSessionIpc(deps: RegisterDeps): void {
     const dir = await deps.pickDirectory()
     if (!dir) return null
     const command = deps.defaultCommand ?? 'claude'
-    const { tabId } = createSession({ cwd: dir, command })
-    return { tabId, cwd: dir, title: basename(dir) || dir, command }
+    const title = basename(dir) || dir
+    try {
+      const { tabId } = createSession({ cwd: dir, command })
+      return { tabId, cwd: dir, title, command }
+    } catch (e) {
+      // Actionable failure (e.g. `claude` not on PATH) — never crash the app.
+      const error = e instanceof Error ? e.message : String(e)
+      return { error, cwd: dir, title, command }
+    }
   })
 }

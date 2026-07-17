@@ -44,6 +44,10 @@ export interface DiffPayload {
   modified: string
 }
 
+export type OpenProjectResult =
+  | { tabId: string; cwd: string; title: string; command: SessionCommand }
+  | { error: string; cwd: string; title: string; command: SessionCommand }
+
 /** The typed preload bridge exposed as `window.api`. */
 export interface WeftApi {
   // Terminal / session
@@ -84,13 +88,12 @@ export interface WeftApi {
   getDiff(path: string): Promise<DiffPayload>
 
   // App actions
-  /** Open an OS directory picker; if a folder is chosen, start a claude session there. */
-  openProject(): Promise<{
-    tabId: string
-    cwd: string
-    title: string
-    command: SessionCommand
-  } | null>
+  /**
+   * Open an OS directory picker; if a folder is chosen, start a claude session
+   * there. A spawn failure (e.g. `claude` not on PATH) resolves with an
+   * `error` result rather than rejecting, so the UI can offer a Retry.
+   */
+  openProject(): Promise<OpenProjectResult | null>
 
   // Persistence
   loadWorkspace(): Promise<WorkspaceState>

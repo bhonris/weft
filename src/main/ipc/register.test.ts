@@ -248,6 +248,47 @@ describe('registerSessionIpc', () => {
     expect(factory.spawns[0]).toMatchObject({ file: 'bash' })
   })
 
+  it('openProject returns an error result (not a rejection) when spawn fails', async () => {
+    const failingFactory: PtyFactory = {
+      spawn: () => {
+        throw new Error('spawn claude ENOENT')
+      }
+    }
+    const pty = new PtyManager(failingFactory)
+    const ipcMain = new FakeIpcMain()
+    registerSessionIpc({
+      ipcMain,
+      pty,
+      pickDirectory: async () => 'C:/proj/app',
+      generateId: () => 'x',
+      baseEnv: {},
+      claudePath: 'claude'
+    })
+    const res = await ipcMain.invoke(CH.openProject, { sender: new FakeSender(1) })
+    expect(res).toEqual({
+      error: 'spawn claude ENOENT',
+      cwd: 'C:/proj/app',
+      title: 'app',
+      command: 'claude'
+    })
+  })
+
+  it('spawns the injected claude binary path', () => {
+    const factory = new FakeFactory()
+    const pty = new PtyManager(factory)
+    const ipcMain = new FakeIpcMain()
+    registerSessionIpc({
+      ipcMain,
+      pty,
+      pickDirectory: async () => null,
+      generateId: () => 'y',
+      baseEnv: {},
+      claudePath: 'C:/custom/claude.exe'
+    })
+    ipcMain.invoke(CH.createSession, { sender: new FakeSender(1) }, { cwd: 'C:/p', command: 'claude' })
+    expect(factory.spawns[0]!.file).toBe('C:/custom/claude.exe')
+  })
+
   it('openProject returns null when the picker is cancelled', async () => {
     const c = setup(async () => null)
     const res = await c.ipcMain.invoke(CH.openProject, c.event)

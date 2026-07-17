@@ -9,7 +9,10 @@ export type WorkspaceSyncApi = Pick<WeftBridge, 'createSession'> & {
 }
 
 /** Serialize the renderer's tab list into a persistable WorkspaceState. */
-export function buildWorkspaceState(tabs: readonly Tab[]): WorkspaceState {
+export function buildWorkspaceState(
+  tabs: readonly Tab[],
+  theme: WorkspaceState['theme'] = 'system'
+): WorkspaceState {
   return {
     version: WORKSPACE_VERSION,
     tabs: tabs.map((t) => ({
@@ -24,7 +27,7 @@ export function buildWorkspaceState(tabs: readonly Tab[]): WorkspaceState {
     })),
     tabOrder: tabs.map((t) => t.tabId),
     explorerRoots: [],
-    theme: 'system'
+    theme
   }
 }
 
