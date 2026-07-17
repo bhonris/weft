@@ -13,8 +13,10 @@ import { writeForwarder } from './services/hook-forwarder'
 import { NetTransport } from './platform/net-transport'
 import { statusEndpointPath } from '@core/pipe/pipe-name'
 import { buildHookSettingsJson } from '@core/status/hook-settings'
+import { WorkspaceStore } from './services/workspace-store'
 import { registerSessionIpc } from './ipc/register'
 import { registerFsIpc } from './ipc/register-fs'
+import { registerWorkspaceIpc } from './ipc/register-workspace'
 import { CH } from '@shared/ipc/channels'
 
 /**
@@ -104,6 +106,26 @@ export async function wireApp(): Promise<{ pty: PtyManager; shutdown: () => void
     open: async (path) => {
       await shell.openPath(path)
     }
+  })
+
+  // Workspace persistence: electron-store JSON blob + pre-migration backup.
+  const { default: ElectronStore } = await import('electron-store')
+  const electronStore = new ElectronStore()
+  registerWorkspaceIpc({
+    ipcMain,
+    store: new WorkspaceStore({
+      store: {
+        get: (key) => electronStore.get(key),
+        set: (key, value) => electronStore.set(key, value)
+      },
+      backup: (blob) => {
+        void fsPromises.writeFile(
+          join(app.getPath('userData'), 'config.bak'),
+          JSON.stringify(blob, null, 2)
+        )
+      },
+      onWarn: (message) => console.warn(`[weft-workspace] ${message}`)
+    })
   })
 
   // Main-process introspection for the E2E suite (never exposed to the renderer).

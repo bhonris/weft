@@ -195,7 +195,12 @@ describe('registerSessionIpc', () => {
   it('openProject creates a session for the chosen directory', async () => {
     const c = setup(async () => 'C:/Users/me/my-app')
     const res = await c.ipcMain.invoke(CH.openProject, c.event)
-    expect(res).toEqual({ tabId: 'id1', cwd: 'C:/Users/me/my-app', title: 'my-app' })
+    expect(res).toEqual({
+      tabId: 'id1',
+      cwd: 'C:/Users/me/my-app',
+      title: 'my-app',
+      command: 'claude'
+    })
     expect(c.factory.spawns[0]).toMatchObject({ file: 'claude', cwd: 'C:/Users/me/my-app' })
   })
 

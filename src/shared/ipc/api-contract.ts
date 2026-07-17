@@ -84,7 +84,12 @@ export interface WeftApi {
 
   // App actions
   /** Open an OS directory picker; if a folder is chosen, start a claude session there. */
-  openProject(): Promise<{ tabId: string; cwd: string; title: string } | null>
+  openProject(): Promise<{
+    tabId: string
+    cwd: string
+    title: string
+    command: SessionCommand
+  } | null>
 
   // Persistence
   loadWorkspace(): Promise<WorkspaceState>
@@ -112,5 +117,7 @@ export type WeftBridge = Pick<
   | 'listDir'
   | 'revealInOs'
   | 'openWithDefault'
+  | 'loadWorkspace'
+  | 'saveWorkspace'
 >
 

@@ -21,6 +21,7 @@ test.beforeEach(async () => {
     env: {
       ...process.env,
       NODE_ENV: 'production',
+      WEFT_USER_DATA_DIR: mkdtempSync(join(tmpdir(), 'weft-ud-')),
       WEFT_E2E_OPEN_DIR: projectDir,
       WEFT_OPEN_PROJECT_COMMAND: 'shell' // no real `claude` boot in E2E
     }

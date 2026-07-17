@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 12 — steiner: feat(workspace-persistence) — 2026-07-17T21:20:00Z
+
+**Phase**: time-leap-development
+**Changed**: Workspace persistence + restore-on-launch. register-workspace IPC (loadWorkspace/saveWorkspace over WorkspaceStore); container wires electron-store + config.bak backup writer. Renderer workspace-sync: buildWorkspaceState (tabs→versioned blob) + restoreWorkspace (respawn fresh session per saved tab, skip failures, preserve order/titles); App restores once on launch (StrictMode-guarded) and saves on every tabs change via zustand subscribe. Tab now carries `command`; openProject response includes it. index.ts honors WEFT_USER_DATA_DIR for isolation. FIXED E2E cross-contamination: every spec now launches with its own mkdtemp userData (status spec was restoring tabs saved by open-project spec) + cleaned the polluted shared dev config.json (removed stray workspace key).
+**SERN interference**: E2E cross-test pollution via shared userData once persistence landed — isolated per-launch userData; lesson recorded
+**Divergence meter**: unit 155 pass; e2e 8 pass incl. restart-restore
+**Next target**: Monaco read-only file viewer + diff (readFileText/getDiff IPC + git-HEAD diff provider + renderer viewer pane), then keybindings, tear-off, Phase 3b full sweep.
+
+---
+
 ## Leap 11 — steiner: feat(os-notifications) — 2026-07-17T20:55:00Z
 
 **Phase**: time-leap-development

@@ -4,6 +4,11 @@ import { wireApp } from './container'
 
 const isDev = !!process.env['ELECTRON_RENDERER_URL']
 
+// E2E isolation: each test run gets its own userData dir so persisted
+// workspaces never leak between tests or into the real profile.
+const userDataOverride = process.env['WEFT_USER_DATA_DIR']
+if (userDataOverride) app.setPath('userData', userDataOverride)
+
 function createWindow(): void {
   const win = new BrowserWindow({
     width: 1280,

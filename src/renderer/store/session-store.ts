@@ -1,17 +1,21 @@
 import { create } from 'zustand'
 import type { SessionStatus } from '@shared/status/hook-events'
+import type { SessionCommand } from '@shared/ipc/api-contract'
 
 export interface Tab {
   tabId: string
   title: string
   cwd: string
+  command: SessionCommand
   status: SessionStatus
 }
 
 export interface SessionState {
   tabs: Tab[]
   activeTabId: string | null
-  addTab: (tab: Omit<Tab, 'status'> & { status?: SessionStatus }) => void
+  addTab: (
+    tab: Omit<Tab, 'status' | 'command'> & { status?: SessionStatus; command?: SessionCommand }
+  ) => void
   removeTab: (tabId: string) => void
   setActive: (tabId: string) => void
   setStatus: (tabId: string, status: SessionStatus) => void
@@ -26,7 +30,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   addTab: (tab) =>
     set((s) => {
       if (s.tabs.some((t) => t.tabId === tab.tabId)) return s
-      const next: Tab = { status: 'working', ...tab }
+      const next: Tab = { status: 'working', command: 'claude', ...tab }
       return { tabs: [...s.tabs, next], activeTabId: tab.tabId }
     }),
 

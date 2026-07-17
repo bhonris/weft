@@ -15,6 +15,7 @@ test.beforeEach(async () => {
     env: {
       ...process.env,
       NODE_ENV: 'production',
+      WEFT_USER_DATA_DIR: mkdtempSync(join(tmpdir(), 'weft-ud-')),
       WEFT_E2E_OPEN_DIR: mkdtempSync(join(tmpdir(), 'weft-status-')),
       WEFT_OPEN_PROJECT_COMMAND: 'shell'
     }

@@ -1,9 +1,14 @@
 import { useEffect } from 'react'
 import { useSessionStore, type Tab } from './store/session-store'
+import { buildWorkspaceState, restoreWorkspace } from './store/workspace-sync'
 import { TerminalPane } from './components/TerminalPane'
 import { Explorer } from './components/Explorer'
 import { WorkbenchErrorBoundary } from './components/WorkbenchErrorBoundary'
 import type { SessionStatus } from '@shared/status/hook-events'
+
+// Module-level guard: React StrictMode double-invokes effects in dev; the
+// workspace must be restored exactly once per renderer lifetime.
+let restoreStarted = false
 
 const STATUS_GLYPH: Record<SessionStatus, string> = {
   working: '●',
@@ -62,9 +67,39 @@ export function App(): React.ReactElement {
     }
   }, [])
 
+  // Restore the previous workspace once on launch; then persist tab changes.
+  useEffect(() => {
+    let disposed = false
+    if (!restoreStarted) {
+      restoreStarted = true
+      void window.api.loadWorkspace().then(async (saved) => {
+        const restored = await restoreWorkspace(window.api, saved)
+        if (disposed) return
+        const add = useSessionStore.getState().addTab
+        for (const tab of restored) add(tab)
+      })
+    }
+    const unsub = useSessionStore.subscribe((state, prev) => {
+      if (state.tabs !== prev.tabs) {
+        void window.api.saveWorkspace(buildWorkspaceState(state.tabs))
+      }
+    })
+    return () => {
+      disposed = true
+      unsub()
+    }
+  }, [])
+
   const openProject = async (): Promise<void> => {
     const result = await window.api.openProject()
-    if (result) addTab({ tabId: result.tabId, title: result.title, cwd: result.cwd })
+    if (result) {
+      addTab({
+        tabId: result.tabId,
+        title: result.title,
+        cwd: result.cwd,
+        command: result.command
+      })
+    }
   }
 
   return (

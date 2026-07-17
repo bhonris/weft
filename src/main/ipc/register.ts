@@ -138,7 +138,8 @@ export function registerSessionIpc(deps: RegisterDeps): void {
   ipcMain.handle(CH.openProject, async () => {
     const dir = await deps.pickDirectory()
     if (!dir) return null
-    const { tabId } = createSession({ cwd: dir, command: deps.defaultCommand ?? 'claude' })
-    return { tabId, cwd: dir, title: basename(dir) || dir }
+    const command = deps.defaultCommand ?? 'claude'
+    const { tabId } = createSession({ cwd: dir, command })
+    return { tabId, cwd: dir, title: basename(dir) || dir, command }
   })
 }
