@@ -1,7 +1,10 @@
-import { ipcMain, dialog } from 'electron'
+import { promises as fsPromises } from 'node:fs'
+import { ipcMain, dialog, shell } from 'electron'
 import { PtyManager } from './services/pty-manager'
 import { NodePtyFactory } from './services/pty-factory'
+import { FsService } from './services/fs-service'
 import { registerSessionIpc } from './ipc/register'
+import { registerFsIpc } from './ipc/register-fs'
 
 /**
  * Composition root: constructs the concrete services and wires IPC. This is the
@@ -21,6 +24,15 @@ export function wireApp(): { pty: PtyManager } {
       })
       if (result.canceled || result.filePaths.length === 0) return null
       return result.filePaths[0] ?? null
+    }
+  })
+
+  registerFsIpc({
+    ipcMain,
+    fsService: new FsService(fsPromises),
+    reveal: (path) => shell.showItemInFolder(path),
+    open: async (path) => {
+      await shell.openPath(path)
     }
   })
 

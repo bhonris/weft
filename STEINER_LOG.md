@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 6 — steiner: feat(file-explorer-backend) — 2026-07-17T17:27:00Z
+
+**Phase**: time-leap-development
+**Changed**: File explorer backend (unblocked by native build). Pure `core/fs/dir-sort` (dirs-first case-insensitive sort + default ignores node_modules/.git). `main/services/FsService.listDir` over injectable FsLike → mapped/sorted DirEntry[] with kinds (dir/file/symlink), ignore-filtering. `main/ipc/register-fs` (listDir/revealInOs/openWithDefault, injected reveal/open). Wired into container (fsPromises + electron shell). Added listDir/revealInOs/openWithDefault to preload bridge + WeftBridge. Fixed tests to use path.join (Windows backslash separators, not hardcoded '/').
+**SERN interference**: none (caught Windows path-separator assumption in tests immediately)
+**Divergence meter**: 99.83% stmts / 96% branch / 95.18% funcs, 110 pass, 0 fail
+**Next target**: renderer Explorer tree (lazy-expand via listDir); then status server + inline hooks, OS notifications, Monaco diff, persistence IPC + restore, tear-off. LIVE verify + Phase 3b still gated on node-pty Electron rebuild (VS Build Tools installing).
+
+---
+
 ## Leap 5 — steiner: feat(interactive-terminal) — 2026-07-17T17:18:00Z
 
 **Phase**: time-leap-development

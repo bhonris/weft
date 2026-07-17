@@ -106,5 +106,8 @@ export type WeftBridge = Pick<
   | 'onSessionExit'
   | 'onSessionStatus'
   | 'openProject'
+  | 'listDir'
+  | 'revealInOs'
+  | 'openWithDefault'
 >
 

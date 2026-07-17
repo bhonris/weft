@@ -1,5 +1,5 @@
 import { CH } from '@shared/ipc/channels'
-import type { WeftBridge } from '@shared/ipc/api-contract'
+import type { WeftBridge, DirEntry } from '@shared/ipc/api-contract'
 
 /** The ipcRenderer surface the bridge needs — satisfied by electron and a fake. */
 export interface IpcRendererLike {
@@ -34,6 +34,9 @@ export function createWeftApi(ipc: IpcRendererLike): WeftBridge {
     onSessionExit: (cb) => subscribe(CH.sessionExit, cb),
     onSessionStatus: (cb) => subscribe(CH.sessionStatus, cb),
     openProject: () =>
-      ipc.invoke(CH.openProject) as Promise<{ tabId: string; cwd: string; title: string } | null>
+      ipc.invoke(CH.openProject) as Promise<{ tabId: string; cwd: string; title: string } | null>,
+    listDir: (path) => ipc.invoke(CH.listDir, path) as Promise<DirEntry[]>,
+    revealInOs: (path) => ipc.invoke(CH.revealInOs, path) as Promise<void>,
+    openWithDefault: (path) => ipc.invoke(CH.openWithDefault, path) as Promise<void>
   }
 }
