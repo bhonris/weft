@@ -78,4 +78,19 @@ describe('mapHookToStatus', () => {
       status: null
     })
   })
+
+  it('leaves status unchanged for an unrecognized event (default branch)', () => {
+    // Cast an unknown event shape to exercise the defensive default case.
+    const unknown = { event: 'MysteryEvent', session_id: 's1' } as unknown as HookPayload
+    expect(mapHookToStatus(unknown, 'working')).toEqual({ status: null })
+  })
+
+  it('omits message on a done notification with no message', () => {
+    expect(
+      mapHookToStatus(
+        { ...base, event: 'Notification', notification_type: 'agent_completed' },
+        'working'
+      )
+    ).toEqual({ status: 'done' })
+  })
 })

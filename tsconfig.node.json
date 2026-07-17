@@ -20,5 +20,6 @@
     "baseUrl": "."
   },
   "include": ["src/main/**/*.ts", "src/preload/**/*.ts"],
+  "exclude": ["**/*.test.ts", "**/*.spec.ts"],
   "references": [{ "path": "./tsconfig.shared.json" }]
 }

@@ -28,5 +28,24 @@ pnpm test:cov    # run tests with coverage (95% statement gate)
 
 _Documented as each feature lands._
 
+### Workspace persistence
+
+Weft persists your workspace (open tabs, tab order, explorer roots, theme, and
+window bounds) as a single versioned JSON blob via `electron-store`. On launch it
+loads and validates that blob; on any change it saves the updated state.
+
+- **Schema versioning & migration.** Every persisted blob carries a `version`.
+  On load, older blobs are upgraded through an ordered migration chain to the
+  current shape. Before an upgrade overwrites the stored value, the original blob
+  is backed up (to `config.bak`) so a bad migration can be recovered.
+- **Corruption safety.** If the stored blob is missing, malformed, or fails
+  validation, Weft falls back to a fresh default workspace instead of crashing.
+
+Internals: pure logic lives in `src/core/persistence/` (`schema` — zod shapes +
+`WORKSPACE_VERSION`; `migrations/` — the ordered upgrade chain; `validate` —
+`loadWorkspace(raw)` returning a `Result`). The `WorkspaceStore` adapter in
+`src/main/services/workspace-store.ts` wires that to `electron-store` and the
+backup writer, and is fully unit-tested against an in-memory fake store.
+
 ### Tabbed Claude sessions
-_TBD_
+_TBD — PtyManager + session correlation next._

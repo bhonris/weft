@@ -1,21 +1,21 @@
 phase: time-leap-development
-leap_count: 2
+leap_count: 3
 expansion_cycle: 1
-session_id: 2026-07-17T16:24:00Z
-prev_head: 1f1b722950ab42319a41fcf0a23fbec8397def4d
+session_id: 2026-07-17T16:32:00Z
+prev_head: a24e474794d81ec0eb206c00faf6ff4a73c6fc2b
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md."
 project_name: "weft"
 project_type: web
 spec_path: documents/steiner-spec.md
 test_cmd: pnpm test
 dev_server_port: 5173
-coverage_pct: unknown
+coverage_pct: 100
 divergence_readings: []
-current_focus: "Implement the WorkspaceState persistence service (electron-store adapter + versioned config migrations in core) — first unchecked criterion after scaffold; then PtyManager with injectable PtyFactory"
+current_focus: "Implement PtyManager in main/services with an injectable PtyFactory interface (production adapter lazy-imports node-pty; tests use a FakePty EventEmitter). Cover: create session (spawn claude --session-id <uuid> with cwd + CLAUDE_IDE_TAB env + inline --settings hooks), write, resize (throttled <=1/50ms via core/terminal/resize-throttle), close (pty.kill + deregister), data/exit events. Then install node-pty native."
 blocked_on: null
-last_test_run: "12 pass, 0 fail (status-mapper)"
+last_test_run: "40 pass, 0 fail"
 closed_worldlines: [divergence-analysis, worldline-selection]
-next_action: "Phase 3: spawn Moeka to survey the scaffold, then Daru to implement core/persistence (migrations + validate) and main/services/workspace-store with tests. node-pty native install is still deferred — add it + PtyFactory adapter next."
+next_action: "Phase 3 next slice: build core/terminal/resize-throttle (pure, injected clock) + main/services/pty-manager (PtyFactory DI, FakePty tests) + core/status/session-correlator (session_id -> tabId -> cwd resolution). Add node-pty to deps and the real PtyFactory adapter. Keep growing vitest coverage `include` list as each module lands (add src/main/services/** already covered; add core/terminal, then ipc, preload, renderer/store later)."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:

@@ -21,5 +21,6 @@
     "baseUrl": "."
   },
   "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx"],
+  "exclude": ["**/*.test.ts", "**/*.spec.ts", "**/*.test.tsx", "**/*.spec.tsx"],
   "references": [{ "path": "./tsconfig.shared.json" }]
 }
