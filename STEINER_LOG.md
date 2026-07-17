@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 26 — steiner: release(v0.1.0) — 2026-07-18T05:30:00Z
+
+**Phase**: cycle 4
+**Changed**: Version stamped 0.1.0; CHANGELOG.md written (full feature list, tooling, notable decisions incl. the WebGL rejection and the api-level-E2E lesson). Final verification: 214 unit + 23 e2e green, typecheck clean.
+**SERN interference**: none
+**Divergence meter**: 214 unit + 23 e2e, 0 fail
+**Next target**: budget 26/30. Remaining leaps: operator-instructed continuous improvement until token/leap budget exhausts; EL_PSY_KONGROO no later than 29.
+
+---
+
 ## Leap 25 — steiner: perf(terminal) scrollback cap; WebGL rejected with evidence — 2026-07-18T05:10:00Z
 
 **Phase**: cycle 4 (small quality leaps under budget)

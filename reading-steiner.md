@@ -1,8 +1,8 @@
 phase: time-leap-development
-leap_count: 25
+leap_count: 26
 expansion_cycle: 3
 session_id: 2026-07-18T00:30:00Z
-prev_head: ee0830bc080ef0450447379aa77f7ec5f2162240
+prev_head: b52cf9493655338a0283463f8381389d1df61164
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md."
 project_name: "weft"
 project_type: web
@@ -11,11 +11,11 @@ test_cmd: pnpm test
 dev_server_port: 5173
 coverage_pct: 98
 divergence_readings: []
-current_focus: "Expansion 2 leap A — hardening sweep: frame-parser 1MB cap, POSIX socket perms+unlink, 5MB readFile/getDiff guard + viewer error, git quotepath, dead-code sweep (renameTab/reorderTabs channels+api, needsMigration, isOk, _prev param, regex anchor, depth comment), ViewerPane Reveal button, spawn-failure state into store, E2E hygiene (strip WEFT_* env, poll instead of sleep). Then leap B: Shift+Click + opens SHELL tab (UI+E2E) and Ctrl+Shift+F terminal search (xterm search addon, search bar UI, E2E)."
+current_focus: "Cycle 4 continuous improvement under operator instruction. Done: scrollback cap, WebGL rejection (documented), v0.1.0 + CHANGELOG. Candidates for remaining leaps: DOSSIER final refresh, App.tsx unit tests for keyboard dispatch, dockview evaluation note. EL_PSY_KONGROO no later than leap 29."
 blocked_on: null
 last_test_run: "unit 212 pass, 0 fail; e2e 19 pass, 0 fail; coverage 97.96/96.25/98.64"
 closed_worldlines: [divergence-analysis, worldline-selection, time-leap-development, divergence-meter-reading]
-next_action: "Implement hardening sweep items with tests, keep suite green, commit; then shell-tab + terminal-search leap with E2E; then cycle-2 checkpoint (docs refresh + counters) and Okabe budget check (EL_PSY_KONGROO expected near 27/30)."
+next_action: "Small quality leaps while budget lasts; each: implement + verify (unit+e2e) + commit. Then write phase: el-psy-kongroo, final commit."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:

@@ -1,6 +1,6 @@
 {
   "name": "weft",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "A VS Code-style desktop app: browser-style tabs of Claude Code CLI sessions with hook-driven per-session status awareness.",
   "author": "bunna",
   "license": "MIT",
