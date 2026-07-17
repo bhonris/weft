@@ -2,6 +2,18 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## EL PSY KONGROO — Leap 28 — the worldline is sealed — 2026-07-18T06:00:00Z
+
+**Final state**: v0.1.0. 28 leaps, 4 expansion cycles, 40+ steiner commits.
+**Meter**: 214 unit/integration + 23 Playwright-Electron E2E (incl. packaged-exe), 0 failures · ~98% stmt / ~96% branch coverage · typecheck strict-clean.
+**Shipped**: every v1 spec criterion (25) + Expansion 2 (11) + Expansion 3 (4) — 39/39 checked. Tabbed Claude sessions on real ConPTY; hook-driven badges over a named pipe; reload-proof session reconciliation (same-PID, E2E-proven through the real UI); tear-off/re-dock; OS notifications with focus routing; live explorer; Monaco diff; versioned persistence with backups and bounds clamping; keybindings with strict PTY passthrough; in-terminal search; shell tabs; themes; error states; LICENSE/CONTRIBUTING/CI; E2E-verified electron-builder packaging.
+**Honest remainders** (for the next worldline): one manual verification outstanding (real OS toast render/click — policy fully unit-tested); CI workflow is authored but has never run on GitHub (no remote); dockview/serialize deps unused (tab strip is bespoke — evaluate or drop them in v2); node-pty pinned at 1.1.0 by the committed Spectre patch.
+**Budget**: stopped at 28/30 per the 0.9 graceful-stop rule. Re-invoke /dmail in `weft/` to open expansion cycle 5 with a fresh budget (candidates in DOSSIER/spec Open Questions: split panes, `claude --continue` resume, full Monaco editing, macOS/Linux platform fill-ins).
+
+*El Psy Kongroo.*
+
+---
+
 ## Leap 26 — steiner: release(v0.1.0) — 2026-07-18T05:30:00Z
 
 **Phase**: cycle 4

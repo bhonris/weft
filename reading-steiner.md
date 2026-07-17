@@ -1,8 +1,8 @@
-phase: time-leap-development
-leap_count: 27
+phase: el-psy-kongroo
+leap_count: 28
 expansion_cycle: 3
 session_id: 2026-07-18T00:30:00Z
-prev_head: 65e88f3f4d3273ec86d8f616147f4767b13b136c
+prev_head: c0a35cb93893bdc4859c4ece539b3db1b50f385c
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md."
 project_name: "weft"
 project_type: web
@@ -11,11 +11,11 @@ test_cmd: pnpm test
 dev_server_port: 5173
 coverage_pct: 98
 divergence_readings: []
-current_focus: "Cycle 4 continuous improvement under operator instruction. Done: scrollback cap, WebGL rejection (documented), v0.1.0 + CHANGELOG. Candidates for remaining leaps: DOSSIER final refresh, App.tsx unit tests for keyboard dispatch, dockview evaluation note. EL_PSY_KONGROO no later than leap 29."
+current_focus: "Worldline sealed at v0.1.0 (leap 28/30, 0.9 graceful-stop rule). Re-invoke /dmail in weft/ for expansion cycle 5: split panes, claude --continue, full Monaco editing, macOS/Linux fill-ins, dockview evaluation."
 blocked_on: null
 last_test_run: "unit 212 pass, 0 fail; e2e 19 pass, 0 fail; coverage 97.96/96.25/98.64"
 closed_worldlines: [divergence-analysis, worldline-selection, time-leap-development, divergence-meter-reading]
-next_action: "Small quality leaps while budget lasts; each: implement + verify (unit+e2e) + commit. Then write phase: el-psy-kongroo, final commit."
+next_action: "None — loop complete. On next /dmail: read STEINER_LOG EL-PSY-KONGROO entry for honest remainders, then Phase 7 expansion with a fresh budget."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:
@@ -48,4 +48,4 @@ max_iterations: 30
 push_to_github: false
 bypass_playwright: false
 sern_no_progress_streak: 0
-lessons_learned: ["cycle 1: node-pty Electron rebuild blocked twice on Windows — (a) NoDefaultCurrentDirectoryInExePath=1 breaks winpty GetCommitHash.bat (now unset inside scripts/rebuild-native.mjs), (b) SpectreMitigation flag required Spectre VS libs (removed via committed pnpm patch node-pty@1.1.0). node-pty verified spawning ConPTY under Electron. Rebuild reproducible via pnpm rebuild:native.", "cycle 1: api-level E2E can mask product-path bugs — the reload test drove window.api directly and hid that the REAL React restore flow respawned sessions; always E2E the actual UI path for core guarantees. Destroyed-webContents sends throw inside PTY callbacks and wedge main via modal — guard every main→renderer send. ConPTY children pin process exit — hard-exit fallback after graceful shutdown. What worked: pure-core + injected fakes kept 200+ tests fast; adversarial 3-reviewer pass found a critical product bug that 98% coverage missed."]
+lessons_learned: ["cycle 1: node-pty Electron rebuild blocked twice on Windows — (a) NoDefaultCurrentDirectoryInExePath=1 breaks winpty GetCommitHash.bat (now unset inside scripts/rebuild-native.mjs), (b) SpectreMitigation flag required Spectre VS libs (removed via committed pnpm patch node-pty@1.1.0). node-pty verified spawning ConPTY under Electron. Rebuild reproducible via pnpm rebuild:native.", "cycle 1: api-level E2E can mask product-path bugs — the reload test drove window.api directly and hid that the REAL React restore flow respawned sessions; always E2E the actual UI path for core guarantees. Destroyed-webContents sends throw inside PTY callbacks and wedge main via modal — guard every main→renderer send. ConPTY children pin process exit — hard-exit fallback after graceful shutdown. What worked: pure-core + injected fakes kept 200+ tests fast; adversarial 3-reviewer pass found a critical product bug that 98% coverage missed.", "cycle 4: WebGL renderer trial — GL canvas removes terminal text from the DOM, silently killing a11y + all text-based E2E; the suite caught it in one run. Packaged-exe E2E (electron-builder --dir + _electron.launch executablePath) is cheap and catches asar/native packaging mistakes nothing else sees."]
