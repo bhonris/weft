@@ -160,6 +160,23 @@ export function App(): React.ReactElement {
   const activeTab = tabs.find((t) => t.tabId === activeTabId) ?? null
   const spawnFailure = useSessionStore((s) => s.spawnFailure)
   const setSpawnFailure = useSessionStore((s) => s.setSpawnFailure)
+  const [gitBranch, setGitBranch] = useState<string | null>(null)
+
+  // Git branch for the active project (blank for non-repos).
+  useEffect(() => {
+    const cwd = activeTab?.cwd
+    if (!cwd) {
+      setGitBranch(null)
+      return
+    }
+    let cancelled = false
+    void window.api.getGitBranch(cwd).then((branch) => {
+      if (!cancelled) setGitBranch(branch)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [activeTab?.cwd])
 
   // Apply the theme choice to the document (CSS handles system/light/dark).
   useEffect(() => {
@@ -295,6 +312,16 @@ export function App(): React.ReactElement {
         </main>
         <footer className="status-bar" data-testid="status-bar">
           <span>Weft</span>
+          {activeTab && (
+            <span className="status-bar__cwd" title={activeTab.cwd}>
+              {activeTab.title}
+              {gitBranch && (
+                <span className="status-bar__branch" data-testid="git-branch">
+                  {'  '}⎇ {gitBranch}
+                </span>
+              )}
+            </span>
+          )}
           <span className="status-bar__spacer" />
           <button
             type="button"

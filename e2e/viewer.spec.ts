@@ -42,6 +42,11 @@ test('clicking a file opens the read-only Monaco viewer; Diff vs HEAD shows the 
   await page.getByRole('button', { name: 'open project' }).click()
   await expect(page.getByTestId('explorer-tree')).toBeVisible()
 
+  // The status bar shows the fixture repo's git branch for the active tab.
+  await expect(page.getByTestId('git-branch')).toContainText(/⎇ (master|main)/, {
+    timeout: 10_000
+  })
+
   // Open the file in the viewer.
   await page.getByText('story.txt').click()
   await expect(page.getByTestId('viewer-pane')).toBeVisible()

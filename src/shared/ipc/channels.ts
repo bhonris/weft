@@ -35,6 +35,7 @@ export const CH = {
   openWithDefault: 'fs:open',
   readFileText: 'fs:read-text',
   getDiff: 'fs:get-diff',
+  getGitBranch: 'fs:git-branch',
 
   // Persistence
   loadWorkspace: 'workspace:load',

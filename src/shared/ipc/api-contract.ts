@@ -101,6 +101,8 @@ export interface WeftApi {
   openWithDefault(path: string): Promise<void>
   readFileText(path: string): Promise<string>
   getDiff(path: string): Promise<DiffPayload>
+  /** Current git branch for a directory, or null when not a repo. */
+  getGitBranch(cwd: string): Promise<string | null>
 
   // App actions
   /**
@@ -146,5 +148,6 @@ export type WeftBridge = Pick<
   | 'saveWorkspace'
   | 'readFileText'
   | 'getDiff'
+  | 'getGitBranch'
 >
 

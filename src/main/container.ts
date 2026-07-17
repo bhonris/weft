@@ -18,6 +18,7 @@ import { buildHookSettingsJson } from '@core/status/hook-settings'
 import { WorkspaceStore } from './services/workspace-store'
 import { DiffService } from './services/diff-service'
 import { WatchService } from './services/watch-service'
+import { GitService } from './services/git-service'
 import { watch as chokidarWatch } from 'chokidar'
 import { registerSessionIpc } from './ipc/register'
 import { registerFsIpc } from './ipc/register-fs'
@@ -169,6 +170,7 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
     diffService: new DiffService(fsPromises, (file, args, opts) =>
       execFileAsync(file, args, opts)
     ),
+    gitService: new GitService((file, args, opts) => execFileAsync(file, args, opts)),
     reveal: (path) => shell.showItemInFolder(path),
     open: async (path) => {
       await shell.openPath(path)

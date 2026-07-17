@@ -276,6 +276,16 @@ body,
   flex: 1;
 }
 
+.status-bar__cwd {
+  margin-left: 12px;
+  opacity: 0.9;
+  white-space: pre;
+}
+
+.status-bar__branch {
+  opacity: 0.95;
+}
+
 .error-boundary {
   padding: 24px;
   color: var(--fg);
