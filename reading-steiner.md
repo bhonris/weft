@@ -1,8 +1,8 @@
 phase: time-leap-development
-leap_count: 26
+leap_count: 27
 expansion_cycle: 3
 session_id: 2026-07-18T00:30:00Z
-prev_head: b52cf9493655338a0283463f8381389d1df61164
+prev_head: 65e88f3f4d3273ec86d8f616147f4767b13b136c
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md."
 project_name: "weft"
 project_type: web

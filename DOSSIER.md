@@ -5,8 +5,9 @@ Weft is a cross-platform (Windows-first) open-source Electron desktop app: a VS 
 
 ## Current status
 Phase: Time Leap Development (Leap 8/30, Cycle 1)
-Phase: Worldline 2 STABILISED — cycle 2 complete (Leap 23/30)
-Divergence meter: **214 unit + 22 Electron E2E, all pass** · ~98% statements
+Phase: v0.1.0 RELEASED — cycle 4 (Leap 27/30)
+Divergence meter: **214 unit + 23 Electron E2E, all pass** · ~98% statements
+Cycle 3 shipped OSS hygiene (LICENSE/CONTRIBUTING/CI) + electron-builder packaging — the packaged Weft.exe is E2E-verified. Cycle 4: scrollback cap, WebGL trial rejected on a11y/testability evidence, v0.1.0 stamped with CHANGELOG.
 Cycle 2 (Expansion 2) shipped all 11 ACs: full hardening sweep (buffer caps, UDS perms, 5MB viewer guard, quotepath, dead-code removal, Reveal button, store-based spawn-failure, E2E hygiene with WEFT_*-stripped launches + deterministic persistence polling, correlator path normalization) + two features (Shift+Click shell tabs, Ctrl+Shift+F in-terminal search) + multi-tab/rename/theme restart E2E. Every review item from cycle 1 is now closed — none carried.
 ALL v1 features built and machine-verified in the real app: tabs (create/close/rename/drag-reorder), reload-safe terminal pipeline, hook-driven status badges over named pipe, OS notifications (policy unit-tested; one manual toast check pending — see spec Open Questions), explorer + live chokidar watching, Monaco viewer + git-HEAD diff, workspace persistence incl. window bounds, tear-off/re-dock with same-PID guarantee, keybindings with PTY passthrough, light/dark/system themes, spawn-error recovery. Screenshots in screenshots/. All 25 spec acceptance criteria checked.
 

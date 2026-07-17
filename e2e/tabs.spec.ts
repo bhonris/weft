@@ -51,6 +51,12 @@ test('Ctrl+1/Ctrl+2 jump between tabs and Ctrl+W closes the active one', async (
   await page.keyboard.press('Control+2')
   await expect(page.locator('.tab').nth(1)).toHaveClass(/tab--active/)
 
+  // Ctrl+Tab cycles forward (wraps from 2 → 1), Ctrl+Shift+Tab cycles back.
+  await page.keyboard.press('Control+Tab')
+  await expect(page.locator('.tab').first()).toHaveClass(/tab--active/)
+  await page.keyboard.press('Control+Shift+Tab')
+  await expect(page.locator('.tab').nth(1)).toHaveClass(/tab--active/)
+
   // Ctrl+W closes the active (second) tab.
   await page.keyboard.press('Control+w')
   await expect(page.getByTestId('tab')).toHaveCount(1)
