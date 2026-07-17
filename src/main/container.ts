@@ -19,6 +19,7 @@ import { WorkspaceStore } from './services/workspace-store'
 import { DiffService } from './services/diff-service'
 import { WatchService } from './services/watch-service'
 import { GitService } from './services/git-service'
+import { resolveBinary } from './services/resolve-binary'
 import { watch as chokidarWatch } from 'chokidar'
 import { registerSessionIpc } from './ipc/register'
 import { registerFsIpc } from './ipc/register-fs'
@@ -102,6 +103,14 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
   })
   await statusServer.start()
 
+  const execFileAsync = promisify(execFile)
+
+  // node-pty/ConPTY does not do PATH+PATHEXT resolution — resolve `claude` to
+  // an absolute path once, up front (WEFT_CLAUDE_BIN still overrides for E2E).
+  const claudePath =
+    process.env['WEFT_CLAUDE_BIN'] ??
+    (await resolveBinary('claude', (file, args, opts) => execFileAsync(file, args, opts)))
+
   registerSessionIpc({
     ipcMain,
     pty,
@@ -139,7 +148,7 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
     // (which no automation can drive), and WEFT_OPEN_PROJECT_COMMAND=shell lets
     // tests open a plain shell instead of booting a real `claude`.
     defaultCommand: process.env['WEFT_OPEN_PROJECT_COMMAND'] === 'shell' ? 'shell' : 'claude',
-    claudePath: process.env['WEFT_CLAUDE_BIN'] ?? 'claude',
+    claudePath,
     pickDirectory: async () => {
       const forced = process.env['WEFT_E2E_OPEN_DIR']
       if (forced) return forced
@@ -152,7 +161,6 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
     }
   })
 
-  const execFileAsync = promisify(execFile)
   const watchService = new WatchService(
     (path) =>
       chokidarWatch(path, {
