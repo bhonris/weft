@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "rebuild:native": "electron-rebuild -f -w node-pty"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",
@@ -42,6 +43,7 @@
     ]
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
     "@testing-library/react": "^16.1.0",
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.4",
