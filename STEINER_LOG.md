@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 7 — steiner: chore(native-build) node-pty runs under Electron — 2026-07-17T19:30:00Z
+
+**Phase**: time-leap-development
+**Changed**: Resolved the node-pty Electron-ABI build (user installed VS Build Tools). Two Windows blockers fixed: (1) NoDefaultCurrentDirectoryInExePath=1 broke winpty's GetCommitHash.bat — now cleared inside a new scripts/rebuild-native.mjs; (2) SpectreMitigation flag required Spectre VS libs — removed via committed `pnpm patch` (patches/node-pty@1.1.0.patch, changes 'Spectre'→'false' in binding.gyp + winpty.gyp). `electron-rebuild` now completes. Verified with a headless Electron smoke test: node-pty spawned a real ConPTY session and echoed output. blocked_on cleared.
+**SERN interference**: none (both build blockers diagnosed + fixed)
+**Divergence meter**: 110 pass, 0 fail (unchanged — native build is toolchain, not app logic)
+**Next target**: launch pnpm dev + user opens a project to try a live claude session; then renderer explorer tree, status server + inline hooks, notifications, Monaco diff, persistence IPC, tear-off; then Phase 3b (Playwright-Electron).
+
+---
+
 ## Leap 6 — steiner: feat(file-explorer-backend) — 2026-07-17T17:27:00Z
 
 **Phase**: time-leap-development

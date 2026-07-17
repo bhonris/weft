@@ -17,7 +17,7 @@
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "rebuild:native": "electron-rebuild -f -w node-pty"
+    "rebuild:native": "node scripts/rebuild-native.mjs"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",
@@ -40,7 +40,10 @@
       "electron",
       "esbuild",
       "node-pty"
-    ]
+    ],
+    "patchedDependencies": {
+      "node-pty@1.1.0": "patches/node-pty@1.1.0.patch"
+    }
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.0",

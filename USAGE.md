@@ -11,8 +11,22 @@ pnpm test:cov    # run tests with coverage (95% statement gate)
 ```
 
 > **Prerequisite:** a working `claude` CLI on your PATH (Windows 10+ for ConPTY).
-> **Native module note:** `node-pty` is a native dependency rebuilt for Electron's
-> ABI; this is validated in the Phase-0 ConPTY spike.
+
+### Native build (node-pty)
+
+`node-pty` is a native module and must be built for Electron's ABI before the app
+can spawn terminals:
+
+```bash
+pnpm rebuild:native   # rebuilds node-pty for Electron (run after install)
+```
+
+Requirements on Windows: **Visual Studio Build Tools** with the *Desktop
+development with C++* workload, plus Python 3.x. Two quirks are handled for you:
+- `pnpm rebuild:native` clears `NoDefaultCurrentDirectoryInExePath` for the build
+  (otherwise node-pty's winpty step can't run `GetCommitHash.bat`).
+- A committed patch (`patches/node-pty@1.1.0.patch`) disables node-pty's
+  Spectre-mitigation flag, so the Spectre-mitigated VS libraries aren't required.
 
 ## Project layout
 
