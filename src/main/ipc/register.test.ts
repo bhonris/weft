@@ -199,6 +199,24 @@ describe('registerSessionIpc', () => {
     expect(c.factory.spawns[0]).toMatchObject({ file: 'claude', cwd: 'C:/Users/me/my-app' })
   })
 
+  it('openProject honors an injected default command', async () => {
+    const factory = new FakeFactory()
+    const pty = new PtyManager(factory)
+    const ipcMain = new FakeIpcMain()
+    let n = 0
+    registerSessionIpc({
+      ipcMain,
+      pty,
+      pickDirectory: async () => '/tmp/x',
+      generateId: () => `id${++n}`,
+      baseEnv: {},
+      shellPath: 'bash',
+      defaultCommand: 'shell'
+    })
+    await ipcMain.invoke(CH.openProject, { sender: { id: 1, send: () => {} } })
+    expect(factory.spawns[0]).toMatchObject({ file: 'bash' })
+  })
+
   it('openProject returns null when the picker is cancelled', async () => {
     const c = setup(async () => null)
     const res = await c.ipcMain.invoke(CH.openProject, c.event)

@@ -17,7 +17,13 @@ export function wireApp(): { pty: PtyManager } {
   registerSessionIpc({
     ipcMain,
     pty,
+    // E2E/automation seams: WEFT_E2E_OPEN_DIR bypasses the native folder picker
+    // (which no automation can drive), and WEFT_OPEN_PROJECT_COMMAND=shell lets
+    // tests open a plain shell instead of booting a real `claude`.
+    defaultCommand: process.env['WEFT_OPEN_PROJECT_COMMAND'] === 'shell' ? 'shell' : 'claude',
     pickDirectory: async () => {
+      const forced = process.env['WEFT_E2E_OPEN_DIR']
+      if (forced) return forced
       const result = await dialog.showOpenDialog({
         properties: ['openDirectory'],
         title: 'Open a project in Weft'

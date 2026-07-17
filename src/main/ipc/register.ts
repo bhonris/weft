@@ -31,6 +31,8 @@ export interface RegisterDeps {
   baseEnv?: NodeJS.ProcessEnv
   /** Default shell when command is 'shell'. */
   shellPath?: string
+  /** Command used by openProject (default 'claude'; tests may use 'shell'). */
+  defaultCommand?: 'claude' | 'shell'
 }
 
 /** Build the child-process env, dropping undefined values and tagging the tab. */
@@ -117,7 +119,7 @@ export function registerSessionIpc(deps: RegisterDeps): void {
   ipcMain.handle(CH.openProject, async () => {
     const dir = await deps.pickDirectory()
     if (!dir) return null
-    const { tabId } = createSession({ cwd: dir, command: 'claude' })
+    const { tabId } = createSession({ cwd: dir, command: deps.defaultCommand ?? 'claude' })
     return { tabId, cwd: dir, title: basename(dir) || dir }
   })
 }

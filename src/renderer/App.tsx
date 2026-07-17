@@ -1,5 +1,6 @@
 import { useSessionStore, type Tab } from './store/session-store'
 import { TerminalPane } from './components/TerminalPane'
+import { Explorer } from './components/Explorer'
 import { WorkbenchErrorBoundary } from './components/WorkbenchErrorBoundary'
 import type { SessionStatus } from '@shared/status/hook-events'
 
@@ -41,6 +42,7 @@ export function App(): React.ReactElement {
   const tabs = useSessionStore((s) => s.tabs)
   const activeTabId = useSessionStore((s) => s.activeTabId)
   const addTab = useSessionStore((s) => s.addTab)
+  const activeTab = tabs.find((t) => t.tabId === activeTabId) ?? null
 
   const openProject = async (): Promise<void> => {
     const result = await window.api.openProject()
@@ -67,7 +69,9 @@ export function App(): React.ReactElement {
           )}
         </header>
         <main className="workbench">
-          <aside className="explorer" data-testid="explorer" />
+          <aside className="explorer" data-testid="explorer">
+            <Explorer root={activeTab?.cwd ?? null} />
+          </aside>
           <section className="terminal-host" data-testid="terminal-host">
             {activeTabId ? (
               <TerminalPane key={activeTabId} tabId={activeTabId} />

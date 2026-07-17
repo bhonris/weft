@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 9 — steiner: feat(explorer-tree) — 2026-07-17T20:05:00Z
+
+**Phase**: time-leap-development
+**Changed**: Renderer Explorer tree (lazy listDir expansion, file→openWithDefault, error/empty states, aria tree roles) wired to active tab cwd. E2E seams: WEFT_E2E_OPEN_DIR (folder-picker bypass) + WEFT_OPEN_PROJECT_COMMAND=shell (no real claude boot in tests) — the ENTIRE open-project UI flow is now automatable. e2e/open-project.spec.ts: click + → tab appears → xterm mounts → typed echo round-trips on screen → explorer lists fixture files + lazy-expands subdir; close tab → empty state. 6 Explorer jsdom tests + register defaultCommand test.
+**SERN interference**: none (a log-write shell heredoc hit the Windows python alias and timed out — no repo damage; lesson: use Edit tool for log edits)
+**Divergence meter**: unit 117 pass; e2e 5 pass (real Electron)
+**Next target**: status pipeline (differentiator): NDJSON frame-parser (core) + named-pipe/UDS StatusServer + inline --settings hook injection at spawn + forward-script via ELECTRON_RUN_AS_NODE + renderer badge wiring + E2E (inject hook payload over the pipe → badge flips to waiting).
+
+---
+
 ## Leap 8 — steiner: test(e2e) Playwright-Electron harness — 2026-07-17T19:45:00Z
 
 **Phase**: time-leap-development (Phase 3b harness established early)

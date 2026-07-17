@@ -47,7 +47,8 @@ export default defineConfig({
         'src/main/ipc/**',
         'src/preload/create-bridge.ts',
         'src/renderer/store/**',
-        'src/renderer/components/WorkbenchErrorBoundary.tsx'
+        'src/renderer/components/WorkbenchErrorBoundary.tsx',
+        'src/renderer/components/Explorer.tsx'
       ],
       exclude: [
         '**/*.test.ts',
