@@ -8,6 +8,9 @@ export const CH = {
   writeToSession: 'session:write',
   resizeSession: 'session:resize',
   closeSession: 'session:close',
+  // Attach/detach a renderer view to a live session (survives reload; §4.7).
+  attachSession: 'session:attach',
+  detachSession: 'session:detach',
   renameTab: 'tab:rename',
   reorderTabs: 'tab:reorder',
   moveTabToWindow: 'tab:move-window',

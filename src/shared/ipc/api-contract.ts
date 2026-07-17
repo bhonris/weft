@@ -51,6 +51,15 @@ export interface WeftApi {
   writeToSession(tabId: string, data: string): void
   resizeSession(tabId: string, cols: number, rows: number): void
   closeSession(tabId: string): Promise<void>
+  /**
+   * Attach this renderer view to a live session. Resolves with the buffered
+   * output to replay into a freshly mounted terminal; live output then arrives
+   * via `onSessionData`. Safe to call after a reload/HMR — the PTY is never
+   * respawned (spec §4.7).
+   */
+  attachSession(tabId: string): Promise<{ snapshot: string }>
+  /** Detach this view; leaves the PTY running (only `closeSession` kills it). */
+  detachSession(tabId: string): Promise<void>
   renameTab(tabId: string, title: string): Promise<void>
   reorderTabs(tabOrder: string[]): Promise<void>
   moveTabToWindow(tabId: string, target: 'new' | string): Promise<void>

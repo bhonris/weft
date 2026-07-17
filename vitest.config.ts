@@ -46,7 +46,9 @@ export default defineConfig({
       exclude: [
         '**/*.test.ts',
         '**/*.d.ts',
-        '**/index.html'
+        '**/index.html',
+        // Native/IO adapter — lazily loads node-pty; verified via manual/E2E, not units.
+        'src/main/services/pty-factory.ts'
       ],
       thresholds: {
         statements: 95,

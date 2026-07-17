@@ -47,5 +47,16 @@ Internals: pure logic lives in `src/core/persistence/` (`schema` — zod shapes 
 `src/main/services/workspace-store.ts` wires that to `electron-store` and the
 backup writer, and is fully unit-tested against an in-memory fake store.
 
-### Tabbed Claude sessions
-_TBD — PtyManager + session correlation next._
+### Terminal sessions & reload-safe recovery
+
+The main process owns every PTY through the `PtyManager` (`src/main/services/pty-manager.ts`); the renderer is a **detachable view**. This is what makes sessions survive UI edits (spec §4.7):
+
+- **Decoupled lifecycle.** A PTY is killed only by `closeSession` (tab close) or the process exiting — **never** by a renderer reload, HMR update, or a React crash.
+- **Ring-buffer replay.** Each session keeps a bounded buffer of recent raw output (`OutputRingBuffer`, default 200k chars). `attachSession(tabId)` returns that snapshot to replay into a freshly mounted xterm — so after a reload the terminal redraws its history — then live output streams in.
+- **Idempotent attach/detach.** Re-mounting (e.g. after HMR) detaches the old view and attaches a new one, leaving exactly one live subscription and the **same** PTY process (no respawn).
+- **Throttled resize.** Drag-resize storms are coalesced to ≤ 1 `pty.resize` call per 50 ms (leading + trailing) via the pure `Throttle` in `src/core/terminal/resize-throttle.ts`.
+- **Hook routing.** Incoming Claude Code hook payloads are routed to a tab by `session_id` → `tabId` → `cwd` (`src/core/status/session-correlator.ts`).
+
+The production PTY is provided by `NodePtyFactory` (node-pty / ConPTY on Windows), injected into `PtyManager`; unit tests inject a `FakePty`, so the whole manager is tested without the native module.
+
+> Status: main-process + core foundation implemented and unit-tested. Wiring to the renderer (xterm mount, attach-on-mount, error boundary) and the IPC bridge lands in the next development leap.
