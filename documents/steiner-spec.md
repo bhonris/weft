@@ -373,4 +373,20 @@ Per global conventions: tests for every feature/bugfix, **95%+ coverage before c
 
 ---
 
-*El Psy Kongroo.*
+## Expansion 2 — Hardening sweep + shell tabs + terminal search
+
+Cycle-2 scope (budget-aware: leap 21/30 at planning): close every deferred
+review item, then two small features with daily-driver value.
+
+### New acceptance criteria
+
+- [ ] `FrameParser` caps its buffer (1 MB): a newline-less flood is dropped and reported via `onError`, never OOMing main.
+- [ ] On POSIX the status socket is created `0700`-dir/`0600` and unlinked on close; Windows named pipes unaffected. (Platform-guarded; unit via injected fs.)
+- [ ] `readFileText`/`getDiff` refuse files larger than 5 MB; the viewer shows a friendly "too large" error instead of hanging.
+- [ ] The git diff baseline resolves non-ASCII filenames (`-c core.quotepath=false`).
+- [ ] Dead API surface removed: `renameTab`/`reorderTabs` channels + WeftApi methods, `needsMigration`, `isOk`, the unused `_prev` parameter of `mapHookToStatus`; chokidar ignore regex anchors both alternatives; stale depth comment fixed.
+- [ ] The viewer header has a **Reveal** button that calls `revealInOs` for the open file.
+- [ ] Spawn-failure state lives in the zustand store (no module-level mutable listener).
+- [ ] E2E hygiene: specs strip inherited `WEFT_*` env vars; the persistence spec polls for the saved workspace instead of a bare 500 ms sleep.
+- [ ] Shift-clicking **+** opens a plain **shell** tab (PowerShell/bash) through the real UI, badge `unknown`, fully interactive.
+- [ ] `Ctrl+Shift+F` opens an in-terminal search bar (xterm search addon) that highlights matches in scrollback; Enter finds next, Esc closes and returns focus to the terminal.

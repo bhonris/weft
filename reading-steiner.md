@@ -1,4 +1,4 @@
-phase: worldline-expansion
+phase: time-leap-development
 leap_count: 21
 expansion_cycle: 2
 session_id: 2026-07-18T00:30:00Z
@@ -11,11 +11,11 @@ test_cmd: pnpm test
 dev_server_port: 5173
 coverage_pct: 98
 divergence_readings: []
-current_focus: "Phase 7 — Okabe expansion: propose cycle-2 items; budget 21/30 so prefer 2-3 small high-value (nice_to_have sweep, packaging, plain shell tabs, etc.)"
+current_focus: "Expansion 2 leap A — hardening sweep: frame-parser 1MB cap, POSIX socket perms+unlink, 5MB readFile/getDiff guard + viewer error, git quotepath, dead-code sweep (renameTab/reorderTabs channels+api, needsMigration, isOk, _prev param, regex anchor, depth comment), ViewerPane Reveal button, spawn-failure state into store, E2E hygiene (strip WEFT_* env, poll instead of sleep). Then leap B: Shift+Click + opens SHELL tab (UI+E2E) and Ctrl+Shift+F terminal search (xterm search addon, search bar UI, E2E)."
 blocked_on: null
 last_test_run: "unit 212 pass, 0 fail; e2e 19 pass, 0 fail; coverage 97.96/96.25/98.64"
 closed_worldlines: [divergence-analysis, worldline-selection, time-leap-development, divergence-meter-reading]
-next_action: "Spawn Okabe (expansion mode) with DOSSIER+USAGE+log+nice_to_have+lessons; select top 2-3 small items; append Expansion 2 section to spec; then time-leap-development."
+next_action: "Implement hardening sweep items with tests, keep suite green, commit; then shell-tab + terminal-search leap with E2E; then cycle-2 checkpoint (docs refresh + counters) and Okabe budget check (EL_PSY_KONGROO expected near 27/30)."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:
