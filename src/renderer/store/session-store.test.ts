@@ -1,0 +1,67 @@
+import { describe, it, expect, beforeEach } from 'vitest'
+import { useSessionStore } from './session-store'
+
+beforeEach(() => {
+  useSessionStore.setState({ tabs: [], activeTabId: null })
+})
+
+describe('useSessionStore', () => {
+  it('adds a tab and makes it active with a default status', () => {
+    useSessionStore.getState().addTab({ tabId: 't1', title: 'proj', cwd: 'C:/a' })
+    const s = useSessionStore.getState()
+    expect(s.tabs).toHaveLength(1)
+    expect(s.tabs[0]).toMatchObject({ tabId: 't1', title: 'proj', status: 'working' })
+    expect(s.activeTabId).toBe('t1')
+  })
+
+  it('ignores a duplicate tabId', () => {
+    const { addTab } = useSessionStore.getState()
+    addTab({ tabId: 't1', title: 'a', cwd: 'C:/a' })
+    addTab({ tabId: 't1', title: 'again', cwd: 'C:/a' })
+    expect(useSessionStore.getState().tabs).toHaveLength(1)
+  })
+
+  it('removes a tab and reactivates the last remaining one', () => {
+    const { addTab, removeTab } = useSessionStore.getState()
+    addTab({ tabId: 't1', title: 'a', cwd: 'C:/a' })
+    addTab({ tabId: 't2', title: 'b', cwd: 'C:/b' })
+    removeTab('t2') // active was t2 → falls back to t1
+    const s = useSessionStore.getState()
+    expect(s.tabs.map((t) => t.tabId)).toEqual(['t1'])
+    expect(s.activeTabId).toBe('t1')
+  })
+
+  it('keeps the active tab when a non-active tab is removed', () => {
+    const { addTab, removeTab, setActive } = useSessionStore.getState()
+    addTab({ tabId: 't1', title: 'a', cwd: 'C:/a' })
+    addTab({ tabId: 't2', title: 'b', cwd: 'C:/b' })
+    setActive('t1')
+    removeTab('t2')
+    expect(useSessionStore.getState().activeTabId).toBe('t1')
+  })
+
+  it('sets activeTabId to null when the last tab is removed', () => {
+    const { addTab, removeTab } = useSessionStore.getState()
+    addTab({ tabId: 't1', title: 'a', cwd: 'C:/a' })
+    removeTab('t1')
+    expect(useSessionStore.getState().activeTabId).toBeNull()
+  })
+
+  it('updates status and title', () => {
+    const { addTab, setStatus, rename } = useSessionStore.getState()
+    addTab({ tabId: 't1', title: 'a', cwd: 'C:/a' })
+    setStatus('t1', 'waiting')
+    rename('t1', 'renamed')
+    const tab = useSessionStore.getState().tabs[0]!
+    expect(tab.status).toBe('waiting')
+    expect(tab.title).toBe('renamed')
+  })
+
+  it('setActive switches the active tab', () => {
+    const { addTab, setActive } = useSessionStore.getState()
+    addTab({ tabId: 't1', title: 'a', cwd: 'C:/a' })
+    addTab({ tabId: 't2', title: 'b', cwd: 'C:/b' })
+    setActive('t1')
+    expect(useSessionStore.getState().activeTabId).toBe('t1')
+  })
+})

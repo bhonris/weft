@@ -14,6 +14,8 @@ export const CH = {
   renameTab: 'tab:rename',
   reorderTabs: 'tab:reorder',
   moveTabToWindow: 'tab:move-window',
+  // Open an OS directory picker and start a claude session rooted there.
+  openProject: 'app:open-project',
 
   // Terminal / session (main -> renderer, event)
   sessionData: 'session:data',

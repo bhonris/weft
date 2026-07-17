@@ -4,9 +4,9 @@
 Weft is a cross-platform (Windows-first) open-source Electron desktop app: a VS Code-style shell wrapped around browser-style tabs of Claude Code CLI sessions — one tab per project, each running a live interactive `claude` session in its own pseudo-terminal (node-pty + xterm.js). It adds an integrated file explorer, a Monaco read-only + diff viewer, tear-off tabs into separate OS windows, workspace persistence, and — the defining differentiator — per-tab Claude session status (working / waiting / done / error) driven by Claude Code's own lifecycle hooks (not output scraping), plus app-owned OS notifications that focus the right tab when a session needs attention. Market research confirms the wedge: no existing tool combines hook-driven per-session status + tab-focusing notifications + Windows-first + a tear-off VS Code shell.
 
 ## Current status
-Phase: Time Leap Development (Leap 4/30, Cycle 1)
-Divergence meter: 100% stmts / 99.35% branch (built modules) · 74 tests pass
-Implemented so far: hook→status mapper, workspace persistence + migrations, resize-throttle, output ring buffer, session correlator (core); PtyManager with attach/detach + ring-buffer replay + FakePty tests, NodePtyFactory adapter (node-pty/ConPTY installed). Session-resilience foundation (spec §4.7) done at main+core level; renderer/IPC wiring next.
+Phase: Time Leap Development (Leap 5/30, Cycle 1)
+Divergence meter: 99.81% stmts / 95.61% branch (built modules) · 98 tests pass
+Implemented so far: hook→status mapper, workspace persistence + migrations, resize-throttle, output ring buffer, session correlator (core); PtyManager (attach/detach + ring-buffer replay) + NodePtyFactory; IPC register layer (create/write/resize/close/attach/detach/openProject), preload bridge (window.api), renderer session-store + TerminalPane (xterm, attach-on-mount) + WorkbenchErrorBoundary. **Interactive terminal wired end-to-end** — open project → live claude session, reload-safe. Next: node-pty Electron-ABI rebuild + live verify, then file explorer, status server/hooks, notifications.
 
 ## Stack
 TypeScript · pnpm · Electron + electron-vite · React + Vite (renderer) · xterm.js (+fit/webgl/search/serialize) · node-pty · chokidar · electron-store · zustand · monaco-editor · dockview · vitest + @vitest/coverage-v8 · @playwright/test (Electron)

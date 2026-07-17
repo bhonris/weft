@@ -80,7 +80,31 @@ export interface WeftApi {
   readFileText(path: string): Promise<string>
   getDiff(path: string): Promise<DiffPayload>
 
+  // App actions
+  /** Open an OS directory picker; if a folder is chosen, start a claude session there. */
+  openProject(): Promise<{ tabId: string; cwd: string; title: string } | null>
+
   // Persistence
   loadWorkspace(): Promise<WorkspaceState>
   saveWorkspace(state: WorkspaceState): Promise<void>
 }
+
+/**
+ * The subset of {@link WeftApi} currently implemented by the preload bridge and
+ * exposed as `window.api`. Grows toward the full `WeftApi` as features land;
+ * being a `Pick` of `WeftApi`, it can never drift from the contract.
+ */
+export type WeftBridge = Pick<
+  WeftApi,
+  | 'createSession'
+  | 'writeToSession'
+  | 'resizeSession'
+  | 'closeSession'
+  | 'attachSession'
+  | 'detachSession'
+  | 'onSessionData'
+  | 'onSessionExit'
+  | 'onSessionStatus'
+  | 'openProject'
+>
+

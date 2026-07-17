@@ -39,6 +39,107 @@ body,
 .tab-strip__empty {
   opacity: 0.6;
   font-size: 13px;
+  margin-left: 8px;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 4px 0 8px;
+  margin-right: 4px;
+  background: #2d2d2d;
+  border: 1px solid var(--border);
+  border-radius: 6px 6px 0 0;
+  font-size: 12px;
+}
+
+.tab--active {
+  background: #37373d;
+  border-bottom-color: var(--accent);
+}
+
+.tab__label,
+.tab__close,
+.tab-strip__add {
+  background: none;
+  border: none;
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tab__close {
+  padding: 0 4px;
+  opacity: 0.6;
+}
+.tab__close:hover {
+  opacity: 1;
+}
+
+.tab-strip__add {
+  font-size: 16px;
+  padding: 0 8px;
+}
+
+.tab__badge {
+  font-size: 11px;
+}
+.tab__badge--working {
+  color: #4a9eff;
+}
+.tab__badge--waiting {
+  color: #e8b339;
+}
+.tab__badge--done {
+  color: #3fb950;
+}
+.tab__badge--error {
+  color: #f85149;
+}
+.tab__badge--unknown {
+  color: #888;
+}
+
+.terminal-host__placeholder {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  opacity: 0.5;
+  font-size: 13px;
+}
+
+.terminal-pane {
+  height: 100%;
+  width: 100%;
+}
+
+.status-bar__spacer {
+  flex: 1;
+}
+
+.error-boundary {
+  padding: 24px;
+  color: var(--fg);
+}
+.error-boundary__message {
+  color: #f85149;
+  font-family: monospace;
+}
+.error-boundary__hint {
+  opacity: 0.7;
+}
+.error-boundary__reload {
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .workbench {

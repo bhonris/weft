@@ -1,21 +1,21 @@
 phase: time-leap-development
-leap_count: 4
+leap_count: 5
 expansion_cycle: 1
-session_id: 2026-07-17T17:00:00Z
-prev_head: a9dd0124e3dfccb4761494592eb38df63e3b7bbe
+session_id: 2026-07-17T17:18:00Z
+prev_head: 227dcd7b3541d618632c92fd834d3878bc6d871f
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md."
 project_name: "weft"
 project_type: web
 spec_path: documents/steiner-spec.md
 test_cmd: pnpm test
 dev_server_port: 5173
-coverage_pct: 100
+coverage_pct: 99
 divergence_readings: []
-current_focus: "Wire the IPC layer + preload bridge + renderer terminal to complete the §4.7 session-resilience guarantee END-TO-END. (1) main/ipc/register.ts: ipcMain.handle for createSession (generate uuid, spawn via NodePtyFactory with claude --session-id + CLAUDE_IDE_TAB env + inline --settings hooks), writeToSession, resizeSession, closeSession, attachSession (returns {snapshot}, subscribes a per-webContents listener that sends CH.sessionData), detachSession, plus loadWorkspace/saveWorkspace. Forward pty data/exit via webContents.send(CH.sessionData/sessionExit). (2) preload/bridge.ts: implement WeftApi over ipcRenderer.invoke/on, each on* returning Unsubscribe; expose as window.api (contextBridge). (3) renderer: zustand store + TerminalPane (mount xterm + fit/webgl/serialize addons, call attachSession on mount, write snapshot, subscribe onSessionData, and on unmount/HMR-dispose detach + dispose xterm — exactly one subscription), and a WorkbenchErrorBoundary (fallback + reload) around the workbench. Add src/main/ipc/**, src/preload/**, src/renderer/store/** to vitest coverage include as they land."
+current_focus: "Verify the terminal works END-TO-END in the real Electron app. node-pty's prebuilt binary is built for Node's ABI, NOT Electron 34's — spawning a session in-app will likely fail until rebuilt. Add @electron/rebuild (dev dep), add a postinstall/rebuild step for node-pty against Electron, launch pnpm dev, open a project, and confirm a live claude session renders + accepts input. This de-risks the Phase-3b node-pty blocker. If the rebuild needs VS C++ build tools not present, PAUSE and tell the user."
 blocked_on: null
-last_test_run: "74 pass, 0 fail"
+last_test_run: "98 pass, 0 fail"
 closed_worldlines: [divergence-analysis, worldline-selection]
-next_action: "Build main/ipc/register.ts + preload/bridge.ts + renderer TerminalPane/store + WorkbenchErrorBoundary. Unit-test IPC handlers with a fake PtyManager + fake ipcMain; test preload bridge over a fake ipcRenderer; test the error boundary + store in jsdom. Then Phase 3b (Playwright-Electron) can smoke-test the running app incl. the reload-recovery E2E. node-pty is installed (prebuilt, ConPTY dll copied); a full Electron-ABI rebuild (@electron/rebuild) may be needed before pnpm dev launches — verify at Phase 3b and add electron-rebuild to postinstall if so."
+next_action: "Rebuild node-pty for Electron (@electron/rebuild) and launch to verify open-project -> live claude session. Then continue Phase 3 features toward the remaining acceptance criteria: (a) file explorer — fs-service (readdir/stat/reveal/open + chokidar watch) + IPC + virtualized tree; (b) status server — named-pipe/UDS transport (platform seam) + inline --settings hook injection at spawn + wire correlator + status-mapper to update tab badges; (c) app-owned OS notifications (focus window+tab on click); (d) Monaco read-only + diff viewer; (e) workspace persistence IPC wiring (loadWorkspace/saveWorkspace + restore on launch); (f) tear-off windows. Grow vitest coverage include as modules land. When ALL acceptance criteria are checked AND coverage>=90, advance to Phase 3b (Playwright-for-Electron)."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:

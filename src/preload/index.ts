@@ -1,12 +1,11 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
+import { createWeftApi, type IpcRendererLike } from './create-bridge'
 
 /**
- * The typed preload bridge. Phase 2 exposes a minimal, versioned handshake;
- * the full `WeftApi` surface (sessions, fs, persistence) is wired in Phase 1/2
- * of development against `@shared/ipc/channels` and `@shared/ipc/api-contract`.
+ * The typed preload bridge. All wiring lives in `createWeftApi` (unit-tested with
+ * a fake ipcRenderer); this file is just the electron glue that injects the real
+ * ipcRenderer and exposes the API on `window.api` under context isolation.
  */
-const bridge = {
-  version: '0.0.0'
-}
+const api = createWeftApi(ipcRenderer as unknown as IpcRendererLike)
 
-contextBridge.exposeInMainWorld('weft', bridge)
+contextBridge.exposeInMainWorld('api', api)

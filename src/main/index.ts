@@ -1,5 +1,6 @@
 import { join } from 'node:path'
 import { app, BrowserWindow } from 'electron'
+import { wireApp } from './container'
 
 const isDev = !!process.env['ELECTRON_RENDERER_URL']
 
@@ -29,6 +30,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  wireApp()
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

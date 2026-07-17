@@ -1,5 +1,6 @@
 import { resolve } from 'node:path'
 import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
 
 const alias = {
   '@shared': resolve('src/shared'),
@@ -20,6 +21,7 @@ export default defineConfig({
         }
       },
       {
+        plugins: [react()],
         resolve: { alias },
         test: {
           name: 'dom',
@@ -41,10 +43,15 @@ export default defineConfig({
       include: [
         'src/shared/result.ts',
         'src/core/**',
-        'src/main/services/**'
+        'src/main/services/**',
+        'src/main/ipc/**',
+        'src/preload/create-bridge.ts',
+        'src/renderer/store/**',
+        'src/renderer/components/WorkbenchErrorBoundary.tsx'
       ],
       exclude: [
         '**/*.test.ts',
+        '**/*.test.tsx',
         '**/*.d.ts',
         '**/index.html',
         // Native/IO adapter — lazily loads node-pty; verified via manual/E2E, not units.

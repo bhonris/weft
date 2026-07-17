@@ -59,4 +59,6 @@ The main process owns every PTY through the `PtyManager` (`src/main/services/pty
 
 The production PTY is provided by `NodePtyFactory` (node-pty / ConPTY on Windows), injected into `PtyManager`; unit tests inject a `FakePty`, so the whole manager is tested without the native module.
 
-> Status: main-process + core foundation implemented and unit-tested. Wiring to the renderer (xterm mount, attach-on-mount, error boundary) and the IPC bridge lands in the next development leap.
+**How to use it (once running):** click **+** in the tab strip → pick a project folder → Weft spawns `claude --session-id <uuid>` rooted there and shows it in a live terminal tab. Type into the terminal as normal; close a tab with its **×**. Each tab shows a status glyph (● working, ‖ waiting, ✓ done, ✕ error).
+
+> Status: wired end-to-end — IPC handlers (`src/main/ipc/register.ts`), typed preload bridge (`window.api`, `src/preload/create-bridge.ts`), renderer `TerminalPane` (xterm, attach-on-mount replay, HMR-safe cleanup), zustand `session-store`, and a `WorkbenchErrorBoundary` (fallback + reload). Verified by 98 unit/integration tests; live browser-level verification is Phase 3b.

@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 5 — steiner: feat(interactive-terminal) — 2026-07-17T17:18:00Z
+
+**Phase**: time-leap-development
+**Changed**: Wired the terminal end-to-end so the app is usable. main/ipc/register.ts (electron-free, injectable ipcMain/pty/pickDirectory): createSession (uuid + claude --session-id + CLAUDE_IDE_TAB env), write/resize (guarded), close, attach (replay snapshot + forward data/exit to the sender), detach, openProject (dir picker → session). main/container.ts composition root (real ipcMain/dialog/NodePtyFactory). preload/create-bridge.ts (testable over injected ipcRenderer) + preload/index.ts glue → window.api. Renderer: session-store (zustand), TerminalPane (xterm + fit, attach-on-mount replay, HMR-safe cleanup that detaches without killing), WorkbenchErrorBoundary (fallback + reload), App wired with tab strip + status glyphs + Open-project. Added openProject channel + WeftApi.openProject + WeftBridge Pick type.
+**SERN interference**: none (fixed inline: vitest 'dom' project needed @vitejs/plugin-react for JSX automatic runtime — 'React is not defined' until added)
+**Divergence meter**: 99.81% stmts / 95.61% branch / 98.66% funcs, 98 pass, 0 fail; production build OK
+**Next target**: node-pty Electron-ABI rebuild (@electron/rebuild) + launch to verify open-project→live-claude-session works (de-risk Phase 3b blocker); then file explorer, status server + inline hooks, OS notifications.
+
+---
+
 ## Leap 4 — steiner: feat(pty-manager) — 2026-07-17T17:00:00Z
 
 **Phase**: time-leap-development
