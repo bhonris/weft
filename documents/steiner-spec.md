@@ -403,3 +403,20 @@ Design-doc §17 obligations that code alone doesn't satisfy.
 - [x] `CONTRIBUTING.md` covers dev setup, the test commands, the architecture boundary rules (pure core vs adapters), and the coverage bar.
 - [x] A GitHub Actions workflow (`.github/workflows/ci.yml`) runs typecheck + unit tests + coverage gate on push/PR (Windows + Linux matrix; E2E job on Windows with the native rebuild).
 - [x] `pnpm package` produces a distributable Windows build via electron-builder (verified locally with an unpacked `--dir` build that launches).
+
+---
+
+## Expansion 5 — END GOAL: v0.2.0 "Daily Driver"
+
+Declared end goal (operator-set, cycle 5): the release that makes Weft strictly
+better than a bare terminal for daily Claude work. Budget extended to 40 leaps.
+
+### New acceptance criteria
+
+- [ ] Each tab persists its REAL pinned `sessionId` (workspace schema v2 with a v1→v2 migration exercising the chain + config.bak backup).
+- [ ] With **Resume** enabled (status-bar toggle, persisted), a restored `claude` tab relaunches as `claude --resume <sessionId> --session-id <new-uuid>` style continuation (exact flags per CLI verification) so the conversation continues; with it disabled, restored tabs start fresh.
+- [ ] The status bar shows the active project's current **git branch** (updates on tab switch; blank for non-repos), backed by a unit-tested GitService.
+- [ ] The Monaco viewer gains an **Edit** mode: typing enabled, dirty indicator (●) on change, `Ctrl+S` writes the file to disk through a validated IPC (`saveFile`), and the explorer/diff reflect the save. E2E: edit → save → file content on disk changed.
+- [ ] `saveFile` refuses paths outside any open project root (boundary validation) and files >5 MB.
+- [ ] Unused dependencies removed from package.json (`dockview`, `@xterm/addon-webgl`, `@xterm/addon-serialize`) — install + full suite still green.
+- [ ] v0.2.0 stamped with an updated CHANGELOG; full suite (unit + E2E incl. packaged) green.
