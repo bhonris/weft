@@ -5,6 +5,7 @@ Weft is a cross-platform (Windows-first) open-source Electron desktop app: a VS 
 
 ## Current status
 Phase: v0.2.0 END GOAL REACHED (Leap 33/40, Cycle 5)
+Post-end-goal manual enhancement (2026-07-18, outside the /dmail loop): per-tab status now colors the **whole tab** (stripe + tint), not just the glyph — see `STEINER_LOG.md` and `documents/completed/tab-state-colors.md`.
 Divergence meter: **229 unit + 24 Electron E2E, all pass** · ~98% statements
 Cycle 3 shipped OSS hygiene (LICENSE/CONTRIBUTING/CI) + electron-builder packaging — the packaged Weft.exe is E2E-verified. Cycle 4: scrollback cap, WebGL trial rejected on a11y/testability evidence, v0.1.0 stamped with CHANGELOG.
 Cycle 2 (Expansion 2) shipped all 11 ACs: full hardening sweep (buffer caps, UDS perms, 5MB viewer guard, quotepath, dead-code removal, Reveal button, store-based spawn-failure, E2E hygiene with WEFT_*-stripped launches + deterministic persistence polling, correlator path normalization) + two features (Shift+Click shell tabs, Ctrl+Shift+F in-terminal search) + multi-tab/rename/theme restart E2E. Every review item from cycle 1 is now closed — none carried.

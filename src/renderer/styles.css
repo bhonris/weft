@@ -7,6 +7,12 @@
   --border: #333;
   --accent: #4a9eff;
   --hover: #2a2d2e;
+  /* Claude Code session-state colors (shared by tab tint and status glyph). */
+  --st-working: #4a9eff;
+  --st-waiting: #e8b339;
+  --st-done: #3fb950;
+  --st-error: #f85149;
+  --st-unknown: #888;
 }
 
 /* Explicit light override. */
@@ -72,15 +78,32 @@ body,
   height: 28px;
   padding: 0 4px 0 8px;
   margin-right: 4px;
-  background: #2d2d2d;
+  /* --st is the current session-state color (set by .tab--<status>); it tints
+     the whole tab so Claude Code's state reads at a glance, not just the glyph. */
+  background: color-mix(in srgb, var(--st, transparent) 12%, #2d2d2d);
   border: 1px solid var(--border);
+  border-top: 2px solid var(--st, var(--border));
   border-radius: 6px 6px 0 0;
   font-size: 12px;
 }
 
 .tab--active {
-  background: #37373d;
-  border-bottom-color: var(--accent);
+  background: color-mix(in srgb, var(--st, transparent) 22%, #37373d);
+  border-bottom-color: var(--st, var(--accent));
+}
+
+/* Per-status tint. `unknown` stays neutral so a fresh tab looks ordinary. */
+.tab--working {
+  --st: var(--st-working);
+}
+.tab--waiting {
+  --st: var(--st-waiting);
+}
+.tab--done {
+  --st: var(--st-done);
+}
+.tab--error {
+  --st: var(--st-error);
 }
 
 .tab__label,
@@ -203,19 +226,19 @@ body,
   padding: 1px 4px;
 }
 .tab__badge--working {
-  color: #4a9eff;
+  color: var(--st-working);
 }
 .tab__badge--waiting {
-  color: #e8b339;
+  color: var(--st-waiting);
 }
 .tab__badge--done {
-  color: #3fb950;
+  color: var(--st-done);
 }
 .tab__badge--error {
-  color: #f85149;
+  color: var(--st-error);
 }
 .tab__badge--unknown {
-  color: #888;
+  color: var(--st-unknown);
 }
 
 .terminal-host__placeholder {

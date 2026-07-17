@@ -91,7 +91,7 @@ function TabButton({ tab, active }: { tab: Tab; active: boolean }): React.ReactE
 
   return (
     <div
-      className={`tab${active ? ' tab--active' : ''}`}
+      className={`tab tab--${tab.status}${active ? ' tab--active' : ''}`}
       data-testid="tab"
       draggable={!editing}
       onDragStart={(e) => e.dataTransfer.setData('text/weft-tab', tab.tabId)}

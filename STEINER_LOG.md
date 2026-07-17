@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Manual entry (outside /dmail loop) — whole-tab state coloring — 2026-07-18
+
+**Phase**: post-end-goal manual enhancement (not a Steiner leap; loop remains at `el-psy-kongroo`)
+**Changed**: extended per-tab status from a colored glyph to the **whole tab** — each tab now carries its `SessionStatus` as a colored top stripe + background tint (`App.tsx` adds a `tab--<status>` modifier; `styles.css` adds shared `--st-*` vars and `color-mix` tints; glyph colors refactored to the same vars). Added `src/renderer/App.test.tsx` regression tests (status→class transitions + per-tab scoping). Reconciled the stale `documents/design-doc.md` todo list against shipped reality and moved it (with a new `tab-state-colors.md` feature doc) into `documents/completed/`.
+**SERN interference**: pre-existing `hook-forwarder.integration.test.ts` failure when the suite runs inside a live Weft session (inherits real `CLAUDE_IDE_TAB` via `...process.env`) — not caused by this change.
+**Divergence meter**: renderer tests green (2 new pass); typecheck clean.
+**Next target**: unchanged — next `/dmail` cycle 6 candidates (split panes, LSP, macOS/Linux). Optionally fold this enhancement into a future expansion's spec checkboxes.
+
+---
+
 ## END GOAL REACHED — Leap 33 — v0.2.0 "Daily Driver" shipped — 2026-07-18T08:10:00Z
 
 **The operator-declared end goal is complete.** All four outcomes delivered and machine-verified:

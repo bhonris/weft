@@ -420,3 +420,20 @@ better than a bare terminal for daily Claude work. Budget extended to 40 leaps.
 - [x] `saveFile` refuses paths outside any open project root (boundary validation) and files >5 MB.
 - [x] Unused dependencies removed from package.json (`dockview`, `@xterm/addon-webgl`, `@xterm/addon-serialize`) — install + full suite still green.
 - [x] v0.2.0 stamped with an updated CHANGELOG; full suite (unit + E2E incl. packaged) green.
+
+---
+
+## Manual addendum (post-v0.2.0, 2026-07-18) — whole-tab state coloring
+
+Done **manually, outside the `/dmail` loop** (which is parked at `el-psy-kongroo`).
+Recorded here so the spec stays complete; intentionally **not** numbered
+"Expansion 6" so it doesn't collide with the next autonomous cycle. Full design:
+`documents/completed/tab-state-colors.md`.
+
+### New acceptance criteria
+
+- [x] Each tab's Claude Code `SessionStatus` colors the **whole tab** (a colored top stripe + background tint), not just the status glyph: `working` blue, `waiting` amber, `done` green, `error` red, `unknown` neutral.
+- [x] The active tab stays visually distinct from inactive tabs within the same status (stronger tint).
+- [x] An `onSessionStatus` update recolors only the targeted tab, not the others.
+- [x] The tab tint and the status glyph share one color source (`--st-*` CSS variables) so they can never drift; color remains redundant with the distinct glyph shapes + `aria-label` (no color-only signal).
+- [x] Covered by `src/renderer/App.test.tsx` (status→class transitions + per-tab scoping); renderer suite green, typecheck clean.

@@ -77,15 +77,17 @@ Success is **the author's own satisfaction in daily use** — the app is "workin
 
 ## 4. Acceptance criteria
 
-- [ ] The app launches on Windows 11 and opens at least one tab.
-- [ ] A new tab spawns `claude` in a user-selected directory and renders its **fullscreen TUI** correctly (colors, mouse, resize) inside the embedded terminal.
-- [ ] Typing/keyboard/paste/`Ctrl+C` behave correctly in the active terminal; resizing the window resizes the PTY.
-- [ ] Tabs can be added, closed, renamed, and reordered; closing a tab terminates its PTY cleanly.
-- [ ] Each Claude tab shows a live status badge that transitions **working → waiting/done** based on real session events (not output scraping).
-- [ ] Closing and reopening the app restores the prior tabs and their working directories.
-- [ ] The file explorer lists a project directory, reflects external file changes within ~1s, and can reveal/open a file.
-- [ ] A session that needs input or finishes raises an OS notification that, when clicked, focuses the app and activates that session's tab.
-- [ ] All of the above is covered by tests meeting the project's 95%+ coverage bar (per global conventions), with the ConPTY/TUI rendering verified manually on Windows.
+> **Status (reconciled 2026-07-18):** all MVP acceptance criteria met and machine-verified — see `DOSSIER.md` and `documents/steiner-spec.md` (46/46 spec checkboxes across v1 + Expansions 2/3/5, ~98% coverage, 229 unit + 24 Electron E2E).
+
+- [x] The app launches on Windows 11 and opens at least one tab.
+- [x] A new tab spawns `claude` in a user-selected directory and renders its **fullscreen TUI** correctly (colors, mouse, resize) inside the embedded terminal.
+- [x] Typing/keyboard/paste/`Ctrl+C` behave correctly in the active terminal; resizing the window resizes the PTY.
+- [x] Tabs can be added, closed, renamed, and reordered; closing a tab terminates its PTY cleanly.
+- [x] Each Claude tab shows a live status badge that transitions **working → waiting/done** based on real session events (not output scraping).
+- [x] Closing and reopening the app restores the prior tabs and their working directories.
+- [x] The file explorer lists a project directory, reflects external file changes within ~1s, and can reveal/open a file.
+- [x] A session that needs input or finishes raises an OS notification that, when clicked, focuses the app and activates that session's tab.
+- [x] All of the above is covered by tests meeting the project's 95%+ coverage bar (per global conventions), with the ConPTY/TUI rendering verified manually on Windows.
 
 ---
 
@@ -357,40 +359,46 @@ All design questions are **resolved**. What remains is empirical validation and 
 
 ## 16. Todo list
 
+> **Reconciled 2026-07-18** against what actually shipped (v0.2.0, `/dmail` cycles 1–5).
+> Phases 0–2 and the MVP cross-cutting work are complete; remaining unchecked
+> items are the post-MVP / next-worldline candidates. The tab **status badges**
+> below were later extended so the **whole tab** carries the state color — see
+> `documents/completed/tab-state-colors.md`.
+
 ### Phase 0 — De-risk (spike)
-- [ ] Electron + React + Vite skeleton (`electron-vite`), `contextIsolation` on, preload bridge stub.
-- [ ] `node-pty` integrated and rebuilt for Electron on Windows.
-- [ ] Spawn `claude` in one xterm.js pane; **verify fullscreen TUI, mouse, resize, paste, Ctrl+C on Windows 11**.
-- [ ] Decide go/no-go on the embedding approach based on the spike.
+- [x] Electron + React + Vite skeleton (`electron-vite`), `contextIsolation` on, preload bridge stub.
+- [x] `node-pty` integrated and rebuilt for Electron on Windows. *(reproducible via `pnpm rebuild:native`; Spectre/winpty build blockers resolved via committed patch — see `reading-steiner.md` lessons.)*
+- [x] Spawn `claude` in one xterm.js pane; **verify fullscreen TUI, mouse, resize, paste, Ctrl+C on Windows 11**.
+- [x] Decide go/no-go on the embedding approach based on the spike. *(go — Beta worldline.)*
 
 ### Phase 1 — Core terminal IDE (MVP)
-- [ ] Browser-style tab strip (dockview): one tab per project; add / close / rename / reorder.
-- [ ] **Tear-off** a tab into its own window + re-dock; PTY stays in main and survives the move.
-- [ ] PTY ↔ xterm data + resize pipeline with flow control.
-- [ ] File explorer per project: tree + chokidar watch + reveal/open.
-- [ ] Monaco **read-only viewer + diff** ("review Claude's changes").
-- [ ] Workspace persistence (electron-store) + restore-on-launch.
-- [ ] Keybindings + copy/paste + terminal-key passthrough.
-- [ ] Packaging (electron-builder) for Windows.
+- [x] Browser-style tab strip: one tab per project; add / close / rename / reorder. *(implemented as a custom tab strip, not dockview; dockview since removed from deps.)*
+- [x] **Tear-off** a tab into its own window + re-dock; PTY stays in main and survives the move.
+- [x] PTY ↔ xterm data + resize pipeline with flow control.
+- [x] File explorer per project: tree + chokidar watch + reveal/open.
+- [x] Monaco **read-only viewer + diff** ("review Claude's changes").
+- [x] Workspace persistence (electron-store) + restore-on-launch.
+- [x] Keybindings + copy/paste + terminal-key passthrough.
+- [x] Packaging (electron-builder) for Windows. *(packaged `Weft.exe` is E2E-verified.)*
 
 ### Phase 2 — Claude awareness
-- [ ] Implement session correlation: `--session-id <uuid>` + `--settings` inline hooks + `CLAUDE_IDE_TAB` (mechanism verified — see §5).
-- [ ] Local status endpoint (named pipe ↔ UDS) receiving forwarded hook payloads; resolve tab by `session_id`.
-- [ ] Per-tab status badges + status bar.
-- [ ] **App-owned OS notifications** that focus the app + activate the right tab/window (replaces the standalone `~/.claude/notify/*` toasts).
+- [x] Implement session correlation: `--session-id <uuid>` + `--settings` inline hooks + `CLAUDE_IDE_TAB` (mechanism verified — see §5).
+- [x] Local status endpoint (named pipe ↔ UDS) receiving forwarded hook payloads; resolve tab by `session_id`.
+- [x] Per-tab status badges + status bar.
+- [x] **App-owned OS notifications** that focus the app + activate the right tab/window (replaces the standalone `~/.claude/notify/*` toasts). *(policy unit-tested; one manual toast check still pending — see spec Open Questions.)*
 
 ### Phase 3 — Polish / v2 candidates
-- [ ] Split panes (dockview) → multiple Claude sessions visible per project.
-- [ ] `claude --continue` session resume per tab.
-- [ ] Full Monaco editing + per-language intelligence (LSP).
+- [ ] Split panes (dockview) → multiple Claude sessions visible per project. *(next-worldline candidate.)*
+- [x] `claude` session resume per tab. *(v0.2.0 — schema-v2 `sessionId` persistence + ↻ toggle + `--resume`, argv-injection-proofed.)*
+- [ ] Full Monaco editing + per-language intelligence (LSP). *(partial: Edit mode + Ctrl+S save shipped in v0.2.0; LSP not yet.)*
 - [ ] Cost/token metrics (optional SQLite).
 - [ ] Logging / observability — structured logs, crash capture, and a "copy diagnostics" action for OSS bug reports.
-- [ ] Polished macOS/Linux builds.
+- [ ] Polished macOS/Linux builds. *(next-worldline candidate.)*
 
 ### Cross-cutting
-- [ ] Test suite to 95%+ coverage (unit + integration + Playwright-Electron E2E).
-- [ ] Open-source hygiene: LICENSE, README, CONTRIBUTING, CI, no hardcoded personal paths.
-- [ ] `CLAUDE.md` for the project (run `/init` once code exists).
+- [x] Test suite to 95%+ coverage (unit + integration + Playwright-Electron E2E). *(~98% statements; 229 unit + 24 Electron E2E.)*
+- [x] Open-source hygiene: LICENSE, README, CONTRIBUTING, CI, no hardcoded personal paths. *(CI at `.github/workflows/ci.yml`.)*
+- [x] `CLAUDE.md` for the project. *(added at `weft/CLAUDE.md` — architecture/layer-boundary, invariants, commands, testing gate, /dmail state files.)*
 
 ---
 
