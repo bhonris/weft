@@ -4,7 +4,6 @@
 Weft is a cross-platform (Windows-first) open-source Electron desktop app: a VS Code-style shell wrapped around browser-style tabs of Claude Code CLI sessions — one tab per project, each running a live interactive `claude` session in its own pseudo-terminal (node-pty + xterm.js). It adds an integrated file explorer, a Monaco read-only + diff viewer, tear-off tabs into separate OS windows, workspace persistence, and — the defining differentiator — per-tab Claude session status (working / waiting / done / error) driven by Claude Code's own lifecycle hooks (not output scraping), plus app-owned OS notifications that focus the right tab when a session needs attention. Market research confirms the wedge: no existing tool combines hook-driven per-session status + tab-focusing notifications + Windows-first + a tear-off VS Code shell.
 
 ## Current status
-Phase: Time Leap Development (Leap 8/30, Cycle 1)
 Phase: v0.2.0 END GOAL REACHED (Leap 33/40, Cycle 5)
 Divergence meter: **229 unit + 24 Electron E2E, all pass** · ~98% statements
 Cycle 3 shipped OSS hygiene (LICENSE/CONTRIBUTING/CI) + electron-builder packaging — the packaged Weft.exe is E2E-verified. Cycle 4: scrollback cap, WebGL trial rejected on a11y/testability evidence, v0.1.0 stamped with CHANGELOG.
