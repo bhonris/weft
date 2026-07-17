@@ -390,3 +390,16 @@ review item, then two small features with daily-driver value.
 - [x] E2E hygiene: specs strip inherited `WEFT_*` env vars; the persistence spec polls for the saved workspace instead of a bare 500 ms sleep.
 - [x] Shift-clicking **+** opens a plain **shell** tab (PowerShell/bash) through the real UI, badge `unknown`, fully interactive.
 - [x] `Ctrl+Shift+F` opens an in-terminal search bar (xterm search addon) that highlights matches in scrollback; Enter finds next, Esc closes and returns focus to the terminal.
+
+---
+
+## Expansion 3 — Open-source hygiene + packaging
+
+Design-doc §17 obligations that code alone doesn't satisfy.
+
+### New acceptance criteria
+
+- [x] A `LICENSE` file (MIT, per the design doc) exists at the repo root.
+- [x] `CONTRIBUTING.md` covers dev setup, the test commands, the architecture boundary rules (pure core vs adapters), and the coverage bar.
+- [x] A GitHub Actions workflow (`.github/workflows/ci.yml`) runs typecheck + unit tests + coverage gate on push/PR (Windows + Linux matrix; E2E job on Windows with the native rebuild).
+- [x] `pnpm package` produces a distributable Windows build via electron-builder (verified locally with an unpacked `--dir` build that launches).

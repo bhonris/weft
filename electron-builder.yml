@@ -1,0 +1,21 @@
+appId: dev.bunna.weft
+productName: Weft
+directories:
+  output: release
+files:
+  - dist-electron/**
+  - package.json
+# node-pty must stay a real file tree (native .node + conpty.dll/OpenConsole.exe).
+asarUnpack:
+  - node_modules/node-pty/**
+# node-pty is already rebuilt for Electron's ABI via `pnpm rebuild:native`;
+# letting electron-builder re-run node-gyp would reintroduce the Spectre/VS
+# toolchain requirements the committed patch removes.
+npmRebuild: false
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

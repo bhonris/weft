@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Worldline 3 Stabilised — Leap 24 — steiner: worldline-3-stable — 2026-07-18T04:40:00Z
+
+**Phase**: cycle 3 (OSS hygiene + packaging) — all 4 Expansion-3 ACs done in one leap
+**Changed**: LICENSE (MIT) at repo root (design-doc §17 debt). CONTRIBUTING.md (dev setup, test bar, architecture boundary table, IPC checklist, E2E conventions incl. the api-level-masking lesson). .github/workflows/ci.yml (typecheck+unit+coverage matrix win/linux; E2E job on windows-latest with rebuild:native). electron-builder 26 + electron-builder.yml (asarUnpack node-pty, npmRebuild:false so the Spectre patch stays authoritative, NSIS target) + package:dir script. VERIFIED FOR REAL: pnpm package:dir produced release/win-unpacked/Weft.exe and a new e2e/packaged.spec.ts (skips when no build present) launched the PACKAGED exe, opened a project, and echoed through the packaged ConPTY — the distributable genuinely works. Full suite: 214 unit + 23 e2e green. All 39 spec checkboxes checked.
+**SERN interference**: none
+**Divergence meter**: 214 unit + 23 e2e (incl. packaged-exe), 0 fail
+**Next target**: budget 24/30 (0.8) — continue small-value leaps while budget remains per operator instruction; candidates: xterm serialize-based inactive-tab rehydration, WebGL renderer addon, explorer virtualization. Graceful EL_PSY_KONGROO by 27+.
+
+---
+
 ## Worldline 2 Stabilised — Leap 23 — steiner: worldline-2-stable — 2026-07-18T04:00:00Z
 
 **Phase**: cycle-2 checkpoint → worldline-expansion (cycle 3)
