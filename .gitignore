@@ -8,3 +8,6 @@ coverage/
 .vite/
 release/
 *.log
+test-results/
+playwright-report/
+.playwright-mcp/

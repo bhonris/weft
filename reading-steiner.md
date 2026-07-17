@@ -1,8 +1,8 @@
 phase: time-leap-development
-leap_count: 7
+leap_count: 8
 expansion_cycle: 1
-session_id: 2026-07-17T19:30:00Z
-prev_head: 3787ca58dbc8caefc9e7a4e54f804248ef5f5fbf
+session_id: 2026-07-17T19:45:00Z
+prev_head: 8566eb2
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md."
 project_name: "weft"
 project_type: web
@@ -13,7 +13,7 @@ coverage_pct: 99
 divergence_readings: []
 current_focus: "Render the file explorer tree in the renderer: Explorer.tsx — for the active tab's cwd, lazy-expand directories via window.api.listDir; clicking a file reveals/opens it. Then continue: status server (named-pipe/UDS platform seam + inject inline --settings reporting hooks at spawn in register.createSession + wire correlator + status-mapper so tab badges reflect working/waiting/done/error); app-owned OS notifications (focus window+tab on click); Monaco read-only + diff viewer; workspace persistence IPC (loadWorkspace/saveWorkspace) + restore-on-launch; tear-off windows."
 blocked_on: null
-last_test_run: "110 pass, 0 fail"
+last_test_run: "unit 110 pass, 0 fail; e2e 3 pass, 0 fail"
 closed_worldlines: [divergence-analysis, worldline-selection]
 next_action: "Rebuild node-pty for Electron (@electron/rebuild) and launch to verify open-project -> live claude session. Then continue Phase 3 features toward the remaining acceptance criteria: (a) file explorer — fs-service (readdir/stat/reveal/open + chokidar watch) + IPC + virtualized tree; (b) status server — named-pipe/UDS transport (platform seam) + inline --settings hook injection at spawn + wire correlator + status-mapper to update tab badges; (c) app-owned OS notifications (focus window+tab on click); (d) Monaco read-only + diff viewer; (e) workspace persistence IPC wiring (loadWorkspace/saveWorkspace + restore on launch); (f) tear-off windows. Grow vitest coverage include as modules land. When ALL acceptance criteria are checked AND coverage>=90, advance to Phase 3b (Playwright-for-Electron)."
 sern_interference_count: 0

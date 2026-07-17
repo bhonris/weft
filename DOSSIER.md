@@ -4,9 +4,9 @@
 Weft is a cross-platform (Windows-first) open-source Electron desktop app: a VS Code-style shell wrapped around browser-style tabs of Claude Code CLI sessions — one tab per project, each running a live interactive `claude` session in its own pseudo-terminal (node-pty + xterm.js). It adds an integrated file explorer, a Monaco read-only + diff viewer, tear-off tabs into separate OS windows, workspace persistence, and — the defining differentiator — per-tab Claude session status (working / waiting / done / error) driven by Claude Code's own lifecycle hooks (not output scraping), plus app-owned OS notifications that focus the right tab when a session needs attention. Market research confirms the wedge: no existing tool combines hook-driven per-session status + tab-focusing notifications + Windows-first + a tear-off VS Code shell.
 
 ## Current status
-Phase: Time Leap Development (Leap 6/30, Cycle 1)
-Divergence meter: 99.83% stmts / 96% branch (built modules) · 110 tests pass
-Blocked (live-verify only): node-pty needs an Electron-ABI rebuild; VS C++ Build Tools installing. Feature work continues unblocked.
+Phase: Time Leap Development (Leap 8/30, Cycle 1)
+Divergence meter: 99.83% stmts / 96% branch · 110 unit tests + 3 Electron E2E, all pass
+node-pty rebuilt for Electron (verified); Playwright-Electron E2E harness live (renders + IPC/PTY echo + §4.7 reload-recovery all green in the real app). Nothing blocked.
 Implemented so far: hook→status mapper, workspace persistence + migrations, resize-throttle, output ring buffer, session correlator (core); PtyManager (attach/detach + ring-buffer replay) + NodePtyFactory; IPC register layer (create/write/resize/close/attach/detach/openProject), preload bridge (window.api), renderer session-store + TerminalPane (xterm, attach-on-mount) + WorkbenchErrorBoundary. **Interactive terminal wired end-to-end** — open project → live claude session, reload-safe. Next: node-pty Electron-ABI rebuild + live verify, then file explorer, status server/hooks, notifications.
 
 ## Stack

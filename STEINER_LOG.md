@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 8 — steiner: test(e2e) Playwright-Electron harness — 2026-07-17T19:45:00Z
+
+**Phase**: time-leap-development (Phase 3b harness established early)
+**Changed**: Installed @playwright/test 1.61 (no browser download — Electron uses app's own binary). Added playwright.config.ts + e2e/app.spec.ts driving the REAL built Electron app via _electron.launch(). 3 tests, all green: (1) workbench shell renders + window.api exposed under context isolation; (2) a shell session spawns and echoes input through the real preload→IPC→node-pty/ConPTY pipeline; (3) §4.7 — a session SURVIVES a hard renderer reload and re-attach replays its buffered output. test:e2e now builds first (electron-vite build && playwright test). gitignored test-results/playwright-report/.playwright-mcp.
+**SERN interference**: none
+**Divergence meter**: unit 110 pass; e2e 3 pass (real Electron)
+**Next target**: continue Phase 3 features — renderer explorer tree, status server + inline hooks (tab badges), OS notifications, Monaco diff, persistence IPC + restore, tear-off. E2E harness now lets me self-verify each in the real app.
+
+---
+
 ## Leap 7 — steiner: chore(native-build) node-pty runs under Electron — 2026-07-17T19:30:00Z
 
 **Phase**: time-leap-development
