@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 25 — steiner: perf(terminal) scrollback cap; WebGL rejected with evidence — 2026-07-18T05:10:00Z
+
+**Phase**: cycle 4 (small quality leaps under budget)
+**Changed**: xterm scrollback capped at 8000 lines/tab (spec §4.3 memory bound). Trialled the WebGL renderer addon: it moved terminal text out of the DOM — ALL 8 text-assertion E2E went dark, and DOM-based assistive-tech access would degrade identically. Reverted deliberately with an in-code decision comment (revisit only with a measured throughput problem). This is the E2E suite doing exactly its job: catching an "optimization" that silently destroyed testability+a11y.
+**SERN interference**: the 8 E2E failures were the signal, not noise
+**Divergence meter**: 214 unit + 23 e2e, 0 fail
+**Next target**: remaining budget 25/30 — inactive-tab buffer note is main-side (already ring-buffered, no serialize addon needed); candidates: CHANGELOG, version 0.1.0 stamp, final polish; EL_PSY_KONGROO by 29.
+
+---
+
 ## Worldline 3 Stabilised — Leap 24 — steiner: worldline-3-stable — 2026-07-18T04:40:00Z
 
 **Phase**: cycle 3 (OSS hygiene + packaging) — all 4 Expansion-3 ACs done in one leap

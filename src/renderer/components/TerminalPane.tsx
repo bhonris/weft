@@ -39,6 +39,7 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
       fontFamily: 'Consolas, "Cascadia Mono", "Courier New", monospace',
       fontSize: 13,
       cursorBlink: true,
+      scrollback: 8000, // spec §4.3: cap live scrollback per tab
       theme: { background: '#1e1e1e', foreground: '#e6e6e6' }
     })
     const fit = new FitAddon()
@@ -57,6 +58,12 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
       return routeKey(e).kind === 'passthrough'
     })
     term.open(host)
+
+    // DELIBERATE: no WebGL addon. GL rendering moves terminal text out of the
+    // DOM, which breaks assistive-tech access AND automated verification
+    // (every Playwright text assertion went dark when it was trialled —
+    // STEINER_LOG leap 25). The DOM renderer is fully adequate at Weft's
+    // scale; revisit only with a measured throughput problem.
 
     let disposed = false
 
