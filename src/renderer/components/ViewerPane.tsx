@@ -80,6 +80,14 @@ export function ViewerPane(): React.ReactElement | null {
         <div className="viewer__actions">
           <button
             type="button"
+            className="viewer__mode"
+            title="Show in the OS file manager"
+            onClick={() => void window.api.revealInOs(file.path)}
+          >
+            Reveal
+          </button>
+          <button
+            type="button"
             className={`viewer__mode${mode === 'view' ? ' viewer__mode--on' : ''}`}
             onClick={() => setMode('view')}
           >

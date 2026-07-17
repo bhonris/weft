@@ -64,6 +64,8 @@ export interface WeftApi {
   writeToSession(tabId: string, data: string): void
   resizeSession(tabId: string, cols: number, rows: number): void
   closeSession(tabId: string): Promise<void>
+  // (Tab rename/reorder are renderer-store concerns persisted via WorkspaceState —
+  // deliberately NOT IPC surface.)
   /**
    * Attach this renderer view to a live session. Resolves with the buffered
    * output to replay into a freshly mounted terminal; live output then arrives
@@ -75,8 +77,6 @@ export interface WeftApi {
   ): Promise<{ snapshot: string; exited: boolean; exitCode: number | null }>
   /** Detach this view; leaves the PTY running (only `closeSession` kills it). */
   detachSession(tabId: string): Promise<void>
-  renameTab(tabId: string, title: string): Promise<void>
-  reorderTabs(tabOrder: string[]): Promise<void>
   moveTabToWindow(tabId: string, target: 'new' | string, meta?: { title?: string }): Promise<void>
   /** A torn-off window closed; the surviving session should re-join this strip. */
   onReDockTab(
@@ -108,7 +108,7 @@ export interface WeftApi {
    * there. A spawn failure (e.g. `claude` not on PATH) resolves with an
    * `error` result rather than rejecting, so the UI can offer a Retry.
    */
-  openProject(): Promise<OpenProjectResult | null>
+  openProject(command?: SessionCommand): Promise<OpenProjectResult | null>
 
   // Persistence
   loadWorkspace(): Promise<WorkspaceState>

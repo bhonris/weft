@@ -12,11 +12,21 @@ export interface Tab {
 
 export type ThemeChoice = 'system' | 'light' | 'dark'
 
+export interface SpawnFailure {
+  message: string
+  cwd: string
+  title: string
+  command: SessionCommand
+}
+
 export interface SessionState {
   tabs: Tab[]
   activeTabId: string | null
   theme: ThemeChoice
   setTheme: (theme: ThemeChoice) => void
+  /** Last failed spawn (claude not found, …) — drives the retry banner. */
+  spawnFailure: SpawnFailure | null
+  setSpawnFailure: (failure: SpawnFailure | null) => void
   addTab: (
     tab: Omit<Tab, 'status' | 'command'> & { status?: SessionStatus; command?: SessionCommand }
   ) => void
@@ -36,6 +46,8 @@ export const useSessionStore = create<SessionState>((set) => ({
   activeTabId: null,
   theme: 'system',
   setTheme: (theme) => set({ theme }),
+  spawnFailure: null,
+  setSpawnFailure: (spawnFailure) => set({ spawnFailure }),
 
   addTab: (tab) =>
     set((s) => {

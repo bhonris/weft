@@ -49,7 +49,8 @@ export function createWeftApi(ipc: IpcRendererLike): WeftBridge {
     moveTabToWindow: (tabId, target, meta) =>
       ipc.invoke(CH.moveTabToWindow, tabId, target, meta) as Promise<void>,
     onReDockTab: (cb) => subscribe(CH.reDockTab, cb),
-    openProject: () => ipc.invoke(CH.openProject) as Promise<OpenProjectResult | null>,
+    openProject: (command) =>
+      ipc.invoke(CH.openProject, command) as Promise<OpenProjectResult | null>,
     listDir: (path) => ipc.invoke(CH.listDir, path) as Promise<DirEntry[]>,
     watchDir: (path) => ipc.invoke(CH.watchDir, path) as Promise<{ watchId: string }>,
     unwatchDir: (watchId) => ipc.invoke(CH.unwatchDir, watchId) as Promise<void>,

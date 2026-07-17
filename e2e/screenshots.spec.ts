@@ -3,6 +3,7 @@ import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { test, expect, _electron as electron } from '@playwright/test'
+import { launchWeft } from './helpers'
 
 const MAIN = join(process.cwd(), 'dist-electron', 'main', 'index.js')
 const SHOTS = join(process.cwd(), 'screenshots')
@@ -27,16 +28,10 @@ test('capture divergence-meter screenshots of the running app', async () => {
   git('-c', 'user.email=lab@weft.test', '-c', 'user.name=Weft', 'commit', '-q', '-m', 'init')
   writeFileSync(join(projectDir, 'src', 'index.ts'), 'export const answer = 43 // changed\n')
 
-  const app = await electron.launch({
-    args: [MAIN],
-    env: {
-      ...process.env,
-      NODE_ENV: 'production',
-      WEFT_USER_DATA_DIR: mkdtempSync(join(tmpdir(), 'weft-ud-')),
+  const app = await launchWeft({
       WEFT_E2E_OPEN_DIR: projectDir,
       WEFT_OPEN_PROJECT_COMMAND: 'shell'
-    }
-  })
+    })
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
 

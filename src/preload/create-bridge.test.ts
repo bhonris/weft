@@ -32,7 +32,7 @@ describe('createWeftApi', () => {
     expect(invoke).toHaveBeenCalledWith(CH.closeSession, 't1')
     expect(invoke).toHaveBeenCalledWith(CH.attachSession, 't1')
     expect(invoke).toHaveBeenCalledWith(CH.detachSession, 't1')
-    expect(invoke).toHaveBeenCalledWith(CH.openProject)
+    expect(invoke).toHaveBeenCalledWith(CH.openProject, undefined)
   })
 
   it('routes fire-and-forget calls via send', () => {

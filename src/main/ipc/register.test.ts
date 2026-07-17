@@ -324,6 +324,29 @@ describe('registerSessionIpc', () => {
     expect(factory.spawns[1]!.env['WEFT_STATUS_ENDPOINT']).toBe('\\\\.\\pipe\\weft-x')
   })
 
+  it('openProject honors a per-call command override (shell tab via Shift+Click)', async () => {
+    const factory = new FakeFactory()
+    const pty = new PtyManager(factory)
+    const ipcMain = new FakeIpcMain()
+    let n = 0
+    registerSessionIpc({
+      ipcMain,
+      pty,
+      pickDirectory: async () => '/tmp/x',
+      generateId: () => `id${++n}`,
+      baseEnv: {},
+      shellPath: 'bash',
+      defaultCommand: 'claude'
+    })
+    const res = await ipcMain.invoke(
+      CH.openProject,
+      { sender: { id: 1, send: () => {} } },
+      'shell'
+    )
+    expect(factory.spawns[0]).toMatchObject({ file: 'bash' })
+    expect(res).toMatchObject({ command: 'shell' })
+  })
+
   it('openProject honors an injected default command', async () => {
     const factory = new FakeFactory()
     const pty = new PtyManager(factory)

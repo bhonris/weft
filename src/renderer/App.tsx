@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useSessionStore, type Tab } from './store/session-store'
+import { useSessionStore, type Tab, type SpawnFailure } from './store/session-store'
 import { buildWorkspaceState, restoreWorkspace } from './store/workspace-sync'
 import { TerminalPane } from './components/TerminalPane'
 import { Explorer } from './components/Explorer'
@@ -20,22 +20,24 @@ const STATUS_GLYPH: Record<SessionStatus, string> = {
   unknown: '○'
 }
 
-export interface SpawnFailure {
-  message: string
-  cwd: string
+/** Add a spawned session as a tab and clear any spawn-failure banner. */
+function addSessionTab(t: {
+  tabId: string
   title: string
+  cwd: string
   command: 'claude' | 'shell'
+}): void {
+  const s = useSessionStore.getState()
+  s.setSpawnFailure(null)
+  s.addTab(t)
 }
 
-type SpawnFailureListener = (failure: SpawnFailure | null) => void
-let spawnFailureListener: SpawnFailureListener = () => {}
-
 /** Open the OS folder picker and add the resulting session as a tab. */
-async function openProject(): Promise<void> {
-  const result = await window.api.openProject()
+async function openProject(command?: 'claude' | 'shell'): Promise<void> {
+  const result = await window.api.openProject(command)
   if (!result) return
   if ('error' in result) {
-    spawnFailureListener({
+    useSessionStore.getState().setSpawnFailure({
       message: result.error,
       cwd: result.cwd,
       title: result.title,
@@ -43,13 +45,7 @@ async function openProject(): Promise<void> {
     })
     return
   }
-  spawnFailureListener(null)
-  useSessionStore.getState().addTab({
-    tabId: result.tabId,
-    title: result.title,
-    cwd: result.cwd,
-    command: result.command
-  })
+  addSessionTab(result)
 }
 
 /** Retry a failed spawn in the same cwd (e.g. after fixing PATH). */
@@ -59,15 +55,9 @@ async function retrySpawn(failure: SpawnFailure): Promise<void> {
       cwd: failure.cwd,
       command: failure.command
     })
-    spawnFailureListener(null)
-    useSessionStore.getState().addTab({
-      tabId,
-      title: failure.title,
-      cwd: failure.cwd,
-      command: failure.command
-    })
+    addSessionTab({ tabId, title: failure.title, cwd: failure.cwd, command: failure.command })
   } catch (e) {
-    spawnFailureListener({
+    useSessionStore.getState().setSpawnFailure({
       ...failure,
       message: e instanceof Error ? e.message : String(e)
     })
@@ -168,15 +158,8 @@ export function App(): React.ReactElement {
   const theme = useSessionStore((s) => s.theme)
   const setTheme = useSessionStore((s) => s.setTheme)
   const activeTab = tabs.find((t) => t.tabId === activeTabId) ?? null
-  const [spawnFailure, setSpawnFailure] = useState<SpawnFailure | null>(null)
-
-  // Module-level open/retry helpers report spawn failures into this component.
-  useEffect(() => {
-    spawnFailureListener = setSpawnFailure
-    return () => {
-      spawnFailureListener = () => {}
-    }
-  }, [])
+  const spawnFailure = useSessionStore((s) => s.spawnFailure)
+  const setSpawnFailure = useSessionStore((s) => s.setSpawnFailure)
 
   // Apply the theme choice to the document (CSS handles system/light/dark).
   useEffect(() => {
@@ -193,14 +176,7 @@ export function App(): React.ReactElement {
     const offActivate = window.api.onActivateTab((e) =>
       useSessionStore.getState().setActive(e.tabId)
     )
-    const offReDock = window.api.onReDockTab((e) =>
-      useSessionStore.getState().addTab({
-        tabId: e.tabId,
-        title: e.title,
-        cwd: e.cwd,
-        command: e.command
-      })
-    )
+    const offReDock = window.api.onReDockTab((e) => addSessionTab(e))
     return () => {
       offStatus()
       offExit()
@@ -276,7 +252,8 @@ export function App(): React.ReactElement {
             type="button"
             className="tab-strip__add"
             aria-label="open project"
-            onClick={() => void openProject()}
+            title="Open project (Shift+Click: plain shell tab)"
+            onClick={(e) => void openProject(e.shiftKey ? 'shell' : undefined)}
           >
             +
           </button>

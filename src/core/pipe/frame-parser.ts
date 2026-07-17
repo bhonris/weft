@@ -5,6 +5,9 @@
  * feed it strings, get parsed objects; invalid JSON lines are surfaced to an
  * error callback (the caller logs and drops them, per spec §4.4).
  */
+/** A single frame larger than this is hostile or broken — drop, don't OOM. */
+const MAX_BUFFER_CHARS = 1_000_000
+
 export class FrameParser {
   private buffer = ''
 
@@ -15,6 +18,12 @@ export class FrameParser {
 
   push(chunk: string): void {
     this.buffer += chunk
+    if (this.buffer.length > MAX_BUFFER_CHARS && !this.buffer.includes('\n')) {
+      // A newline-less flood: discard it rather than growing without bound.
+      this.buffer = ''
+      this.onError('frame exceeded 1MB without a newline — dropped')
+      return
+    }
     let idx = this.buffer.indexOf('\n')
     while (idx !== -1) {
       const line = this.buffer.slice(0, idx).replace(/\r$/, '').trim()

@@ -52,6 +52,23 @@ describe('FrameParser', () => {
     expect(onFrame).not.toHaveBeenCalled()
   })
 
+  it('drops a newline-less flood at 1MB instead of buffering unboundedly', () => {
+    const frames: unknown[] = []
+    const errors: string[] = []
+    const p = new FrameParser(
+      (f) => frames.push(f),
+      (l) => errors.push(l)
+    )
+    const chunk = 'x'.repeat(600_000)
+    p.push(chunk)
+    p.push(chunk) // crosses 1MB with no newline
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toContain('1MB')
+    // The parser recovers: subsequent well-formed frames still parse.
+    p.push('{"ok":true}\n')
+    expect(frames).toEqual([{ ok: true }])
+  })
+
   it('silently drops malformed lines when no onError is provided (default)', () => {
     const frames: unknown[] = []
     const p = new FrameParser((f) => frames.push(f)) // default onError

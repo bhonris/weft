@@ -3,6 +3,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { test, expect, _electron as electron, type ElectronApplication, type Page } from '@playwright/test'
+import { launchWeft } from './helpers'
 
 const MAIN = join(process.cwd(), 'dist-electron', 'main', 'index.js')
 
@@ -25,16 +26,10 @@ test.beforeEach(async () => {
   )
   writeFileSync(join(projectDir, 'story.txt'), 'line one\nline two CHANGED BY CLAUDE\nline three\n')
 
-  app = await electron.launch({
-    args: [MAIN],
-    env: {
-      ...process.env,
-      NODE_ENV: 'production',
-      WEFT_USER_DATA_DIR: mkdtempSync(join(tmpdir(), 'weft-ud-')),
+  app = await launchWeft({
       WEFT_E2E_OPEN_DIR: projectDir,
       WEFT_OPEN_PROJECT_COMMAND: 'shell'
-    }
-  })
+    })
   page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
 })

@@ -1,15 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { migrate, needsMigration, migrations } from './index'
+import { migrate, migrations } from './index'
 import { v0ToV1 } from './v0-to-v1'
-
-describe('needsMigration', () => {
-  it('is true below the current version', () => {
-    expect(needsMigration(0)).toBe(true)
-  })
-  it('is false at the current version', () => {
-    expect(needsMigration(1)).toBe(false)
-  })
-})
 
 describe('migrate', () => {
   it('returns the same blob when already current', () => {

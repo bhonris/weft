@@ -2,22 +2,17 @@ import { join } from 'node:path'
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { test, expect, _electron as electron } from '@playwright/test'
+import { launchWeft } from './helpers'
 
 const MAIN = join(process.cwd(), 'dist-electron', 'main', 'index.js')
 
 test('tear-off moves the tab to its own window with the SAME PTY, and re-docks on close', async () => {
   // Boots two shells and round-trips three echoes — needs more than the default.
   test.setTimeout(120_000)
-  const app = await electron.launch({
-    args: [MAIN],
-    env: {
-      ...process.env,
-      NODE_ENV: 'production',
-      WEFT_USER_DATA_DIR: mkdtempSync(join(tmpdir(), 'weft-ud-')),
+  const app = await launchWeft({
       WEFT_E2E_OPEN_DIR: mkdtempSync(join(tmpdir(), 'weft-tear-')),
       WEFT_OPEN_PROJECT_COMMAND: 'shell'
-    }
-  })
+    })
   const main = await app.firstWindow()
   await main.waitForLoadState('domcontentloaded')
 

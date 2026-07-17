@@ -27,7 +27,3 @@ export function migrate(
   return current
 }
 
-/** True when a blob at `fromVersion` needs any migration to reach current. */
-export function needsMigration(fromVersion: number): boolean {
-  return fromVersion < WORKSPACE_VERSION
-}

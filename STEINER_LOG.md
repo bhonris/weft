@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 22 — steiner: feat(expansion-2) hardening sweep + shell tabs + terminal search — 2026-07-18T03:30:00Z
+
+**Phase**: time-leap-development (cycle 2)
+**Changed**: 9 of 11 Expansion-2 ACs in one leap. Hardening: FrameParser 1MB newline-less flood cap (drops+reports, recovers); NetTransport chmod 0600 + unlink for POSIX UDS (pipe paths untouched); DiffService 5MB stat-guard with friendly viewer error + `-c core.quotepath=false` on both git calls (non-ASCII filenames); dead-code sweep (renameTab/reorderTabs channels+API removed with a doc note, needsMigration/isOk deleted, mapHookToStatus dropped its ceremonial _prev param — dedup stays in StatusServer); ViewerPane Reveal button (revealInOs finally has its UI); spawn-failure state moved into the zustand store (module-level mutable listener gone, addSessionTab dedup helper); safeSend dropAttachment dedupe. E2E hygiene: e2e/helpers.ts launchWeft() strips ALL inherited WEFT_* env + fresh userData per launch (codemod across all 10 specs); persistence spec polls config.json on disk instead of sleeping 500ms. Features: Shift+Click + opens a plain SHELL tab (openProject command override through contract/bridge/register; E2E proves it works while claude is broken); Ctrl+Shift+F in-terminal search (xterm SearchAddon, search bar with next/prev/close, chord intercepted before the PTY, Esc refocuses terminal; E2E).
+**SERN interference**: none (one bridge test assertion updated for the new optional arg)
+**Divergence meter**: 213 unit + 21 e2e, 0 fail
+**Next target**: final expansion items (correlator path normalization + multi-tab/theme restart E2E), cycle-2 checkpoint (docs+spec boxes), then Okabe budget check.
+
+---
+
 ## Worldline 1 Stabilised — Leap 21 — steiner: worldline-1-stable — 2026-07-18T02:40:00Z
 
 **Phase**: worldline-checkpoint → worldline-expansion

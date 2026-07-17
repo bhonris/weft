@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
-import { DiffService, type ExecFn } from './diff-service'
+import { DiffService, MAX_VIEWER_FILE_BYTES, type ExecFn } from './diff-service'
 
-const fakeFs = (content: string) => ({
-  readFile: vi.fn(async () => content)
+const fakeFs = (content: string, size = content.length) => ({
+  readFile: vi.fn(async () => content),
+  stat: vi.fn(async () => ({ size }))
 })
 
 describe('DiffService', () => {
@@ -11,10 +12,22 @@ describe('DiffService', () => {
     expect(await svc.readFileText('/p/a.txt')).toBe('hello')
   })
 
-  it('diffs a tracked file against its HEAD blob', async () => {
+  it('rejects files over the 5MB viewer cap with a friendly error', async () => {
+    const svc = new DiffService(
+      fakeFs('irrelevant', MAX_VIEWER_FILE_BYTES + 1),
+      vi.fn() as unknown as ExecFn
+    )
+    await expect(svc.readFileText('/p/huge.log')).rejects.toThrow(/too large for the viewer/)
+    await expect(svc.getDiff('/p/huge.log')).rejects.toThrow(/too large/)
+  })
+
+  it('diffs a tracked file against its HEAD blob (quotepath disabled)', async () => {
     const exec: ExecFn = vi.fn(async (_file, args) => {
-      if (args[0] === 'ls-files') return { stdout: 'src/a.txt\n' }
-      expect(args).toEqual(['show', 'HEAD:src/a.txt'])
+      if (args.includes('ls-files')) {
+        expect(args.slice(0, 2)).toEqual(['-c', 'core.quotepath=false'])
+        return { stdout: 'src/a.txt\n' }
+      }
+      expect(args).toEqual(['-c', 'core.quotepath=false', 'show', 'HEAD:src/a.txt'])
       return { stdout: 'old content' }
     })
     const svc = new DiffService(fakeFs('new content'), exec)
@@ -26,7 +39,7 @@ describe('DiffService', () => {
 
   it('uses an empty baseline for untracked files', async () => {
     const exec: ExecFn = vi.fn(async (_f, args) => {
-      if (args[0] === 'ls-files') return { stdout: '' } // untracked
+      if (args.includes('ls-files')) return { stdout: '' } // untracked
       throw new Error('should not call git show')
     })
     const svc = new DiffService(fakeFs('brand new'), exec)

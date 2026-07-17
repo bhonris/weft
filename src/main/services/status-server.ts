@@ -88,7 +88,7 @@ export class StatusServer {
       return
     }
     const prev = this.statuses.get(tabId) ?? 'unknown'
-    const update = mapHookToStatus(payload, prev)
+    const update = mapHookToStatus(payload)
     if (update.status === null || update.status === prev) return
     this.statuses.set(tabId, update.status)
     const change: StatusChange = { tabId, status: update.status }

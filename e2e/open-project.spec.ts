@@ -2,6 +2,7 @@ import { join } from 'node:path'
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { test, expect, _electron as electron, type ElectronApplication, type Page } from '@playwright/test'
+import { launchWeft } from './helpers'
 
 const MAIN = join(process.cwd(), 'dist-electron', 'main', 'index.js')
 
@@ -16,16 +17,10 @@ test.beforeEach(async () => {
   mkdirSync(join(projectDir, 'sub'))
   writeFileSync(join(projectDir, 'sub', 'nested.md'), '# nested')
 
-  app = await electron.launch({
-    args: [MAIN],
-    env: {
-      ...process.env,
-      NODE_ENV: 'production',
-      WEFT_USER_DATA_DIR: mkdtempSync(join(tmpdir(), 'weft-ud-')),
+  app = await launchWeft({
       WEFT_E2E_OPEN_DIR: projectDir,
       WEFT_OPEN_PROJECT_COMMAND: 'shell' // no real `claude` boot in E2E
-    }
-  })
+    })
   page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
 })

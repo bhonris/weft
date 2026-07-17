@@ -20,16 +20,14 @@ export interface StatusUpdate {
 }
 
 /**
- * Pure mapping from a hook payload (plus the prior status) to the next status.
- * This is the heart of Weft's differentiation: hook-driven, not output-scraped.
+ * Pure mapping from a hook payload to the next status. This is the heart of
+ * Weft's differentiation: hook-driven, not output-scraped. Deduplication
+ * against the prior status is the StatusServer's job, not the mapper's.
  *
  * Returns `status: null` when the event carries no status meaning (e.g.
  * `auth_success`, `SessionStart`), so the caller leaves the badge untouched.
  */
-export function mapHookToStatus(
-  payload: HookPayload,
-  _prev: SessionStatus
-): StatusUpdate {
+export function mapHookToStatus(payload: HookPayload): StatusUpdate {
   switch (payload.event) {
     case 'UserPromptSubmit':
       return { status: 'working' }

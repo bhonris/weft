@@ -1,21 +1,17 @@
 import { join } from 'node:path'
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { test, expect, _electron as electron, type ElectronApplication } from '@playwright/test'
+import { launchWeft } from './helpers'
 
 const MAIN = join(process.cwd(), 'dist-electron', 'main', 'index.js')
 
 function launch(userDataDir: string, projectDir: string): Promise<ElectronApplication> {
-  return electron.launch({
-    args: [MAIN],
-    env: {
-      ...process.env,
-      NODE_ENV: 'production',
+  return launchWeft({
       WEFT_USER_DATA_DIR: userDataDir,
       WEFT_E2E_OPEN_DIR: projectDir,
       WEFT_OPEN_PROJECT_COMMAND: 'shell'
-    }
-  })
+    })
 }
 
 test('the workspace survives an app restart: tabs and cwds are restored', async () => {
@@ -36,8 +32,21 @@ test('the workspace survives an app restart: tabs and cwds are restored', async 
   await app1.evaluate(({ BrowserWindow }) => {
     BrowserWindow.getAllWindows()[0]!.setBounds({ x: 80, y: 80, width: 977, height: 653 })
   })
-  // The save is debounce-free (fires on tab change); still, give IPC a beat.
-  await page1.waitForTimeout(500)
+  // Deterministic: wait until the workspace blob actually landed on disk
+  // (electron-store writes <userData>/config.json) instead of sleeping.
+  const configPath = join(userDataDir, 'config.json')
+  await expect
+    .poll(
+      () => {
+        try {
+          return readFileSync(configPath, 'utf8').includes(projectName)
+        } catch {
+          return false
+        }
+      },
+      { timeout: 10_000 }
+    )
+    .toBe(true)
   await app1.close()
 
   // ── Second run, same userData: the tab must come back on its own. ─────────

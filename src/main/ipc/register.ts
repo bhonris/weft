@@ -151,17 +151,16 @@ export function registerSessionIpc(deps: RegisterDeps): void {
     // Sending to a dead webContents throws INSIDE the PTY data callback and
     // would take down main — so every forward is guarded and a dead sender
     // detaches itself automatically.
+    const dropAttachment = (): void => {
+      attachments.get(attachmentKey)?.detach()
+      attachments.delete(attachmentKey)
+    }
     const safeSend = (channel: string, payload: unknown): void => {
-      if (sender.isDestroyed?.()) {
-        attachments.get(attachmentKey)?.detach()
-        attachments.delete(attachmentKey)
-        return
-      }
+      if (sender.isDestroyed?.()) return dropAttachment()
       try {
         sender.send(channel, payload)
       } catch {
-        attachments.get(attachmentKey)?.detach()
-        attachments.delete(attachmentKey)
+        dropAttachment()
       }
     }
 
@@ -194,10 +193,13 @@ export function registerSessionIpc(deps: RegisterDeps): void {
     deps.openTearOff?.(tabId as string, title)
   })
 
-  ipcMain.handle(CH.openProject, async () => {
+  ipcMain.handle(CH.openProject, async (_event, commandOverride) => {
     const dir = await deps.pickDirectory()
     if (!dir) return null
-    const command = deps.defaultCommand ?? 'claude'
+    const command =
+      commandOverride === 'shell' || commandOverride === 'claude'
+        ? commandOverride
+        : (deps.defaultCommand ?? 'claude')
     const title = basename(dir) || dir
     try {
       const { tabId } = createSession({ cwd: dir, command })

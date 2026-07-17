@@ -2,21 +2,16 @@ import { join } from 'node:path'
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { test, expect, _electron as electron } from '@playwright/test'
+import { launchWeft } from './helpers'
 
 const MAIN = join(process.cwd(), 'dist-electron', 'main', 'index.js')
 
 test('a missing claude binary shows an actionable error with Retry — no crash', async () => {
-  const app = await electron.launch({
-    args: [MAIN],
-    env: {
-      ...process.env,
-      NODE_ENV: 'production',
-      WEFT_USER_DATA_DIR: mkdtempSync(join(tmpdir(), 'weft-ud-')),
+  const app = await launchWeft({
       WEFT_E2E_OPEN_DIR: mkdtempSync(join(tmpdir(), 'weft-noclaude-')),
       // Default command (claude), but pointed at a binary that cannot exist.
       WEFT_CLAUDE_BIN: 'weft-definitely-not-a-real-binary.exe'
-    }
-  })
+    })
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
 
@@ -43,14 +38,9 @@ test('a missing claude binary shows an actionable error with Retry — no crash'
 })
 
 test('the theme toggle cycles system → light → dark and applies to the document', async () => {
-  const app = await electron.launch({
-    args: [MAIN],
-    env: {
-      ...process.env,
-      NODE_ENV: 'production',
+  const app = await launchWeft({
       WEFT_USER_DATA_DIR: mkdtempSync(join(tmpdir(), 'weft-ud-'))
-    }
-  })
+    })
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
 

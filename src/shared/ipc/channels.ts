@@ -13,8 +13,6 @@ export const CH = {
   // Attach/detach a renderer view to a live session (survives reload; §4.7).
   attachSession: 'session:attach',
   detachSession: 'session:detach',
-  renameTab: 'tab:rename',
-  reorderTabs: 'tab:reorder',
   moveTabToWindow: 'tab:move-window',
   // Open an OS directory picker and start a claude session rooted there.
   openProject: 'app:open-project',
