@@ -1,6 +1,6 @@
-phase: worldline-checkpoint
-leap_count: 20
-expansion_cycle: 1
+phase: worldline-expansion
+leap_count: 21
+expansion_cycle: 2
 session_id: 2026-07-18T00:30:00Z
 prev_head: 67fe8ec6268622c6795427f69a368f49848f840a
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md."
@@ -11,11 +11,11 @@ test_cmd: pnpm test
 dev_server_port: 5173
 coverage_pct: 98
 divergence_readings: []
-current_focus: "Phase 4 — Future Okabe x3 review: (1) simplicity/elegance, (2) correctness+security, (3) test quality. Spawn three general-purpose agents in parallel with key file contents, consolidate findings into review_items (must_fix with file:line, nice_to_have), commit christina-review, advance to worldline-convergence."
+current_focus: "Phase 7 — Okabe expansion: propose cycle-2 items; budget 21/30 so prefer 2-3 small high-value (nice_to_have sweep, packaging, plain shell tabs, etc.)"
 blocked_on: null
 last_test_run: "unit 212 pass, 0 fail; e2e 19 pass, 0 fail; coverage 97.96/96.25/98.64"
 closed_worldlines: [divergence-analysis, worldline-selection, time-leap-development, divergence-meter-reading]
-next_action: "Spawn Future Okabe x3 reviewers over src/ (main services+ipc, core, preload, renderer components/stores) and e2e/. Consolidate into review_items. Then Phase 5 convergence (fix must_fix, keep suite green), Phase 6 checkpoint (README, USAGE full pass, prod-build smoke, lessons_learned, Mayuri), Phase 7 expansion."
+next_action: "Spawn Okabe (expansion mode) with DOSSIER+USAGE+log+nice_to_have+lessons; select top 2-3 small items; append Expansion 2 section to spec; then time-leap-development."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:
@@ -48,4 +48,4 @@ max_iterations: 30
 push_to_github: false
 bypass_playwright: false
 sern_no_progress_streak: 0
-lessons_learned: ["cycle 1: node-pty Electron rebuild blocked twice on Windows — (a) NoDefaultCurrentDirectoryInExePath=1 breaks winpty GetCommitHash.bat (now unset inside scripts/rebuild-native.mjs), (b) SpectreMitigation flag required Spectre VS libs (removed via committed pnpm patch node-pty@1.1.0). node-pty verified spawning ConPTY under Electron. Rebuild reproducible via pnpm rebuild:native."]
+lessons_learned: ["cycle 1: node-pty Electron rebuild blocked twice on Windows — (a) NoDefaultCurrentDirectoryInExePath=1 breaks winpty GetCommitHash.bat (now unset inside scripts/rebuild-native.mjs), (b) SpectreMitigation flag required Spectre VS libs (removed via committed pnpm patch node-pty@1.1.0). node-pty verified spawning ConPTY under Electron. Rebuild reproducible via pnpm rebuild:native.", "cycle 1: api-level E2E can mask product-path bugs — the reload test drove window.api directly and hid that the REAL React restore flow respawned sessions; always E2E the actual UI path for core guarantees. Destroyed-webContents sends throw inside PTY callbacks and wedge main via modal — guard every main→renderer send. ConPTY children pin process exit — hard-exit fallback after graceful shutdown. What worked: pure-core + injected fakes kept 200+ tests fast; adversarial 3-reviewer pass found a critical product bug that 98% coverage missed."]

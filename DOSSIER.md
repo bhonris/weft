@@ -5,8 +5,9 @@ Weft is a cross-platform (Windows-first) open-source Electron desktop app: a VS 
 
 ## Current status
 Phase: Time Leap Development (Leap 8/30, Cycle 1)
-Phase: Divergence Meter STABLE — Phase 3b complete (Leap 18/30, Cycle 1)
-Divergence meter: 98.14% stmts / 97.16% branch / 99.28% funcs · **185 unit + 17 Electron E2E, all pass**
+Phase: Worldline 1 STABILISED — checkpoint (Leap 21/30, Cycle 1 complete)
+Divergence meter: 97.96% stmts / 96.25% branch / 98.64% funcs · **212 unit + 19 Electron E2E, all pass**
+Cycle-1 review: 10/10 must-fix items resolved (see Review section); 8 nice-to-have carried to expansion.
 ALL v1 features built and machine-verified in the real app: tabs (create/close/rename/drag-reorder), reload-safe terminal pipeline, hook-driven status badges over named pipe, OS notifications (policy unit-tested; one manual toast check pending — see spec Open Questions), explorer + live chokidar watching, Monaco viewer + git-HEAD diff, workspace persistence incl. window bounds, tear-off/re-dock with same-PID guarantee, keybindings with PTY passthrough, light/dark/system themes, spawn-error recovery. Screenshots in screenshots/. All 25 spec acceptance criteria checked.
 
 ## Stack
@@ -35,8 +36,8 @@ TypeScript · pnpm · Electron + electron-vite · React + Vite (renderer) · xte
 - [x] Status endpoint down → `unknown` status; terminal still works
 - [x] Statement coverage ≥95%; Playwright-Electron E2E passes
 
-## Review — Cycle 1
-Future Okabe ×3 (simplicity / correctness+security / test quality): **10 must-fix, 8 nice-to-have.**
+## Review — Cycle 1 — ALL MUST-FIX RESOLVED ✓
+Future Okabe ×3 (simplicity / correctness+security / test quality): **10 must-fix (all fixed in Leap 20), 8 nice-to-have (carried).**
 - reload-respawns-sessions — UI reload respawns saved tabs, orphaning live PTYs (§4.7 violation; the API-level E2E masked it)
 - double-attach-leak — attachSession overwrites handle without detach → duplicated output
 - pty-ops-after-exit-throw — write/resize on exited session throws inside throttle timer

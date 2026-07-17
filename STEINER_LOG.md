@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Worldline 1 Stabilised — Leap 21 — steiner: worldline-1-stable — 2026-07-18T02:40:00Z
+
+**Phase**: worldline-checkpoint → worldline-expansion
+**Changed**: Cycle-1 checkpoint. Final meter: 212 unit + 19 Playwright-Electron E2E, 0 fail; 97.96/96.25/98.64 coverage (E2E suite runs against the production build — that is the prod smoke). README rewritten (differentiator-led, honest test numbers, session-resilience guarantee) and USAGE fully rewritten covering every shipped feature. Mayuri (non-programmer) review verdict: DOCUMENTATION GAP — the install on-ramp assumed a developer (no clone step, Node/pnpm unexplained, no VS Build Tools link, no `claude --version` check, never admitted "runs from source"). Fixed immediately: prerequisites section with links + verification steps in README/USAGE, "runs from source" stated plainly, in-terminal usage sentence added. Feature docs she rated genuinely usable (badge table "clearest thing in either document"). lessons_learned appended (api-level E2E masking, destroyed-webContents sends, ConPTY exit pinning, adversarial review value). All 25 spec ACs checked; 1 manual-verify caveat (real OS toast) recorded in Open Questions.
+**SERN interference**: none
+**Divergence meter**: 97.96% · 212+19, 0 fail
+**Next target**: Phase 7 expansion — Okabe proposes cycle-2 items (budget 21/30 used; prefer small high-value: nice_to_have sweep, packaging, shell tabs…).
+
+---
+
 ## Leap 20 — steiner: fix(convergence) all 10 must-fix resolved — 2026-07-18T02:00:00Z
 
 **Phase**: worldline-convergence
