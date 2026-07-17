@@ -29,7 +29,7 @@ Then click **+**, pick a project folder, and a `claude` session opens in that ta
 
 ## Test coverage
 
-**214 unit/integration tests + 22 Playwright-Electron E2E tests** · 97.9% statement / 96.3% branch coverage.
+**229 unit/integration tests + 24 Playwright-Electron E2E tests** · 97.9% statement / 96.3% branch coverage.
 The E2E suite drives the real built app: PTY round-trips, hook-payloads-over-the-pipe → badge flips, renderer-reload session survival (same PID), tear-off/re-dock, restart persistence, and a live-relay integration test that executes the actual hook forwarder against a real named pipe.
 
 ```bash

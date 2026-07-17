@@ -14,9 +14,9 @@ pnpm install          # installs deps; downloads the Electron binary
 pnpm rebuild:native   # rebuilds node-pty for Electron's ABI (run once after install)
 pnpm dev              # launch the app in development (electron-vite)
 pnpm build            # production build of main + preload + renderer
-pnpm test             # unit/integration suite (vitest) — 214 tests
+pnpm test             # unit/integration suite (vitest) — 229 tests
 pnpm test:cov         # with the 95% statement coverage gate (currently ~98%)
-pnpm test:e2e         # builds, then drives the REAL Electron app (22 Playwright tests)
+pnpm test:e2e         # builds, then drives the REAL Electron app (24 Playwright tests)
 ```
 
 > **Prerequisite:** a working `claude` CLI on your PATH (Windows 10+ for ConPTY).
@@ -145,6 +145,19 @@ the window off-screen). Older blobs migrate through a versioned chain with a
 `config.bak` backup written before any upgrade — and also before falling back
 from a corrupt blob, so nothing is ever silently lost. Invalid save payloads
 are rejected rather than persisted.
+
+### Conversation resume (v0.2.0)
+
+The status-bar **↻ resume** toggle (off by default — resuming spends tokens)
+makes restored Claude tabs continue their previous conversation after an app
+restart via `claude --resume <sessionId>`. Shell tabs always start fresh.
+
+### Editing files (v0.2.0)
+
+In the viewer, click **Edit**: the file becomes editable, a ● marks unsaved
+changes, and `Ctrl+S` writes to disk. Saves are only permitted inside open
+project folders and up to 5 MB. The status bar also shows the active
+project's git branch (⎇).
 
 ### Themes
 

@@ -2,6 +2,21 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## END GOAL REACHED — Leap 33 — v0.2.0 "Daily Driver" shipped — 2026-07-18T08:10:00Z
+
+**The operator-declared end goal is complete.** All four outcomes delivered and machine-verified:
+1. ✅ Conversation resume — schema-v2 sessionId persistence + ↻ toggle + `--resume`, argv-injection-proofed.
+2. ✅ Monaco Edit mode — dirty ●, Ctrl+S through a root-confined, size-capped saveFile IPC; E2E asserts bytes on disk.
+3. ✅ Git branch (⎇) in the status bar via unit-tested GitService.
+4. ✅ Dependencies pruned (dockview/webgl/serialize).
+
+**Final meter**: 229 unit/integration + 24 Playwright-Electron E2E (incl. packaged exe), 0 failures · strict typecheck clean · 46/46 spec checkboxes across v1 + Expansions 2/3/5 · version 0.2.0 + CHANGELOG · 33 leaps, 5 cycles.
+**For the next worldline**: split panes / multi-session-per-project, LSP, macOS/Linux platform fill-ins, CI first-run on a real remote, the one manual toast check.
+
+*El Psy Kongroo.*
+
+---
+
 ## Leap 32 — steiner: feat(monaco-edit) — 2026-07-18T07:40:00Z
 
 **Phase**: cycle 5 — final end-goal feature
