@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { test, expect, _electron as electron, type ElectronApplication, type Page } from '@playwright/test'
@@ -68,4 +68,27 @@ test('clicking a file opens the read-only Monaco viewer; Diff vs HEAD shows the 
   await page.getByRole('button', { name: 'close viewer' }).click()
   await expect(page.getByTestId('viewer-pane')).toHaveCount(0)
   await expect(page.locator('.terminal-pane .xterm')).toBeVisible()
+})
+
+test('Edit mode: type into the file, Ctrl+S writes it to disk, dirty dot clears', async () => {
+  await page.getByRole('button', { name: 'open project' }).click()
+  await page.getByText('story.txt').click()
+  await expect(page.getByTestId('viewer-pane')).toBeVisible()
+
+  // Enter edit mode and type at the top of the file.
+  await page.getByTestId('viewer-edit-toggle').click()
+  await expect(page.getByTestId('viewer-editor')).toContainText('line one', { timeout: 20_000 })
+  await page.locator('.viewer__editor .monaco-editor').click()
+  await page.keyboard.press('Control+Home')
+  await page.keyboard.type('EDITED-BY-WEFT ')
+
+  // Dirty indicator appears, then clears on Ctrl+S.
+  await expect(page.getByTestId('viewer-dirty')).toBeVisible()
+  await page.keyboard.press('Control+s')
+  await expect(page.getByTestId('viewer-dirty')).toHaveCount(0, { timeout: 10_000 })
+
+  // The bytes actually landed on disk.
+  await expect
+    .poll(() => readFileSync(join(projectDir, 'story.txt'), 'utf8'))
+    .toContain('EDITED-BY-WEFT')
 })

@@ -10,6 +10,7 @@ export type ExecFn = (
 
 export interface DiffFsLike {
   readFile(path: string, encoding: 'utf8'): Promise<string>
+  writeFile(path: string, content: string, encoding: 'utf8'): Promise<void>
   stat(path: string): Promise<{ size: number }>
 }
 
@@ -41,6 +42,14 @@ export class DiffService {
 
   readFileText(path: string): Promise<string> {
     return this.readGuarded(path)
+  }
+
+  /** Write edited viewer content back to disk (content size capped like reads). */
+  async saveFileText(path: string, content: string): Promise<void> {
+    if (content.length > MAX_VIEWER_FILE_BYTES) {
+      throw new Error('content exceeds the 5 MB viewer limit')
+    }
+    await this.fs.writeFile(path, content, 'utf8')
   }
 
   async getDiff(path: string): Promise<DiffPayload> {

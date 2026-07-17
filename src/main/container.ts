@@ -171,6 +171,7 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
       execFileAsync(file, args, opts)
     ),
     gitService: new GitService((file, args, opts) => execFileAsync(file, args, opts)),
+    getWritableRoots: () => pty.tabRefs().map((r) => r.cwd),
     reveal: (path) => shell.showItemInFolder(path),
     open: async (path) => {
       await shell.openPath(path)

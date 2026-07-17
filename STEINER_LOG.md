@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 32 — steiner: feat(monaco-edit) — 2026-07-18T07:40:00Z
+
+**Phase**: cycle 5 — final end-goal feature
+**Changed**: Monaco Edit mode. Pure core/fs/path-guard (isPathInside/isInsideAnyRoot — separator+case normalized, rejects prefix-lookalikes like C:/proj-evil; 6 tests). saveFile IPC: type-validated, confined to open project roots (getWritableRoots ← pty.tabRefs), content ≤5MB via DiffService.saveFileText (unit-tested). ViewerPane: View|Edit|Diff toggles, editable model, dirty ● indicator, Ctrl+S saves through the guarded IPC with error surface. E2E: enter Edit, type at top of git fixture file, dirty appears, Ctrl+S clears it, and the BYTES ON DISK contain the edit. (Cleanly rewrote register-fs.test after a codemod splice corrupted it.)
+**SERN interference**: one corrupted test file from a sloppy codemod — rewritten by hand; lesson: no lastIndexOf splices
+**Divergence meter**: 229 unit + 24 e2e, 0 fail
+**Next target**: v0.2.0 stamp — the declared END GOAL is functionally complete.
+
+---
+
 ## Leap 29–31 — cycle 5 under way: END GOAL v0.2.0 "Daily Driver" — 2026-07-18T07:00:00Z
 
 **Phase**: time-leap-development (cycle 5, budget extended to 40 by operator)

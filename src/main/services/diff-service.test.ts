@@ -3,6 +3,7 @@ import { DiffService, MAX_VIEWER_FILE_BYTES, type ExecFn } from './diff-service'
 
 const fakeFs = (content: string, size = content.length) => ({
   readFile: vi.fn(async () => content),
+  writeFile: vi.fn(async () => {}),
   stat: vi.fn(async () => ({ size }))
 })
 
@@ -10,6 +11,17 @@ describe('DiffService', () => {
   it('readFileText returns the file content', async () => {
     const svc = new DiffService(fakeFs('hello'), vi.fn() as unknown as ExecFn)
     expect(await svc.readFileText('/p/a.txt')).toBe('hello')
+  })
+
+  it('saveFileText writes content and enforces the 5MB cap', async () => {
+    const fsx = fakeFs('old')
+    const svc = new DiffService(fsx, vi.fn() as unknown as ExecFn)
+    await svc.saveFileText('/p/a.txt', 'new content')
+    expect(fsx.writeFile).toHaveBeenCalledWith('/p/a.txt', 'new content', 'utf8')
+
+    await expect(
+      svc.saveFileText('/p/a.txt', 'x'.repeat(MAX_VIEWER_FILE_BYTES + 1))
+    ).rejects.toThrow(/5 MB/)
   })
 
   it('rejects files over the 5MB viewer cap with a friendly error', async () => {

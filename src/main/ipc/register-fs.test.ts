@@ -22,10 +22,21 @@ const fsService = new FsService({
   ]
 })
 
+const makeDeps = () => ({
+  diffService: {
+    readFileText: async () => 'x',
+    getDiff: async () => ({ original: '', modified: '' }),
+    saveFileText: vi.fn(async () => {})
+  } as never,
+  watchService: { watch: () => ({ watchId: 'w' }), unwatch: async () => {} } as never,
+  gitService: { currentBranch: async () => null } as never,
+  getWritableRoots: () => ['C:/proj']
+})
+
 describe('registerFsIpc', () => {
   it('listDir returns the service result', async () => {
     const ipcMain = new FakeIpcMain()
-    registerFsIpc({ ipcMain, fsService, reveal: () => {}, open: () => {} })
+    registerFsIpc({ ipcMain, fsService, reveal: () => {}, open: () => {}, ...makeDeps() })
     const out = await ipcMain.invoke(CH.listDir, '/proj')
     expect(out).toEqual([{ name: 'src', path: join('/proj', 'src'), kind: 'dir' }])
   })
@@ -34,12 +45,33 @@ describe('registerFsIpc', () => {
     const ipcMain = new FakeIpcMain()
     const reveal = vi.fn()
     const open = vi.fn()
-    registerFsIpc({ ipcMain, fsService, reveal, open })
+    registerFsIpc({ ipcMain, fsService, reveal, open, ...makeDeps() })
 
     await ipcMain.invoke(CH.revealInOs, 'C:/a/b.txt')
     await ipcMain.invoke(CH.openWithDefault, 'C:/a/b.txt')
 
     expect(reveal).toHaveBeenCalledWith('C:/a/b.txt')
     expect(open).toHaveBeenCalledWith('C:/a/b.txt')
+  })
+
+  it('saveFile writes inside an open root and refuses everything else', async () => {
+    const ipcMain = new FakeIpcMain()
+    const deps = makeDeps()
+    registerFsIpc({ ipcMain, fsService, reveal: () => {}, open: () => {}, ...deps })
+
+    await ipcMain.invoke(CH.saveFile, 'C:/proj/notes.txt', 'hello')
+    expect(
+      (deps.diffService as { saveFileText: ReturnType<typeof vi.fn> }).saveFileText
+    ).toHaveBeenCalledWith('C:/proj/notes.txt', 'hello')
+
+    await expect(
+      ipcMain.invoke(CH.saveFile, 'C:/windows/system32/evil.txt', 'x')
+    ).rejects.toThrow(/outside an open project/)
+    await expect(ipcMain.invoke(CH.saveFile, 'C:/proj-evil/a.txt', 'x')).rejects.toThrow(
+      /outside/
+    )
+    await expect(ipcMain.invoke(CH.saveFile, 'C:/proj/a.txt', 123 as never)).rejects.toThrow(
+      /invalid saveFile/
+    )
   })
 })

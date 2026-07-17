@@ -36,6 +36,7 @@ export const CH = {
   readFileText: 'fs:read-text',
   getDiff: 'fs:get-diff',
   getGitBranch: 'fs:git-branch',
+  saveFile: 'fs:save-file',
 
   // Persistence
   loadWorkspace: 'workspace:load',

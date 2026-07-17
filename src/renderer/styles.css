@@ -430,6 +430,10 @@ body,
   color: #f85149;
 }
 
+.viewer__dirty {
+  color: #e8b339;
+}
+
 .status-bar {
   display: flex;
   align-items: center;

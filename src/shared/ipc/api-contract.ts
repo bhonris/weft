@@ -106,6 +106,8 @@ export interface WeftApi {
   openWithDefault(path: string): Promise<void>
   readFileText(path: string): Promise<string>
   getDiff(path: string): Promise<DiffPayload>
+  /** Save edited text to a file INSIDE an open project root (viewer Edit mode). */
+  saveFile(path: string, content: string): Promise<void>
   /** Current git branch for a directory, or null when not a repo. */
   getGitBranch(cwd: string): Promise<string | null>
 
@@ -154,5 +156,6 @@ export type WeftBridge = Pick<
   | 'readFileText'
   | 'getDiff'
   | 'getGitBranch'
+  | 'saveFile'
 >
 

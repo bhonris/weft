@@ -61,6 +61,7 @@ export function createWeftApi(ipc: IpcRendererLike): WeftBridge {
     saveWorkspace: (state) => ipc.invoke(CH.saveWorkspace, state) as Promise<void>,
     readFileText: (path) => ipc.invoke(CH.readFileText, path) as Promise<string>,
     getDiff: (path) => ipc.invoke(CH.getDiff, path) as Promise<DiffPayload>,
-    getGitBranch: (cwd) => ipc.invoke(CH.getGitBranch, cwd) as Promise<string | null>
+    getGitBranch: (cwd) => ipc.invoke(CH.getGitBranch, cwd) as Promise<string | null>,
+    saveFile: (path, content) => ipc.invoke(CH.saveFile, path, content) as Promise<void>
   }
 }

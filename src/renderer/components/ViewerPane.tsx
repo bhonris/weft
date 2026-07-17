@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useViewerStore } from '../store/viewer-store'
+import type { monaco as MonacoNs } from '../monaco-setup'
+
+type Editor = ReturnType<typeof MonacoNs.editor.create>
 
 /**
- * Monaco read-only viewer + side-by-side diff ("review Claude's changes").
- * Monaco is imported lazily so its large chunk never blocks app startup.
+ * Monaco viewer: read-only View, side-by-side Diff vs HEAD, and a light Edit
+ * mode (type + Ctrl+S save; dirty ● indicator). No LSP — full authoring is v2.
  * DOM/Monaco-bound; verified by the Playwright-Electron E2E, not units.
  */
 export function ViewerPane(): React.ReactElement | null {
@@ -12,7 +15,18 @@ export function ViewerPane(): React.ReactElement | null {
   const setMode = useViewerStore((s) => s.setMode)
   const close = useViewerStore((s) => s.close)
   const hostRef = useRef<HTMLDivElement>(null)
+  const editorRef = useRef<Editor | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  // Leaving the file or switching mode exits edit state.
+  useEffect(() => {
+    setEditing(false)
+    setDirty(false)
+    setSaveError(null)
+  }, [file, mode])
 
   useEffect(() => {
     if (!file) return
@@ -27,7 +41,7 @@ export function ViewerPane(): React.ReactElement | null {
       try {
         const { monaco } = await import('../monaco-setup')
         const common = {
-          readOnly: true,
+          readOnly: !editing,
           automaticLayout: true,
           minimap: { enabled: false },
           theme: 'vs-dark',
@@ -38,6 +52,7 @@ export function ViewerPane(): React.ReactElement | null {
           if (disposed) return
           const editor = monaco.editor.createDiffEditor(host, {
             ...common,
+            readOnly: true,
             renderSideBySide: true
           })
           const originalModel = monaco.editor.createModel(original)
@@ -53,7 +68,23 @@ export function ViewerPane(): React.ReactElement | null {
           if (disposed) return
           const model = monaco.editor.createModel(content)
           const editor = monaco.editor.create(host, { ...common, model })
+          editorRef.current = editor
+          const changeSub = model.onDidChangeContent(() => setDirty(true))
+          // Ctrl+S saves through the validated IPC.
+          editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+            void window.api
+              .saveFile(file.path, model.getValue())
+              .then(() => {
+                setDirty(false)
+                setSaveError(null)
+              })
+              .catch((e: unknown) =>
+                setSaveError(e instanceof Error ? e.message : String(e))
+              )
+          })
           dispose = () => {
+            changeSub.dispose()
+            editorRef.current = null
             editor.dispose()
             model.dispose()
           }
@@ -67,7 +98,7 @@ export function ViewerPane(): React.ReactElement | null {
       disposed = true
       dispose?.()
     }
-  }, [file, mode])
+  }, [file, mode, editing])
 
   if (!file) return null
 
@@ -75,6 +106,11 @@ export function ViewerPane(): React.ReactElement | null {
     <section className="viewer" data-testid="viewer-pane">
       <header className="viewer__bar">
         <span className="viewer__name" title={file.path}>
+          {dirty && (
+            <span className="viewer__dirty" data-testid="viewer-dirty" title="unsaved changes">
+              ●{' '}
+            </span>
+          )}
           {file.name}
         </span>
         <div className="viewer__actions">
@@ -88,10 +124,25 @@ export function ViewerPane(): React.ReactElement | null {
           </button>
           <button
             type="button"
-            className={`viewer__mode${mode === 'view' ? ' viewer__mode--on' : ''}`}
-            onClick={() => setMode('view')}
+            className={`viewer__mode${mode === 'view' && !editing ? ' viewer__mode--on' : ''}`}
+            onClick={() => {
+              setMode('view')
+              setEditing(false)
+            }}
           >
             View
+          </button>
+          <button
+            type="button"
+            className={`viewer__mode${mode === 'view' && editing ? ' viewer__mode--on' : ''}`}
+            data-testid="viewer-edit-toggle"
+            title="Edit this file (Ctrl+S saves)"
+            onClick={() => {
+              setMode('view')
+              setEditing(true)
+            }}
+          >
+            Edit
           </button>
           <button
             type="button"
@@ -111,6 +162,11 @@ export function ViewerPane(): React.ReactElement | null {
           </button>
         </div>
       </header>
+      {saveError && (
+        <div className="viewer__error" role="alert">
+          Save failed: {saveError}
+        </div>
+      )}
       {error ? (
         <div className="viewer__error">Cannot open file: {error}</div>
       ) : (
