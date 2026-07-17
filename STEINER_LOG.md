@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 10 — steiner: feat(status-pipeline) — 2026-07-17T20:40:00Z
+
+**Phase**: time-leap-development
+**Changed**: THE DIFFERENTIATOR — hook-driven per-tab status, end-to-end. Core: FrameParser (NDJSON across chunk boundaries + end() flush), statusEndpointPath (named pipe win32 / UDS posix, never TCP), buildHookSettings(Json) (inline --settings registering UserPromptSubmit/Stop/StopFailure/Notification → forwarder command). Main: StatusServer (transport-injectable; bytes→parse→correlate→map→onStatus; dedup; drop+log unknown/malformed; statusOf/forget), hook-forwarder (generates forward.cjs relay + forward.cmd/.sh wrapper; ELECTRON_RUN_AS_NODE scoped INSIDE wrapper; 5s hard timeout so hooks never wedge), NetTransport (node:net on pipe path). PtyManager.tabRefs() (+cwd). register: claude spawns get --settings + WEFT_STATUS_ENDPOINT env. Container wires it all + broadcasts CH.sessionStatus to all windows + __weft E2E introspection global + SHUTDOWN handler (before-quit kills PTYs + stops server — fixed app.close() hang where ConPTY children pinned the process). Renderer App subscribes onSessionStatus/onSessionExit → badges.
+**SERN interference**: app.close() hung 60s in E2E (ConPTY children + live pipe held process open) — fixed with before-quit shutdown; 2 unit fixes (NodeJS namespace not in pure core; JSON quote-escaping in assertion)
+**Divergence meter**: unit 143 pass; e2e 7 pass incl. real-pipe badge flip waiting→working→done + unknown-session no-op
+**Next target**: OS notifications (waiting/done while unfocused → toast → focus window+tab), then workspace persistence IPC + restore-on-launch, Monaco read-only+diff, tear-off.
+
+---
+
 ## Leap 9 — steiner: feat(explorer-tree) — 2026-07-17T20:05:00Z
 
 **Phase**: time-leap-development

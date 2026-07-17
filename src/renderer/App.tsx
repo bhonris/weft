@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useSessionStore, type Tab } from './store/session-store'
 import { TerminalPane } from './components/TerminalPane'
 import { Explorer } from './components/Explorer'
@@ -43,6 +44,19 @@ export function App(): React.ReactElement {
   const activeTabId = useSessionStore((s) => s.activeTabId)
   const addTab = useSessionStore((s) => s.addTab)
   const activeTab = tabs.find((t) => t.tabId === activeTabId) ?? null
+
+  // Hook-driven status → badges; PTY exit → done/error (spec §4.4).
+  useEffect(() => {
+    const setStatus = useSessionStore.getState().setStatus
+    const offStatus = window.api.onSessionStatus((e) => setStatus(e.tabId, e.status))
+    const offExit = window.api.onSessionExit((e) =>
+      setStatus(e.tabId, e.exitCode === 0 ? 'done' : 'error')
+    )
+    return () => {
+      offStatus()
+      offExit()
+    }
+  }, [])
 
   const openProject = async (): Promise<void> => {
     const result = await window.api.openProject()

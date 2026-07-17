@@ -199,6 +199,32 @@ describe('registerSessionIpc', () => {
     expect(c.factory.spawns[0]).toMatchObject({ file: 'claude', cwd: 'C:/Users/me/my-app' })
   })
 
+  it('injects --settings hooks and the status endpoint for claude sessions only', () => {
+    const factory = new FakeFactory()
+    const pty = new PtyManager(factory)
+    const ipcMain = new FakeIpcMain()
+    let n = 0
+    registerSessionIpc({
+      ipcMain,
+      pty,
+      pickDirectory: async () => null,
+      generateId: () => `id${++n}`,
+      baseEnv: {},
+      shellPath: 'bash',
+      hooks: { endpoint: '\\\\.\\pipe\\weft-x', settingsJson: '{"hooks":{}}' }
+    })
+    const event: IpcEventLike = { sender: new FakeSender(9) }
+
+    ipcMain.invoke(CH.createSession, event, { cwd: 'C:/p', command: 'claude' })
+    expect(factory.spawns[0]!.args).toEqual(['--session-id', 'id2', '--settings', '{"hooks":{}}'])
+    expect(factory.spawns[0]!.env['WEFT_STATUS_ENDPOINT']).toBe('\\\\.\\pipe\\weft-x')
+
+    ipcMain.invoke(CH.createSession, event, { cwd: 'C:/p', command: 'shell' })
+    expect(factory.spawns[1]!.args).toEqual([])
+    // Shell sessions still get the endpoint env (harmless; enables future use).
+    expect(factory.spawns[1]!.env['WEFT_STATUS_ENDPOINT']).toBe('\\\\.\\pipe\\weft-x')
+  })
+
   it('openProject honors an injected default command', async () => {
     const factory = new FakeFactory()
     const pty = new PtyManager(factory)

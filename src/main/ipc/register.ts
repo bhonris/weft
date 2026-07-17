@@ -33,15 +33,27 @@ export interface RegisterDeps {
   shellPath?: string
   /** Command used by openProject (default 'claude'; tests may use 'shell'). */
   defaultCommand?: 'claude' | 'shell'
+  /** Status-reporting hook injection (spec §4.4). */
+  hooks?: {
+    /** Named-pipe/UDS path the forwarder writes to (set as WEFT_STATUS_ENDPOINT). */
+    endpoint: string
+    /** Inline JSON for `claude --settings` registering the reporting hooks. */
+    settingsJson: string
+  }
 }
 
 /** Build the child-process env, dropping undefined values and tagging the tab. */
-function buildEnv(base: NodeJS.ProcessEnv, tabId: string): Record<string, string> {
+function buildEnv(
+  base: NodeJS.ProcessEnv,
+  tabId: string,
+  statusEndpoint?: string
+): Record<string, string> {
   const env: Record<string, string> = {}
   for (const [key, value] of Object.entries(base)) {
     if (value !== undefined) env[key] = value
   }
   env['CLAUDE_IDE_TAB'] = tabId
+  if (statusEndpoint !== undefined) env['WEFT_STATUS_ENDPOINT'] = statusEndpoint
   return env
 }
 
@@ -66,14 +78,18 @@ export function registerSessionIpc(deps: RegisterDeps): void {
     const sessionId = genId()
     const isClaude = opts.command === 'claude'
     const file = isClaude ? 'claude' : shellPath
-    const args = isClaude ? ['--session-id', sessionId, ...(opts.args ?? [])] : opts.args ?? []
+    const hookArgs =
+      isClaude && deps.hooks ? ['--settings', deps.hooks.settingsJson] : []
+    const args = isClaude
+      ? ['--session-id', sessionId, ...hookArgs, ...(opts.args ?? [])]
+      : opts.args ?? []
     pty.create({
       tabId,
       sessionId,
       file,
       args,
       cwd: opts.cwd,
-      env: buildEnv(baseEnv, tabId)
+      env: buildEnv(baseEnv, tabId, deps.hooks?.endpoint)
     })
     return { tabId, sessionId }
   }

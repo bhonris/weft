@@ -29,8 +29,9 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
-  wireApp()
+app.whenReady().then(async () => {
+  const { shutdown } = await wireApp()
+  app.on('before-quit', shutdown)
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

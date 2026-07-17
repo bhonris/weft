@@ -61,6 +61,7 @@ export interface AttachHandle {
 interface Session {
   tabId: string
   sessionId: string
+  cwd: string
   proc: IPtyProcess
   buffer: OutputRingBuffer
   dataListeners: Set<DataListener>
@@ -99,6 +100,7 @@ export class PtyManager {
     const session: Session = {
       tabId: spec.tabId,
       sessionId: spec.sessionId,
+      cwd: spec.cwd,
       proc,
       buffer: new OutputRingBuffer(this.options.maxBufferChars),
       dataListeners: new Set(),
@@ -184,6 +186,15 @@ export class PtyManager {
 
   tabIds(): string[] {
     return [...this.sessions.keys()]
+  }
+
+  /** Identity snapshot used to correlate incoming hook payloads to tabs. */
+  tabRefs(): Array<{ tabId: string; sessionId: string; cwd: string }> {
+    return [...this.sessions.values()].map((s) => ({
+      tabId: s.tabId,
+      sessionId: s.sessionId,
+      cwd: s.cwd
+    }))
   }
 
   private require(tabId: string): Session {
