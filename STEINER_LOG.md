@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 11 — steiner: feat(os-notifications) — 2026-07-17T20:55:00Z
+
+**Phase**: time-leap-development
+**Changed**: App-owned OS notifications. NotificationService (pure policy, injected OS I/O): waiting/done while app unfocused → toast ("<project> — needs you"/"— done", hook message as body); click → focusTab; silent when focused; working/error/unknown ignored. Container wires Electron Notification + isFocused check + focusTab (restore/show/focus window + CH.activateTab). New activateTab channel + bridge onActivateTab + App subscription → setActive. register.closeSession now calls onSessionClosed → statusServer.forget(tabId). 7 new unit tests.
+**SERN interference**: none
+**Divergence meter**: unit 150 pass; e2e 7 pass
+**Next target**: workspace persistence IPC (loadWorkspace/saveWorkspace via WorkspaceStore+electron-store) + restore-on-launch (recreate saved tabs' sessions) + E2E restart test; then Monaco read-only+diff; tear-off.
+
+---
+
 ## Leap 10 — steiner: feat(status-pipeline) — 2026-07-17T20:40:00Z
 
 **Phase**: time-leap-development

@@ -2,11 +2,13 @@ import { promises as fsPromises } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { app, ipcMain, dialog, shell, BrowserWindow } from 'electron'
+import { basename } from 'node:path'
+import { app, ipcMain, dialog, shell, BrowserWindow, Notification } from 'electron'
 import { PtyManager } from './services/pty-manager'
 import { NodePtyFactory } from './services/pty-factory'
 import { FsService } from './services/fs-service'
 import { StatusServer } from './services/status-server'
+import { NotificationService } from './services/notification-service'
 import { writeForwarder } from './services/hook-forwarder'
 import { NetTransport } from './platform/net-transport'
 import { statusEndpointPath } from '@core/pipe/pipe-name'
@@ -36,6 +38,30 @@ export async function wireApp(): Promise<{ pty: PtyManager; shutdown: () => void
   })
   const settingsJson = buildHookSettingsJson({ forwarderCommand: `"${wrapperPath}"` })
 
+  // App-owned notifications: toast on waiting/done while unfocused; click
+  // focuses the window and activates the tab (spec §4.4.7).
+  const notifications = new NotificationService({
+    isAppFocused: () => BrowserWindow.getAllWindows().some((w) => w.isFocused()),
+    getTitle: (tabId) => {
+      const ref = pty.tabRefs().find((r) => r.tabId === tabId)
+      return ref ? basename(ref.cwd) || ref.cwd : undefined
+    },
+    focusTab: (tabId) => {
+      const win = BrowserWindow.getAllWindows()[0]
+      if (!win) return
+      if (win.isMinimized()) win.restore()
+      win.show()
+      win.focus()
+      win.webContents.send(CH.activateTab, { tabId })
+    },
+    showToast: (toast) => {
+      if (!Notification.isSupported()) return
+      const n = new Notification({ title: toast.title, body: toast.body })
+      n.on('click', toast.onClick)
+      n.show()
+    }
+  })
+
   const statusServer = new StatusServer({
     transport: new NetTransport(),
     endpointPath: endpoint,
@@ -44,6 +70,7 @@ export async function wireApp(): Promise<{ pty: PtyManager; shutdown: () => void
       for (const win of BrowserWindow.getAllWindows()) {
         win.webContents.send(CH.sessionStatus, change)
       }
+      notifications.handleStatus(change)
     },
     onDrop: (reason) => console.warn(`[weft-status] dropped payload: ${reason}`)
   })
@@ -53,6 +80,7 @@ export async function wireApp(): Promise<{ pty: PtyManager; shutdown: () => void
     ipcMain,
     pty,
     hooks: { endpoint, settingsJson },
+    onSessionClosed: (tabId) => statusServer.forget(tabId),
     // E2E/automation seams: WEFT_E2E_OPEN_DIR bypasses the native folder picker
     // (which no automation can drive), and WEFT_OPEN_PROJECT_COMMAND=shell lets
     // tests open a plain shell instead of booting a real `claude`.

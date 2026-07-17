@@ -68,6 +68,8 @@ export interface WeftApi {
   onSessionStatus(
     cb: (e: { tabId: string; status: SessionStatus; message?: string }) => void
   ): Unsubscribe
+  /** Fired when main wants a tab activated (e.g. a notification was clicked). */
+  onActivateTab(cb: (e: { tabId: string }) => void): Unsubscribe
 
   // Filesystem
   listDir(path: string): Promise<DirEntry[]>
@@ -105,6 +107,7 @@ export type WeftBridge = Pick<
   | 'onSessionData'
   | 'onSessionExit'
   | 'onSessionStatus'
+  | 'onActivateTab'
   | 'openProject'
   | 'listDir'
   | 'revealInOs'

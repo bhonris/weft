@@ -21,6 +21,8 @@ export const CH = {
   sessionData: 'session:data',
   sessionExit: 'session:exit',
   sessionStatus: 'session:status',
+  // Main asks the renderer to activate a tab (notification click routing).
+  activateTab: 'tab:activate',
 
   // Filesystem
   listDir: 'fs:list-dir',

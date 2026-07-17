@@ -52,9 +52,13 @@ export function App(): React.ReactElement {
     const offExit = window.api.onSessionExit((e) =>
       setStatus(e.tabId, e.exitCode === 0 ? 'done' : 'error')
     )
+    const offActivate = window.api.onActivateTab((e) =>
+      useSessionStore.getState().setActive(e.tabId)
+    )
     return () => {
       offStatus()
       offExit()
+      offActivate()
     }
   }, [])
 

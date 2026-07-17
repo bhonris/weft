@@ -33,6 +33,8 @@ export interface RegisterDeps {
   shellPath?: string
   /** Command used by openProject (default 'claude'; tests may use 'shell'). */
   defaultCommand?: 'claude' | 'shell'
+  /** Called after a session is explicitly closed (e.g. to forget its status). */
+  onSessionClosed?: (tabId: string) => void
   /** Status-reporting hook injection (spec §4.4). */
   hooks?: {
     /** Named-pipe/UDS path the forwarder writes to (set as WEFT_STATUS_ENDPOINT). */
@@ -109,6 +111,7 @@ export function registerSessionIpc(deps: RegisterDeps): void {
 
   ipcMain.handle(CH.closeSession, (_event, tabId) => {
     pty.close(tabId as string)
+    deps.onSessionClosed?.(tabId as string)
   })
 
   ipcMain.handle(CH.attachSession, (event, tabId) => {
