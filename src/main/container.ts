@@ -17,6 +17,8 @@ import { statusEndpointPath } from '@core/pipe/pipe-name'
 import { buildHookSettingsJson } from '@core/status/hook-settings'
 import { WorkspaceStore } from './services/workspace-store'
 import { DiffService } from './services/diff-service'
+import { WatchService } from './services/watch-service'
+import { watch as chokidarWatch } from 'chokidar'
 import { registerSessionIpc } from './ipc/register'
 import { registerFsIpc } from './ipc/register-fs'
 import { registerWorkspaceIpc } from './ipc/register-workspace'
@@ -103,9 +105,18 @@ export async function wireApp(): Promise<{ pty: PtyManager; shutdown: () => void
   })
 
   const execFileAsync = promisify(execFile)
+  const watchService = new WatchService((path) =>
+    chokidarWatch(path, {
+      ignoreInitial: true,
+      ignored: (p: string) => /node_modules|[\\/]\.git([\\/]|$)/.test(p),
+      // Two levels is enough for the visible tree; deeper levels load lazily.
+      depth: 4
+    })
+  )
   registerFsIpc({
     ipcMain,
     fsService: new FsService(fsPromises),
+    watchService,
     diffService: new DiffService(fsPromises, (file, args, opts) =>
       execFileAsync(file, args, opts)
     ),
@@ -146,6 +157,7 @@ export async function wireApp(): Promise<{ pty: PtyManager; shutdown: () => void
   const shutdown = (): void => {
     for (const tabId of pty.tabIds()) pty.close(tabId)
     void statusServer.stop()
+    void watchService.closeAll()
   }
 
   return { pty, shutdown }

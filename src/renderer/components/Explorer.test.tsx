@@ -7,12 +7,26 @@ import type { DirEntry } from '@shared/ipc/api-contract'
 const listDir = vi.fn<(path: string) => Promise<DirEntry[]>>()
 const openWithDefault = vi.fn(async () => {})
 
+const watchDir = vi.fn(async () => ({ watchId: 'w1' }))
+const unwatchDir = vi.fn(async () => {})
+let fsChangeCb: ((e: { watchId: string; type: string; path: string }) => void) | null = null
+const onFsChange = vi.fn((cb: (e: { watchId: string; type: string; path: string }) => void) => {
+  fsChangeCb = cb
+  return () => {
+    fsChangeCb = null
+  }
+})
+
 beforeEach(() => {
   listDir.mockReset()
   openWithDefault.mockClear()
+  watchDir.mockClear()
+  unwatchDir.mockClear()
+  onFsChange.mockClear()
+  fsChangeCb = null
   useViewerStore.setState({ file: null, mode: 'view' })
   Object.defineProperty(window, 'api', {
-    value: { listDir, openWithDefault },
+    value: { listDir, openWithDefault, watchDir, unwatchDir, onFsChange },
     configurable: true
   })
 })
@@ -42,7 +56,7 @@ describe('Explorer', () => {
 
   it('lazily loads and toggles a directory on click', async () => {
     listDir.mockResolvedValueOnce([entry('src', 'dir')])
-    listDir.mockResolvedValueOnce([entry('index.ts', 'file', '/p/src')])
+    listDir.mockResolvedValue([entry('index.ts', 'file', '/p/src')])
     render(<Explorer root="/p" />)
     await waitFor(() => screen.getByText('src'))
 
@@ -50,12 +64,32 @@ describe('Explorer', () => {
     await waitFor(() => expect(screen.getByText('index.ts')).toBeDefined())
     expect(listDir).toHaveBeenCalledWith('/p/src')
 
-    // Collapse: children hidden, no refetch on re-expand
+    // Collapse hides children; re-expand refetches so the tree stays current.
     fireEvent.click(screen.getByText('src'))
     expect(screen.queryByText('index.ts')).toBeNull()
     fireEvent.click(screen.getByText('src'))
     await waitFor(() => expect(screen.getByText('index.ts')).toBeDefined())
-    expect(listDir).toHaveBeenCalledTimes(2)
+  })
+
+  it('an fs change event refreshes the root listing', async () => {
+    listDir.mockResolvedValueOnce([entry('a.txt', 'file')])
+    render(<Explorer root="/p" />)
+    await waitFor(() => screen.getByText('a.txt'))
+    await waitFor(() => expect(watchDir).toHaveBeenCalledWith('/p'))
+
+    listDir.mockResolvedValueOnce([entry('a.txt', 'file'), entry('b.txt', 'file')])
+    fsChangeCb?.({ watchId: 'w1', type: 'add', path: '/p/b.txt' })
+    await waitFor(() => expect(screen.getByText('b.txt')).toBeDefined())
+  })
+
+  it('ignores fs events from other watches', async () => {
+    listDir.mockResolvedValueOnce([entry('a.txt', 'file')])
+    render(<Explorer root="/p" />)
+    await waitFor(() => screen.getByText('a.txt'))
+    await waitFor(() => expect(watchDir).toHaveBeenCalled())
+
+    fsChangeCb?.({ watchId: 'other', type: 'add', path: '/q/x.txt' })
+    expect(listDir).toHaveBeenCalledTimes(1)
   })
 
   it('single click opens a file in the in-app viewer', async () => {

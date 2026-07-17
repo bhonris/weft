@@ -10,11 +10,37 @@ import { useViewerStore } from '../store/viewer-store'
 export function Explorer({ root }: { root: string | null }): React.ReactElement {
   const [entries, setEntries] = useState<DirEntry[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Bumped on every external fs change; open nodes re-list themselves.
+  const [version, setVersion] = useState(0)
+
+  // Watch the root; any add/change/unlink refreshes the visible tree (≤1s AC).
+  useEffect(() => {
+    if (!root) return
+    let watchId: string | null = null
+    let disposed = false
+    void window.api.watchDir(root).then((res) => {
+      if (disposed) {
+        void window.api.unwatchDir(res.watchId)
+        return
+      }
+      watchId = res.watchId
+    })
+    const offChange = window.api.onFsChange((e) => {
+      if (watchId !== null && e.watchId === watchId) setVersion((v) => v + 1)
+    })
+    return () => {
+      disposed = true
+      offChange()
+      if (watchId !== null) void window.api.unwatchDir(watchId)
+    }
+  }, [root])
 
   useEffect(() => {
-    setEntries(null)
     setError(null)
-    if (!root) return
+    if (!root) {
+      setEntries(null)
+      return
+    }
     let cancelled = false
     window.api
       .listDir(root)
@@ -27,7 +53,7 @@ export function Explorer({ root }: { root: string | null }): React.ReactElement 
     return () => {
       cancelled = true
     }
-  }, [root])
+  }, [root, version])
 
   if (!root) return <div className="explorer__empty">No project open</div>
   if (error) return <div className="explorer__empty">Cannot read folder: {error}</div>
@@ -36,32 +62,51 @@ export function Explorer({ root }: { root: string | null }): React.ReactElement 
   return (
     <ul className="explorer__list" role="tree" data-testid="explorer-tree">
       {entries.map((e) => (
-        <ExplorerNode key={e.path} entry={e} depth={0} />
+        <ExplorerNode key={e.path} entry={e} depth={0} version={version} />
       ))}
     </ul>
   )
 }
 
-function ExplorerNode({ entry, depth }: { entry: DirEntry; depth: number }): React.ReactElement {
+function ExplorerNode({
+  entry,
+  depth,
+  version
+}: {
+  entry: DirEntry
+  depth: number
+  version: number
+}): React.ReactElement {
   const [open, setOpen] = useState(false)
   const [children, setChildren] = useState<DirEntry[] | null>(null)
   const isDir = entry.kind === 'dir'
 
+  // Keep an expanded directory current when external changes arrive.
+  useEffect(() => {
+    if (!isDir || !open) return
+    let cancelled = false
+    window.api
+      .listDir(entry.path)
+      .then((list) => {
+        if (!cancelled) setChildren(list)
+      })
+      .catch(() => {
+        if (!cancelled) setChildren([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [version, isDir, open, entry.path])
+
   const openInViewer = useViewerStore((s) => s.openFile)
 
-  const onClick = async (): Promise<void> => {
+  const onClick = (): void => {
     if (!isDir) {
       // Single click: in-app read-only Monaco viewer (spec §2 diff-on-demand).
       openInViewer(entry.path, entry.name)
       return
     }
-    if (!open && children === null) {
-      try {
-        setChildren(await window.api.listDir(entry.path))
-      } catch {
-        setChildren([])
-      }
-    }
+    // The effect above owns (re)fetching whenever the node is open.
     setOpen((o) => !o)
   }
 
@@ -71,7 +116,7 @@ function ExplorerNode({ entry, depth }: { entry: DirEntry; depth: number }): Rea
         type="button"
         className={`explorer__item explorer__item--${entry.kind}`}
         style={{ paddingLeft: `${8 + depth * 14}px` }}
-        onClick={() => void onClick()}
+        onClick={onClick}
         onDoubleClick={() => {
           // Double click: hand off to the OS default handler.
           if (!isDir) void window.api.openWithDefault(entry.path)
@@ -84,7 +129,7 @@ function ExplorerNode({ entry, depth }: { entry: DirEntry; depth: number }): Rea
       {isDir && open && children && (
         <ul className="explorer__list" role="group">
           {children.map((c) => (
-            <ExplorerNode key={c.path} entry={c} depth={depth + 1} />
+            <ExplorerNode key={c.path} entry={c} depth={depth + 1} version={version} />
           ))}
         </ul>
       )}

@@ -74,6 +74,7 @@ export interface WeftApi {
   // Filesystem
   listDir(path: string): Promise<DirEntry[]>
   watchDir(path: string): Promise<{ watchId: string }>
+  unwatchDir(watchId: string): Promise<void>
   onFsChange(
     cb: (e: { watchId: string; type: 'add' | 'change' | 'unlink'; path: string }) => void
   ): Unsubscribe
@@ -115,6 +116,9 @@ export type WeftBridge = Pick<
   | 'onActivateTab'
   | 'openProject'
   | 'listDir'
+  | 'watchDir'
+  | 'unwatchDir'
+  | 'onFsChange'
   | 'revealInOs'
   | 'openWithDefault'
   | 'loadWorkspace'

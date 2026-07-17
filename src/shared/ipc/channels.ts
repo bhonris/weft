@@ -27,6 +27,7 @@ export const CH = {
   // Filesystem
   listDir: 'fs:list-dir',
   watchDir: 'fs:watch-dir',
+  unwatchDir: 'fs:unwatch-dir',
   fsChange: 'fs:change',
   revealInOs: 'fs:reveal',
   openWithDefault: 'fs:open',

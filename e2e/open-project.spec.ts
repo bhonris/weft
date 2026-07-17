@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs'
+import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { test, expect, _electron as electron, type ElectronApplication, type Page } from '@playwright/test'
 
@@ -65,6 +65,14 @@ test('clicking + opens a project: tab appears, terminal is live, explorer lists 
 
   // Status bar reflects one session.
   await expect(page.getByTestId('status-bar')).toContainText('1 session')
+
+  // Live watching: a file created externally appears in the tree (~1s AC).
+  writeFileSync(join(projectDir, 'appeared-later.txt'), 'external change')
+  await expect(page.getByText('appeared-later.txt')).toBeVisible({ timeout: 5_000 })
+
+  // And an externally deleted file disappears.
+  rmSync(join(projectDir, 'hello.txt'))
+  await expect(page.getByText('hello.txt')).toHaveCount(0, { timeout: 5_000 })
 })
 
 test('closing the tab returns to the empty state', async () => {

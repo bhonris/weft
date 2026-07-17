@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 14 — steiner: feat(fs-watching) — 2026-07-17T22:15:00Z
+
+**Phase**: time-leap-development
+**Changed**: Live file watching (≤1s explorer reflection AC). WatchService (injectable chokidar factory; add/addDir/change/unlink/unlinkDir → add/change/unlink; unwatch/closeAll; 4 unit tests). register-fs: watchDir (forwards CH.fsChange to the calling sender) + unwatchDir. Container: chokidar (ignoreInitial, node_modules/.git ignored, depth 4) + watchers closed on shutdown. Bridge/WeftBridge: watchDir/unwatchDir/onFsChange. Explorer: watches active root; fs events bump a version that re-lists root AND all open nodes; refactored node fetching so the open-effect owns it (no double fetch). E2E extended: externally created file appears ≤5s, externally deleted file disappears.
+**SERN interference**: none
+**Divergence meter**: unit 166 pass; e2e 9 pass incl. live add/delete reflection
+**Next target**: tab rename (double-click inline edit) + drag-reorder + keybindings (Ctrl+T/W/Tab/1..9 with terminal passthrough via core keybinding-router); then spawn-error state + theme; tear-off; Phase 3b sweep.
+
+---
+
 ## Leap 13 — steiner: feat(monaco-viewer) — 2026-07-17T21:50:00Z
 
 **Phase**: time-leap-development

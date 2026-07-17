@@ -48,6 +48,9 @@ export function createWeftApi(ipc: IpcRendererLike): WeftBridge {
         command: SessionCommand
       } | null>,
     listDir: (path) => ipc.invoke(CH.listDir, path) as Promise<DirEntry[]>,
+    watchDir: (path) => ipc.invoke(CH.watchDir, path) as Promise<{ watchId: string }>,
+    unwatchDir: (watchId) => ipc.invoke(CH.unwatchDir, watchId) as Promise<void>,
+    onFsChange: (cb) => subscribe(CH.fsChange, cb),
     revealInOs: (path) => ipc.invoke(CH.revealInOs, path) as Promise<void>,
     openWithDefault: (path) => ipc.invoke(CH.openWithDefault, path) as Promise<void>,
     loadWorkspace: () => ipc.invoke(CH.loadWorkspace) as Promise<WorkspaceState>,

@@ -2,11 +2,13 @@ import { CH } from '@shared/ipc/channels'
 import type { IpcMainLike } from './register'
 import type { FsService } from '../services/fs-service'
 import type { DiffService } from '../services/diff-service'
+import type { WatchService } from '../services/watch-service'
 
 export interface FsRegisterDeps {
   ipcMain: IpcMainLike
   fsService: FsService
   diffService: DiffService
+  watchService: WatchService
   /** Reveal a path in the OS file manager (electron shell.showItemInFolder). */
   reveal: (path: string) => void
   /** Open a path with its default OS handler (electron shell.openPath). */
@@ -30,4 +32,15 @@ export function registerFsIpc(deps: FsRegisterDeps): void {
   ipcMain.handle(CH.readFileText, (_event, path) => deps.diffService.readFileText(path as string))
 
   ipcMain.handle(CH.getDiff, (_event, path) => deps.diffService.getDiff(path as string))
+
+  ipcMain.handle(CH.watchDir, (event, path) => {
+    const sender = event.sender
+    return deps.watchService.watch(path as string, (change) =>
+      sender.send(CH.fsChange, change)
+    )
+  })
+
+  ipcMain.handle(CH.unwatchDir, (_event, watchId) =>
+    deps.watchService.unwatch(watchId as string)
+  )
 }
