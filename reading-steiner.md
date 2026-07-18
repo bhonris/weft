@@ -1,8 +1,8 @@
 phase: time-leap-development
-leap_count: 38
+leap_count: 39
 expansion_cycle: 6
 session_id: 2026-07-18T10:30:00Z
-prev_head: a175184b12354801553b33c27baa0bec17a7911f
+prev_head: 1779817b7112a69211865e21bf059ea76279897b
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md. CYCLE 6 END GOAL (operator): fully mouseless, keyboard-only navigation across all of Weft; macOS/Linux platform work OUT OF SCOPE this cycle."
 project_name: "weft"
 project_type: web
@@ -11,11 +11,11 @@ test_cmd: pnpm test
 dev_server_port: 5173
 coverage_pct: 98
 divergence_readings: []
-current_focus: "Expansion 6 AC6/AC7 (region focus + focus rings). (1) Region-focus system: a focus manager (hook or refs) owning the ordered regions [tab strip, explorer, terminal, viewer, status bar]; wire routeKey actions focus-region (Ctrl+` → terminal xterm textarea, Ctrl+Shift+E → explorer active/first tree node) and focus-cycle (Ctrl+F6/Ctrl+Shift+F6 → next/prev present region, skipping absent ones). Move DOM focus via .focus() and assert document.activeElement in tests. TerminalPane needs a way to focus its xterm (expose a ref/imperative handle or focus the .xterm textarea via the terminal-host container). Wire dispatch focus.terminal/explorer/cycleNext/cyclePrev. (2) Add theme-aware :focus-visible rings in styles.css for tabs, tab buttons, explorer nodes, status-bar buttons, palette/help options + a cyberpunk neon variant; respect prefers-reduced-motion. Tests: a region-focus unit/jsdom test (Ctrl+` focuses terminal region, Ctrl+Shift+E focuses explorer, Ctrl+F6 cycles) — may need to give the terminal-host/explorer focusable targets (tabIndex) in the App."
+current_focus: "Expansion 6 AC8 (explorer keyboard nav). Build pure src/core/explorer/tree-nav.ts implementing the WAI-ARIA tree pattern over a FLATTENED list of visible nodes: given (nodes[], currentIndex, key) return an intent {type: 'move', index} | {type:'expand'} | {type:'collapse'} | {type:'open'} | {type:'none'}. Keys: ArrowDown/Up move ±1 (clamp), Home/End first/last, ArrowRight expands a collapsed dir else moves to first child, ArrowLeft collapses an expanded dir else moves to parent, Enter/Space opens file or toggles dir. Then refactor src/renderer/components/Explorer.tsx to a roving-tabindex tree (exactly ONE node tabIndex=0, rest -1), an onKeyDown calling tree-nav + moving focus to the resulting node, and aria-level/aria-selected/aria-setsize. Keep existing click-to-open/expand. Unit-test tree-nav transitions; jsdom-test Explorer arrow nav + Enter open (window.api.readFileText/openFile). Ensure focusRegion('explorer') targets the roving (tabIndex=0) node."
 blocked_on: null
-last_test_run: "283 unit pass, 0 fail; typecheck clean"
+last_test_run: "293 unit pass, 0 fail; typecheck clean"
 closed_worldlines: [worldline-expansion]
-next_action: "Implement region-focus (App refs + wire focus-region/focus-cycle actions + dispatch; make terminal + explorer focusable targets) and :focus-visible CSS. Add jsdom tests for focus movement. Run pnpm test + typecheck, commit steiner: feat(region-focus + focus-rings)."
+next_action: "Create src/core/explorer/tree-nav.ts + test; refactor Explorer.tsx to roving tabindex + onKeyDown + aria; add Explorer keyboard tests. Run pnpm test + typecheck, commit steiner: feat(explorer-keyboard-nav)."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:

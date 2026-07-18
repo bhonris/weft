@@ -147,6 +147,45 @@ describe('App keyboard help', () => {
   })
 })
 
+describe('App region focus (keyboard-only navigation)', () => {
+  const dispatch = (init: KeyboardEventInit): void => {
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', init))
+    })
+  }
+
+  it('Ctrl+Shift+E focuses the explorer region', async () => {
+    render(<App />)
+    dispatch({ key: 'E', ctrlKey: true, shiftKey: true })
+    // Empty tree → the explorer shell (tabIndex -1) receives focus.
+    expect(document.activeElement).toBe(screen.getByTestId('explorer'))
+  })
+
+  it('Ctrl+` focuses the terminal region when a session is active', async () => {
+    render(<App />)
+    act(() => {
+      useSessionStore.getState().addTab({ tabId: 't1', title: 'p', cwd: '/p' })
+    })
+    await screen.findByTestId('tab')
+    dispatch({ key: '`', ctrlKey: true })
+    expect(document.activeElement).toBe(screen.getByTestId('terminal-region'))
+  })
+
+  it('Ctrl+F6 cycles focus to the next present region', async () => {
+    render(<App />)
+    act(() => {
+      useSessionStore.getState().addTab({ tabId: 't1', title: 'p', cwd: '/p' })
+    })
+    await screen.findByTestId('tab')
+
+    // Start on the explorer, then cycle → next present region is the terminal.
+    dispatch({ key: 'E', ctrlKey: true, shiftKey: true })
+    expect(document.activeElement).toBe(screen.getByTestId('explorer'))
+    dispatch({ key: 'F6', ctrlKey: true })
+    expect(document.activeElement).toBe(screen.getByTestId('terminal-region'))
+  })
+})
+
 describe('App theme toggle', () => {
   it('cycles system → light → dark → cyberpunk → system and reflects it on <html>', async () => {
     act(() => useSessionStore.getState().setTheme('system'))

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSessionStore, nextTheme, type Tab, type SpawnFailure } from './store/session-store'
+import { useViewerStore } from './store/viewer-store'
 import { buildWorkspaceState, restoreWorkspace } from './store/workspace-sync'
 import { TerminalPane } from './components/TerminalPane'
 import { Explorer } from './components/Explorer'
@@ -8,6 +9,7 @@ import { WorkbenchErrorBoundary } from './components/WorkbenchErrorBoundary'
 import { CommandPalette } from './components/CommandPalette'
 import { KeyboardHelp } from './components/KeyboardHelp'
 import { routeKey } from '@core/keybindings/keybinding-router'
+import { nextRegion, type RegionId } from '@core/focus/region-cycle'
 import type { CommandId } from '@core/commands/registry'
 import type { SessionStatus } from '@shared/status/hook-events'
 
@@ -180,6 +182,65 @@ export function App(): React.ReactElement {
     overlayOpenRef.current = overlay !== 'none'
   }, [overlay])
 
+  // ── Region focus (keyboard-only navigation between UI regions) ──
+  const tabStripRef = useRef<HTMLElement>(null)
+  const explorerRef = useRef<HTMLElement>(null)
+  const terminalRef = useRef<HTMLDivElement>(null)
+  const viewerRef = useRef<HTMLDivElement>(null)
+  const statusRef = useRef<HTMLElement>(null)
+  const activeRegionRef = useRef<RegionId | null>(null)
+
+  const focusEl = (el: Element | null | undefined): boolean => {
+    if (el instanceof HTMLElement) {
+      el.focus()
+      return true
+    }
+    return false
+  }
+
+  const focusRegion = (id: RegionId): void => {
+    activeRegionRef.current = id
+    switch (id) {
+      case 'tabs':
+        focusEl(
+          tabStripRef.current?.querySelector('.tab__label') ??
+            tabStripRef.current?.querySelector('.tab-strip__add')
+        )
+        break
+      case 'explorer':
+        focusEl(explorerRef.current?.querySelector('[role="treeitem"]') ?? explorerRef.current)
+        break
+      case 'terminal':
+        // xterm's hidden textarea when live; the region shell otherwise.
+        focusEl(terminalRef.current?.querySelector('textarea') ?? terminalRef.current)
+        break
+      case 'viewer':
+        focusEl(
+          viewerRef.current?.querySelector('textarea') ??
+            viewerRef.current?.querySelector('button') ??
+            viewerRef.current
+        )
+        break
+      case 'status':
+        focusEl(statusRef.current?.querySelector('button') ?? statusRef.current)
+        break
+    }
+  }
+
+  // Regions currently focusable (read live to avoid stale closures).
+  const presentRegions = (): RegionId[] => {
+    const p: RegionId[] = ['tabs', 'explorer']
+    if (useSessionStore.getState().activeTabId) p.push('terminal')
+    if (useViewerStore.getState().file) p.push('viewer')
+    p.push('status')
+    return p
+  }
+
+  const cycleRegion = (dir: 1 | -1): void => {
+    const target = nextRegion(presentRegions(), activeRegionRef.current, dir)
+    if (target) focusRegion(target)
+  }
+
   // Renderer-owned command dispatch: maps a CommandId to its side effect.
   // Handlers not yet wired this cycle are safe no-ops until their leap lands.
   const runCommand = (id: CommandId): void => {
@@ -216,7 +277,19 @@ export function App(): React.ReactElement {
       case 'general.keyboardHelp':
         setOverlay('help')
         break
-      // Wired in later cycle-6 leaps: focus.*, viewer.*, tab.move*/rename,
+      case 'focus.terminal':
+        focusRegion('terminal')
+        break
+      case 'focus.explorer':
+        focusRegion('explorer')
+        break
+      case 'focus.cycleNext':
+        cycleRegion(1)
+        break
+      case 'focus.cyclePrev':
+        cycleRegion(-1)
+        break
+      // Wired in later cycle-6 leaps: viewer.*, tab.move*/rename,
       // general.terminalSearch.
       default:
         break
@@ -296,6 +369,12 @@ export function App(): React.ReactElement {
         case 'help-overlay':
           setOverlay('help')
           break
+        case 'focus-region':
+          focusRegion(action.region)
+          break
+        case 'focus-cycle':
+          cycleRegion(action.dir)
+          break
         default:
           return // passthrough + not-yet-wired chords: do not intercept
       }
@@ -340,7 +419,7 @@ export function App(): React.ReactElement {
   return (
     <WorkbenchErrorBoundary>
       <div className="weft-shell">
-        <header className="tab-strip" data-testid="tab-strip">
+        <header className="tab-strip" data-testid="tab-strip" ref={tabStripRef}>
           {tabs.map((t) => (
             <TabButton key={t.tabId} tab={t} active={t.tabId === activeTabId} />
           ))}
@@ -377,19 +456,35 @@ export function App(): React.ReactElement {
           </div>
         )}
         <main className="workbench">
-          <aside className="explorer" data-testid="explorer">
+          <aside
+            className="explorer"
+            data-testid="explorer"
+            ref={explorerRef}
+            tabIndex={-1}
+            aria-label="File explorer"
+          >
             <Explorer root={activeTab?.cwd ?? null} />
           </aside>
           <section className="terminal-host" data-testid="terminal-host">
-            {activeTabId ? (
-              <TerminalPane key={activeTabId} tabId={activeTabId} />
-            ) : (
-              <div className="terminal-host__placeholder">No active session</div>
-            )}
-            <ViewerPane />
+            <div
+              className="terminal-region"
+              data-testid="terminal-region"
+              ref={terminalRef}
+              tabIndex={-1}
+              aria-label="Terminal"
+            >
+              {activeTabId ? (
+                <TerminalPane key={activeTabId} tabId={activeTabId} />
+              ) : (
+                <div className="terminal-host__placeholder">No active session</div>
+              )}
+            </div>
+            <div className="viewer-region" ref={viewerRef}>
+              <ViewerPane />
+            </div>
           </section>
         </main>
-        <footer className="status-bar" data-testid="status-bar">
+        <footer className="status-bar" data-testid="status-bar" ref={statusRef}>
           <span>Weft</span>
           {activeTab && (
             <span className="status-bar__cwd" title={activeTab.cwd}>

@@ -29,6 +29,9 @@ export function CommandPalette({
   const [active, setActive] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const restoreRef = useRef<HTMLElement | null>(null)
+  // Set when closing via a run: the command owns focus afterward, so the
+  // open→false effect must not restore focus and clobber it.
+  const skipRestoreRef = useRef(false)
 
   const results = useMemo(
     () => fuzzyFilter(query, commands, (c) => c.title).map((r) => r.item),
@@ -44,7 +47,8 @@ export function CommandPalette({
       setActive(0)
       inputRef.current?.focus()
     } else {
-      restoreRef.current?.focus?.()
+      if (!skipRestoreRef.current) restoreRef.current?.focus?.()
+      skipRestoreRef.current = false
     }
   }, [open])
 
@@ -56,6 +60,11 @@ export function CommandPalette({
   if (!open) return null
 
   const run = (id: CommandId): void => {
+    // Restore focus to the pre-palette element synchronously, THEN run — a
+    // command that moves focus (e.g. Focus Terminal) wins; one that doesn't
+    // (e.g. Cycle Theme) leaves focus sensibly where it was.
+    skipRestoreRef.current = true
+    restoreRef.current?.focus?.()
     onRun(id)
     onClose()
   }

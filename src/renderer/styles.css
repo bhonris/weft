@@ -388,6 +388,20 @@ body,
   position: relative;
 }
 
+/* Region wrappers for keyboard focus (Expansion 6). The terminal region fills
+   the host; the viewer region is layout-transparent so the viewer keeps
+   overlaying the terminal exactly as before. */
+.terminal-region {
+  position: absolute;
+  inset: 0;
+}
+.terminal-region:focus {
+  outline: none; /* the xterm textarea shows its own caret; ring is on regions below */
+}
+.viewer-region {
+  display: contents;
+}
+
 .viewer {
   position: absolute;
   inset: 0;
@@ -983,4 +997,36 @@ body,
 :root[data-theme='cyberpunk'] .help__title {
   font-family: var(--font-display);
   color: var(--p2);
+}
+
+/* ==========================================================================
+   Visible keyboard focus (Expansion 6, AC7). A clear :focus-visible ring on
+   every interactive element + focusable region, theme-aware, with a cyberpunk
+   neon variant. No transitions → inherently reduced-motion-safe.
+   ========================================================================== */
+
+:where(button, input, a[href], [role='treeitem'], [role='option'], [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+
+/* The terminal region shows xterm's own caret; no big ring on its shell. */
+.terminal-region:focus,
+.terminal-region:focus-visible {
+  outline: none;
+}
+
+:root[data-theme='cyberpunk']
+  :where(button, input, a[href], [role='treeitem'], [role='option'], [tabindex]):focus-visible {
+  outline-color: var(--p2);
+  box-shadow:
+    0 0 0 2px rgba(33, 230, 255, 0.35),
+    0 0 10px rgba(33, 230, 255, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, input, a[href], [role='treeitem'], [role='option'], [tabindex]):focus-visible {
+    transition: none;
+  }
 }

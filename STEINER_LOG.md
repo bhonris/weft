@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 39 — steiner: feat(region-focus + focus-rings) — 2026-07-18
+
+**Phase**: time-leap-development (cycle 6)
+**Changed**: Keyboard focus movement between UI regions. Pure `core/focus/region-cycle.ts` (`RegionId`, `REGION_ORDER`, `nextRegion(present, current, dir)` — canonical order, skips absent regions, wraps; 8 tests). In App: region refs (tab strip / explorer / terminal / viewer / status) + `focusRegion(id)` (focuses the best target: active tab label, first treeitem, xterm textarea, viewer control, first status button — with focusable-shell fallbacks) + live `presentRegions()` (reads store/viewer via getState to dodge stale closures) + `cycleRegion(dir)`. Wired the router's `focus-region` (Ctrl+` terminal, Ctrl+Shift+E explorer) and `focus-cycle` (Ctrl+F6 / Ctrl+Shift+F6) plus the `focus.*` palette commands. Restructured `terminal-host` into a `.terminal-region` (absolute-fill, tabIndex -1) + layout-transparent `.viewer-region` (display:contents) so the viewer still overlays exactly as before. Fixed a focus ordering bug: the palette now restores focus synchronously inside `run()` and suppresses its close-effect restore, so a Focus-* command run from the palette keeps its focus while non-focus commands still land focus sensibly. Added theme-aware `:focus-visible` rings (cyberpunk neon variant, motion-free) across buttons/inputs/treeitems/options/regions.
+**SERN interference**: none
+**Divergence meter**: 293 unit pass (was 283), 0 fail; typecheck clean. 11 new tests (8 region-cycle + 3 App region-focus).
+**Next target**: Leap 40 — pure `core/explorer/tree-nav` (ARIA tree: ↑/↓/→/←/Home/End/Enter over a flattened visible-node list) + Explorer roving tabindex + onKeyDown + aria-level/aria-selected; keyboard file-open. Then Leap 41 tab reorder/rename(F2)/type.
+
+---
+
 ## Leap 38 — steiner: feat(keyboard-help) — Ctrl+Shift+/ cheat sheet — 2026-07-18
 
 **Phase**: time-leap-development (cycle 6)
