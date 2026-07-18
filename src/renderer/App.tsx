@@ -129,6 +129,14 @@ function TabButton({ tab, active }: { tab: Tab; active: boolean }): React.ReactE
             setDraft(tab.title)
             setEditing(true)
           }}
+          onKeyDown={(e) => {
+            // F2 renames the focused tab (keyboard parity with double-click).
+            if (e.key === 'F2') {
+              e.preventDefault()
+              setDraft(tab.title)
+              setEditing(true)
+            }
+          }}
         >
           <span
             className={`tab__badge tab__badge--${tab.status}`}
@@ -267,6 +275,12 @@ export function App(): React.ReactElement {
       case 'tab.prev':
         s.cycleTab(-1)
         break
+      case 'tab.moveLeft':
+        s.moveActiveTab(-1)
+        break
+      case 'tab.moveRight':
+        s.moveActiveTab(1)
+        break
       case 'general.commandPalette':
         setOverlay('palette')
         break
@@ -294,8 +308,8 @@ export function App(): React.ReactElement {
       case 'focus.cyclePrev':
         cycleRegion(-1)
         break
-      // Wired in later cycle-6 leaps: viewer.*, tab.move*/rename,
-      // general.terminalSearch.
+      // Wired in later cycle-6 leaps: viewer.*, general.terminalSearch.
+      // (tab.rename is a local F2 key on the focused tab, not a dispatch entry.)
       default:
         break
     }
@@ -368,6 +382,9 @@ export function App(): React.ReactElement {
           if (target) s.setActive(target.tabId)
           break
         }
+        case 'move-tab':
+          s.moveActiveTab(action.dir)
+          break
         case 'command-palette':
           setOverlay('palette')
           break

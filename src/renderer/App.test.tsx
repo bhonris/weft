@@ -186,6 +186,47 @@ describe('App region focus (keyboard-only navigation)', () => {
   })
 })
 
+describe('App keyboard tab management', () => {
+  it('Ctrl+Shift+PageDown / PageUp reorder the active tab', async () => {
+    render(<App />)
+    act(() => {
+      const s = useSessionStore.getState()
+      s.addTab({ tabId: 't1', title: 'one', cwd: '/a' })
+      s.addTab({ tabId: 't2', title: 'two', cwd: '/b' })
+      s.addTab({ tabId: 't3', title: 'three', cwd: '/c' })
+      s.setActive('t2')
+    })
+    await screen.findAllByTestId('tab')
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageUp', ctrlKey: true, shiftKey: true }))
+    })
+    expect(useSessionStore.getState().tabs.map((t) => t.tabId)).toEqual(['t2', 't1', 't3'])
+
+    act(() => {
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'PageDown', ctrlKey: true, shiftKey: true })
+      )
+    })
+    expect(useSessionStore.getState().tabs.map((t) => t.tabId)).toEqual(['t1', 't2', 't3'])
+  })
+
+  it('F2 on a focused tab enters inline rename', async () => {
+    render(<App />)
+    act(() => {
+      useSessionStore.getState().addTab({ tabId: 't1', title: 'proj', cwd: '/a' })
+    })
+    // The label button's accessible name is the badge aria-label + the title.
+    const label = await screen.findByRole('button', { name: 'status: unknown proj' })
+    fireEvent.keyDown(label, { key: 'F2' })
+    const input = await screen.findByLabelText('rename tab')
+    expect(input).toBeTruthy()
+    fireEvent.change(input, { target: { value: 'renamed' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(useSessionStore.getState().tabs[0]!.title).toBe('renamed'))
+  })
+})
+
 describe('App theme toggle', () => {
   it('cycles system → light → dark → cyberpunk → system and reflects it on <html>', async () => {
     act(() => useSessionStore.getState().setTheme('system'))

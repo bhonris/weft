@@ -54,6 +54,8 @@ export interface SessionState {
   rename: (tabId: string, title: string) => void
   /** Move `dragId` to `targetId`'s position (drag-and-drop reorder). */
   moveTab: (dragId: string, targetId: string) => void
+  /** Reorder the ACTIVE tab one slot left (-1) or right (+1); clamps at ends. */
+  moveActiveTab: (dir: 1 | -1) => void
   /** Activate the tab `step` positions away from the active one (wraps). */
   cycleTab: (step: 1 | -1) => void
 }
@@ -116,5 +118,17 @@ export const useSessionStore = create<SessionState>((set) => ({
       const idx = s.tabs.findIndex((t) => t.tabId === s.activeTabId)
       const next = (idx + step + s.tabs.length) % s.tabs.length
       return { activeTabId: s.tabs[next]!.tabId }
+    }),
+
+  moveActiveTab: (dir) =>
+    set((s) => {
+      const idx = s.tabs.findIndex((t) => t.tabId === s.activeTabId)
+      if (idx === -1) return s
+      const target = idx + dir
+      if (target < 0 || target >= s.tabs.length) return s // clamp at ends
+      const tabs = [...s.tabs]
+      const [moved] = tabs.splice(idx, 1)
+      tabs.splice(target, 0, moved!)
+      return { tabs }
     })
 }))

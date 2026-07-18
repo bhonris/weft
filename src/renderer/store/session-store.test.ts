@@ -88,6 +88,32 @@ describe('useSessionStore', () => {
     expect(useSessionStore.getState().tabs.map((t) => t.tabId)).toEqual(['a', 'b'])
   })
 
+  it('moveActiveTab reorders the active tab and clamps at the ends', () => {
+    const { addTab, setActive, moveActiveTab } = useSessionStore.getState()
+    addTab({ tabId: 'a', title: 'a', cwd: 'C:/a' })
+    addTab({ tabId: 'b', title: 'b', cwd: 'C:/b' })
+    addTab({ tabId: 'c', title: 'c', cwd: 'C:/c' })
+
+    setActive('b')
+    moveActiveTab(-1) // b left
+    expect(useSessionStore.getState().tabs.map((t) => t.tabId)).toEqual(['b', 'a', 'c'])
+    moveActiveTab(1) // b right (back to middle)
+    expect(useSessionStore.getState().tabs.map((t) => t.tabId)).toEqual(['a', 'b', 'c'])
+
+    setActive('a')
+    moveActiveTab(-1) // already first → clamp, no change
+    expect(useSessionStore.getState().tabs.map((t) => t.tabId)).toEqual(['a', 'b', 'c'])
+
+    setActive('c')
+    moveActiveTab(1) // already last → clamp, no change
+    expect(useSessionStore.getState().tabs.map((t) => t.tabId)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('moveActiveTab is a no-op with no active tab', () => {
+    useSessionStore.getState().moveActiveTab(1)
+    expect(useSessionStore.getState().tabs).toEqual([])
+  })
+
   it('cycleTab wraps in both directions', () => {
     const { addTab, setActive, cycleTab } = useSessionStore.getState()
     addTab({ tabId: 'a', title: 'a', cwd: 'C:/a' })

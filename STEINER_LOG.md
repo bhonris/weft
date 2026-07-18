@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 41 — steiner: feat(keyboard-tab-management) — reorder + F2 rename — 2026-07-18
+
+**Phase**: time-leap-development (cycle 6)
+**Changed**: Keyboard-complete tab management. Store `moveActiveTab(dir)` reorders the active tab one slot L/R, clamping at ends (+2 unit tests). Wired the router `move-tab` action (Ctrl+Shift+PageUp/PageDown) and the `tab.moveLeft/moveRight` palette commands to it. F2 rename: a LOCAL `onKeyDown` on the focused tab-label button enters the existing inline rename input (kept out of the global router so F2 still reaches a TUI when the terminal is focused). Verified shell-vs-claude new-tab is keyboard-reachable via the palette (`tab.new` → openProject, `tab.newShell` → openProject('shell')). App tests: Ctrl+Shift+PageUp/PageDown reorder; F2 → inline rename → Enter commits.
+**SERN interference**: one test-only fix — the tab exposes three buttons matching /proj/ (label/tear-off/close); targeted the label by its exact accessible name.
+**Divergence meter**: 311 unit pass (was 307), 0 fail; typecheck clean. 4 new tests.
+**Next target**: Leap 42 — viewer keyboard control: make View/Edit/Diff/Reveal/Close reachable by keyboard (lift viewer edit-mode into the viewer store so palette viewer.* commands work) + app-level Ctrl+S that saves when the viewer region is focused (guarded saveFile IPC), not only when Monaco holds focus.
+
+---
+
 ## Leap 40 — steiner: feat(explorer-keyboard-nav) — ARIA tree — 2026-07-18
 
 **Phase**: time-leap-development (cycle 6)

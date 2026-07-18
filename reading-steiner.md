@@ -1,8 +1,8 @@
 phase: time-leap-development
-leap_count: 40
+leap_count: 41
 expansion_cycle: 6
 session_id: 2026-07-18T10:30:00Z
-prev_head: 018b0b04ddf404806896834f89f2dfe3155b6280
+prev_head: 98ffb5d0f2a2ffa822b9ab52c594384be386ed32
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md. CYCLE 6 END GOAL (operator): fully mouseless, keyboard-only navigation across all of Weft; macOS/Linux platform work OUT OF SCOPE this cycle."
 project_name: "weft"
 project_type: web
@@ -11,11 +11,11 @@ test_cmd: pnpm test
 dev_server_port: 5173
 coverage_pct: 98
 divergence_readings: []
-current_focus: "Expansion 6 AC9 (keyboard tab management). (1) Add store action moveActiveTab(dir: 1|-1) that reorders the active tab left/right within tabs[] (clamp at ends), plus a unit test. (2) Wire router move-tab action + tab.moveLeft/moveRight commands in App to call it. (3) Rename via F2: a LOCAL key handler on the focused tab button (not the global router) — pressing F2 while a tab label button is focused enters the existing inline rename input; Enter commits, Esc cancels (already implemented in TabButton). Add onKeyDown to the tab label button for F2→setEditing(true). (4) shell-vs-claude: tab.new/tab.newShell already dispatch openProject()/openProject('shell'); verify. Tests: store moveActiveTab unit; App test Ctrl+Shift+PageDown reorders active tab; TabButton F2 enters rename."
+current_focus: "Expansion 6 AC10 (viewer keyboard control). Lift the viewer's edit mode into the viewer-store (add mode 'edit' OR an `editing` boolean + setEditing; ViewerPane reads it instead of local state) so palette commands can drive it. Wire runCommand: viewer.view→store view+editing off, viewer.edit→editing on, viewer.diff→mode diff, viewer.reveal→window.api.revealInOs(file.path), viewer.close→viewer close. Add an APP-LEVEL Ctrl+S: when the viewer region is focused (activeRegionRef==='viewer' or focus within viewerRef) and a file is open, save via window.api.saveFile(path, currentContent) — need the editor's current value; simplest: keep the Monaco Ctrl+S (already works when editor focused) AND add a viewer-region key handler that triggers save via an exposed ref/handle or via the store. Consider exposing a save() on the viewer store set by ViewerPane, or move save wiring so App can call it. Keep viewer.* commands no-op-safe when no file open. Tests: viewer-store edit state; ViewerPane renders edit from store; App viewer.* dispatch. NOTE the viewer commands only meaningful with a file open — that's fine."
 blocked_on: null
-last_test_run: "307 unit pass, 0 fail; typecheck clean"
+last_test_run: "311 unit pass, 0 fail; typecheck clean"
 closed_worldlines: [worldline-expansion]
-next_action: "Add moveActiveTab to session-store (+test); wire move-tab action + tab.move* commands; add F2 rename to TabButton label; add tests. Run pnpm test + typecheck, commit steiner: feat(keyboard-tab-management)."
+next_action: "Lift viewer edit state into viewer-store; wire viewer.* commands + app-level Ctrl+S when viewer focused; add tests. Run pnpm test + typecheck, commit steiner: feat(viewer-keyboard-control)."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:
