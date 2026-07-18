@@ -10,7 +10,13 @@
  * focused tab, Ctrl+S while the viewer is focused) are intentionally NOT global
  * chords — they are handled by their own components' key handlers so they only
  * act in-context and otherwise pass through to the terminal.
+ *
+ * The reserved chords themselves are now data — see `keymap.ts`. `routeKey`
+ * resolves an event against a {@link Keymap} (the built-in `DEFAULT_KEYMAP` by
+ * default), so bindings can be overridden without touching this classifier.
  */
+import { DEFAULT_KEYMAP, chordOf, type Keymap } from './keymap'
+
 export interface KeyLike {
   key: string
   ctrlKey: boolean
@@ -36,46 +42,20 @@ export type KeyAction =
   | { kind: 'terminal-search' }
   | { kind: 'passthrough' }
 
-export function routeKey(e: KeyLike): KeyAction {
-  // Only plain-Ctrl chords are reserved; Alt/Meta combos always pass through.
+export function routeKey(e: KeyLike, keymap: Keymap = DEFAULT_KEYMAP): KeyAction {
+  // Alt/Meta combos and non-Ctrl keys always reach the PTY.
   if (!e.ctrlKey || e.altKey || e.metaKey) return { kind: 'passthrough' }
 
-  // Ctrl+Tab / Ctrl+Shift+Tab — cycle tabs.
-  if (e.key === 'Tab') {
-    return e.shiftKey ? { kind: 'prev-tab' } : { kind: 'next-tab' }
-  }
-
-  // Ctrl+F6 / Ctrl+Shift+F6 — cycle focus region forward / back. (Ctrl+F-key is
-  // not terminal-bound; plain F6 is left for TUIs.)
-  if (e.key === 'F6') return { kind: 'focus-cycle', dir: e.shiftKey ? -1 : 1 }
-
-  // Ctrl+Shift+PageUp / PageDown — move the active tab left / right. (Plain and
-  // Ctrl PageUp/PageDown are left for terminal scrollback.)
-  if (e.shiftKey && e.key === 'PageUp') return { kind: 'move-tab', dir: -1 }
-  if (e.shiftKey && e.key === 'PageDown') return { kind: 'move-tab', dir: 1 }
-
-  // Ctrl+` — focus the terminal (VS Code convention; not terminal-bound).
-  if (e.key === '`') return { kind: 'focus-region', region: 'terminal' }
-
-  if (e.shiftKey) {
-    // Ctrl+Shift+<key> chords. Anything not claimed here passes through.
-    const sk = e.key.toLowerCase()
-    if (sk === 'p') return { kind: 'command-palette' }
-    if (sk === 'e') return { kind: 'focus-region', region: 'explorer' }
-    // In-terminal search: TerminalPane opens it when the terminal is focused;
-    // routed here (not special-cased) so the router stays the single source.
-    if (sk === 'f') return { kind: 'terminal-search' }
-    // Shift+/ produces '?' on US layouts; accept both for the help overlay.
-    if (e.key === '?' || e.key === '/') return { kind: 'help-overlay' }
-    return { kind: 'passthrough' }
-  }
-
-  // Plain Ctrl+<key> chords.
+  // Ctrl+1..9 — positional tab jump. A built-in: parameterized by digit, with
+  // no registry command, and deliberately NOT remappable.
   const key = e.key.toLowerCase()
-  if (key === 't') return { kind: 'new-tab' }
-  if (key === 'w') return { kind: 'close-tab' }
-  if (key >= '1' && key <= '9' && key.length === 1) {
+  if (!e.shiftKey && key.length === 1 && key >= '1' && key <= '9') {
     return { kind: 'jump-tab', index: Number(key) - 1 }
   }
-  return { kind: 'passthrough' }
+
+  // Everything else is data-driven: canonicalize the chord and look it up. An
+  // unbindable event (chordOf === null) or an unbound chord passes through.
+  const chord = chordOf(e)
+  if (chord === null) return { kind: 'passthrough' }
+  return keymap[chord] ?? { kind: 'passthrough' }
 }
