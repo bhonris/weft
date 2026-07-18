@@ -9,6 +9,7 @@ import { WorkbenchErrorBoundary } from './components/WorkbenchErrorBoundary'
 import { CommandPalette } from './components/CommandPalette'
 import { KeyboardHelp } from './components/KeyboardHelp'
 import { routeKey } from '@core/keybindings/keybinding-router'
+import { commandIdForAction } from '@core/commands/action-dispatch'
 import { nextRegion, type RegionId } from '@core/focus/region-cycle'
 import type { CommandId } from '@core/commands/registry'
 import type { SessionStatus } from '@shared/status/hook-events'
@@ -380,50 +381,26 @@ export function App(): React.ReactElement {
     }
   }, [])
 
-  // Global chords route through the single pure keybinding-router. We act on —
-  // and only preventDefault for — the actions we actually handle; everything
-  // else (passthrough, plus chords not yet wired this cycle) reaches the PTY.
-  // While an overlay is open it owns the keyboard, so we stand down entirely.
+  // Global chords route through the single pure keybinding-router, then resolve
+  // to a CommandId dispatched by `runCommand` — the ONE place a command's side
+  // effect lives (no parallel KeyAction switch to drift out of sync). We only
+  // preventDefault for actions we actually handle; everything else (passthrough,
+  // terminal-search) reaches the PTY. While an overlay is open it owns the
+  // keyboard, so we stand down entirely.
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (overlayOpenRef.current) return
       const action = routeKey(e)
-      const s = useSessionStore.getState()
-      switch (action.kind) {
-        case 'new-tab':
-          void openProject()
-          break
-        case 'close-tab':
-          if (s.activeTabId) closeTab(s.activeTabId)
-          break
-        case 'next-tab':
-          s.cycleTab(1)
-          break
-        case 'prev-tab':
-          s.cycleTab(-1)
-          break
-        case 'jump-tab': {
-          const target = s.tabs[action.index]
-          if (target) s.setActive(target.tabId)
-          break
-        }
-        case 'move-tab':
-          s.moveActiveTab(action.dir)
-          break
-        case 'command-palette':
-          setOverlay('palette')
-          break
-        case 'help-overlay':
-          setOverlay('help')
-          break
-        case 'focus-region':
-          focusRegion(action.region)
-          break
-        case 'focus-cycle':
-          cycleRegion(action.dir)
-          break
-        default:
-          return // passthrough + not-yet-wired chords: do not intercept
+      if (action.kind === 'jump-tab') {
+        // Parameterized by number (Ctrl+1..9); no registry command. We still
+        // intercept the chord even when no tab occupies that slot.
+        const s = useSessionStore.getState()
+        const target = s.tabs[action.index]
+        if (target) s.setActive(target.tabId)
+      } else {
+        const id = commandIdForAction(action)
+        if (!id) return // passthrough / terminal-search: let the terminal have it
+        runCommand(id)
       }
       e.preventDefault()
       e.stopPropagation()
