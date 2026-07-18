@@ -112,8 +112,13 @@ describe('routeKey', () => {
     expect(routeKey(k({ shiftKey: true, key: 'PageUp' }))).toEqual({ kind: 'passthrough' })
   })
 
-  it('leaves Ctrl+Shift+F as passthrough (in-terminal search handled by TerminalPane)', () => {
-    expect(routeKey(k({ ctrlKey: true, shiftKey: true, key: 'F' }))).toEqual({ kind: 'passthrough' })
+  it('routes Ctrl+Shift+F to terminal-search (TerminalPane opens it when focused)', () => {
+    expect(routeKey(k({ ctrlKey: true, shiftKey: true, key: 'F' }))).toEqual({
+      kind: 'terminal-search'
+    })
+    expect(routeKey(k({ ctrlKey: true, shiftKey: true, key: 'f' }))).toEqual({
+      kind: 'terminal-search'
+    })
   })
 
   it('passes unclaimed Ctrl+Shift+letter chords through', () => {

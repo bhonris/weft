@@ -241,6 +241,19 @@ describe('App viewer commands', () => {
   })
 })
 
+describe('App status commands', () => {
+  it('toggles resume from the palette', async () => {
+    act(() => useSessionStore.setState({ resumeEnabled: false }))
+    render(<App />)
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'P', ctrlKey: true, shiftKey: true }))
+    })
+    fireEvent.change(await screen.findByRole('combobox'), { target: { value: 'toggle resume' } })
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' })
+    await waitFor(() => expect(useSessionStore.getState().resumeEnabled).toBe(true))
+  })
+})
+
 describe('App theme toggle', () => {
   it('cycles system → light → dark → cyberpunk → system and reflects it on <html>', async () => {
     act(() => useSessionStore.getState().setTheme('system'))

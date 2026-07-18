@@ -33,6 +33,7 @@ export type KeyAction =
   | { kind: 'focus-region'; region: FocusRegion }
   | { kind: 'focus-cycle'; dir: 1 | -1 }
   | { kind: 'move-tab'; dir: 1 | -1 }
+  | { kind: 'terminal-search' }
   | { kind: 'passthrough' }
 
 export function routeKey(e: KeyLike): KeyAction {
@@ -57,12 +58,13 @@ export function routeKey(e: KeyLike): KeyAction {
   if (e.key === '`') return { kind: 'focus-region', region: 'terminal' }
 
   if (e.shiftKey) {
-    // Ctrl+Shift+<key> chords. Anything not claimed here passes through — in
-    // particular Ctrl+Shift+F stays passthrough so the in-terminal search
-    // (handled by TerminalPane) keeps working until it is folded in here.
+    // Ctrl+Shift+<key> chords. Anything not claimed here passes through.
     const sk = e.key.toLowerCase()
     if (sk === 'p') return { kind: 'command-palette' }
     if (sk === 'e') return { kind: 'focus-region', region: 'explorer' }
+    // In-terminal search: TerminalPane opens it when the terminal is focused;
+    // routed here (not special-cased) so the router stays the single source.
+    if (sk === 'f') return { kind: 'terminal-search' }
     // Shift+/ produces '?' on US layouts; accept both for the help overlay.
     if (e.key === '?' || e.key === '/') return { kind: 'help-overlay' }
     return { kind: 'passthrough' }

@@ -149,7 +149,8 @@ export const COMMANDS: readonly Command[] = [
     id: 'general.terminalSearch',
     title: 'Search in Terminal',
     category: 'General',
-    shortcutHint: 'Ctrl+Shift+F'
+    shortcutHint: 'Ctrl+Shift+F',
+    routes: 'terminal-search'
   },
   { id: 'general.cycleTheme', title: 'Cycle Theme', category: 'General' },
   { id: 'general.toggleResume', title: 'Toggle Resume on Restore', category: 'General' }

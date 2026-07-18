@@ -328,7 +328,11 @@ export function App(): React.ReactElement {
       case 'viewer.close':
         useViewerStore.getState().close()
         break
-      // Wired in later cycle-6 leaps: general.terminalSearch.
+      case 'general.terminalSearch':
+        // Focus the terminal; the in-terminal search opens on Ctrl+Shift+F
+        // there (search state is TerminalPane-local).
+        focusRegion('terminal')
+        break
       // (tab.rename is a local F2 key on the focused tab, not a dispatch entry.)
       default:
         break

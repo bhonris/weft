@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 43 — steiner: feat(terminal-search-routing + status-commands) — 2026-07-18
+
+**Phase**: time-leap-development (cycle 6) — AC2 closed
+**Changed**: Folded the out-of-band `Ctrl+Shift+F` terminal-search into the pure router: added `{kind:'terminal-search'}` to `routeKey`, and `TerminalPane.attachCustomKeyEventHandler` now decides via `routeKey` (terminal-search → open + swallow; passthrough → to PTY; else swallow) instead of the hardcoded `isSearchChord` (removed). The router is now the SINGLE source both consumers agree on — the cycle-6-planning anti-pattern is gone. `general.terminalSearch` command gained `routes:'terminal-search'` (no-drift test still green) and dispatches to focusRegion('terminal') (search bar state stays TerminalPane-local; opens on the chord there). App window listener leaves terminal-search to `default:return` so it reaches the focused terminal. Updated the router test (Ctrl+Shift+F → terminal-search) and added an App palette test for Toggle Resume (status-bar command).
+**SERN interference**: none
+**Divergence meter**: 316 unit pass (was 315), 0 fail; typecheck clean.
+**Next target**: Leap 44 — the mouseless E2E: a Playwright-Electron spec driving a full journey with keyboard input ONLY (no .click()) — palette open project, focus explorer, arrow-nav + Enter to open a file, focus terminal + type, switch tabs, cycle theme — plus a focus-ring-visible check and a Ctrl+C-reaches-PTY passthrough check. Then Phase 4 review.
+
+---
+
 ## Leap 42 — steiner: feat(viewer-keyboard-control) — modes + app Ctrl+S — 2026-07-18
 
 **Phase**: time-leap-development (cycle 6)

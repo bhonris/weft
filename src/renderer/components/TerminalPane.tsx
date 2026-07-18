@@ -9,9 +9,6 @@ interface Props {
   tabId: string
 }
 
-const isSearchChord = (e: { key: string; ctrlKey: boolean; shiftKey: boolean; altKey: boolean; metaKey: boolean }): boolean =>
-  e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey && e.key.toLowerCase() === 'f'
-
 /**
  * Mounts an xterm bound to a live PTY. On mount it calls `attachSession`, which
  * replays the main-side ring buffer (recovering scrollback after a reload/HMR),
@@ -48,14 +45,16 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
     term.loadAddon(search)
     termRef.current = term
     searchRef.current = search
-    // Reserved app chords (Ctrl+T/W/Tab/1..9) must NOT be swallowed by the
-    // terminal; Ctrl+Shift+F opens search; everything else reaches the PTY.
+    // Single source of truth: the pure router. terminal-search opens the search
+    // bar (and is swallowed); passthrough reaches the PTY; any other reserved
+    // app chord is swallowed here so the app-level listener handles it.
     term.attachCustomKeyEventHandler((e) => {
-      if (e.type === 'keydown' && isSearchChord(e)) {
+      const action = routeKey(e)
+      if (e.type === 'keydown' && action.kind === 'terminal-search') {
         setSearchOpen(true)
         return false
       }
-      return routeKey(e).kind === 'passthrough'
+      return action.kind === 'passthrough'
     })
     term.open(host)
 

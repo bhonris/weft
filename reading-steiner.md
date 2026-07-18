@@ -1,8 +1,8 @@
 phase: time-leap-development
-leap_count: 42
+leap_count: 43
 expansion_cycle: 6
 session_id: 2026-07-18T10:30:00Z
-prev_head: 39b831dac5f3327d66ab52f0c3622c67d4cd2d13
+prev_head: 763d02e84d32f7c1a3320386d901a92222aa971d
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md. CYCLE 6 END GOAL (operator): fully mouseless, keyboard-only navigation across all of Weft; macOS/Linux platform work OUT OF SCOPE this cycle."
 project_name: "weft"
 project_type: web
@@ -11,11 +11,11 @@ test_cmd: pnpm test
 dev_server_port: 5173
 coverage_pct: 98
 divergence_readings: []
-current_focus: "Expansion 6 AC2 + AC11 finish. (1) Fold the out-of-band Ctrl+Shift+F terminal-search through the router (AC2): add {kind:'terminal-search'} to routeKey for Ctrl+Shift+F; in TerminalPane's attachCustomKeyEventHandler, decide via routeKey (kind==='terminal-search' → open search + swallow; kind==='passthrough' → let through; else swallow) instead of the hardcoded special-case; add general.terminalSearch command routes:'terminal-search'; keep the registry no-drift test green. Ensure the App window listener does NOT act on terminal-search (it's terminal-local) — add a case that returns/no-ops so it doesn't preventDefault globally (or leave default:return but then App would swallow it when terminal NOT focused; acceptable — search only relevant with terminal focused). Verify terminal-router agreement + update the router test (Ctrl+Shift+F now → terminal-search, adjust the passthrough test). (2) Confirm status-bar theme/resume commands (already wired) with an App palette test for toggle resume. Then Leap 44: full mouseless E2E."
+current_focus: "Expansion 6 AC12 — the mouseless E2E. Add e2e/keyboard-nav.spec.ts (Playwright-Electron) driving a full journey with KEYBOARD ONLY (no page.click / .click): use launchWeft + WEFT_E2E_OPEN_DIR + WEFT_OPEN_PROJECT_COMMAND=shell (see e2e/helpers.ts + open-project.spec.ts for the seams). Steps: open the command palette via page.keyboard Ctrl+Shift+P → type 'open project' → Enter (or new shell tab); OR if the open-project flow needs the dir seam, drive via the + is mouse — instead use the palette 'New Shell Tab' command which calls openProject('shell') that reads WEFT_E2E_OPEN_DIR. Then: Ctrl+Shift+E focus explorer, ArrowDown/Enter open a fixture file into the viewer (assert viewer-pane visible), Ctrl+` focus terminal + type echo text (assert it appears), Ctrl+Shift+P → cycle theme, assert data-theme changed. Also assert a focus ring / that document.activeElement is expected, and that typing Ctrl+C-style input reaches the PTY (echo still interactive). Keep it robust: reuse helpers, no WEFT_* leakage. Check e2e/helpers.ts + existing specs for exact API (launchWeft signature, how open-project.spec drives the + button — replace with keyboard/palette)."
 blocked_on: null
-last_test_run: "315 unit pass, 0 fail; typecheck clean"
+last_test_run: "316 unit pass, 0 fail; typecheck clean"
 closed_worldlines: [worldline-expansion]
-next_action: "Fold Ctrl+Shift+F into routeKey as terminal-search; update TerminalPane to use routeKey; add general.terminalSearch routes; update router test; add App toggle-resume palette test. Run pnpm test + typecheck, commit steiner: feat(terminal-search-routing + status-commands)."
+next_action: "Read e2e/helpers.ts + e2e/open-project.spec.ts; write e2e/keyboard-nav.spec.ts (keyboard-only journey). Run pnpm test:e2e (or at least typecheck + a targeted run). Commit steiner: test(e2e) mouseless keyboard journey. Then advance phase to christinas-analysis (Phase 4 review)."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:
