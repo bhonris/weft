@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 49 — feat(dispatch-unification) — Cycle 7 opens — 2026-07-18
+
+**Phase**: time-leap-development (Expansion 7 — remappable keybindings + dispatch unification)
+**Changed**: Opened Cycle 7 (operator re-invoked `/dmail`; budget refreshed to 62). First leap tackles the foundational Expansion-7 criterion: **unified the dual dispatch**. Chords now resolve to a `CommandId` through a new pure bridge `core/commands/action-dispatch.ts` (`commandIdForAction`, exhaustive over `KeyAction` kinds) and flow through the single `runCommand` dispatcher — the parallel `KeyAction` switch in `App.onKey` is gone. This structurally eliminates the drift that let a duplicate case displace `viewer.save` in Cycle 6. Added a **bidirectional no-drift regression test** (every dispatched action → a command whose registry `routes` matches; every routed command is reachable, `terminal-search` excepted as intentional passthrough). `jump-tab` (Ctrl+1..9) stays inline as it's parameterized with no registry command. Also committed the pending manual pre-cycle work (PostToolUse waiting-fix, notifications on/off toggle) and the `## Expansion 7` plan.
+**SERN interference**: none
+**Divergence meter**: 98.54% stmts / 96.58% branches / 97.2% funcs — 350 pass (the hook-forwarder integration test passes once `CLAUDE_IDE_TAB` is unset; it only leaks inside a live Weft session).
+**Next target**: Expansion 7 criterion 2 — a persisted, user-editable keymap (chord → CommandId) with reset-to-defaults, built on the now-unified dispatch.
+
+---
+
 ## Manual entry (outside /dmail loop) — complete in-app cheat-sheet — 2026-07-18
 
 **Phase**: post-cycle-6 manual enhancement (not a Steiner leap; loop stays at `el-psy-kongroo`)

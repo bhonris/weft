@@ -1,21 +1,21 @@
-phase: el-psy-kongroo
-leap_count: 48
+phase: time-leap-development
+leap_count: 49
 expansion_cycle: 7
-session_id: 2026-07-18T10:30:00Z
-prev_head: 665a8e718217517961e0644369b75c7acd3ede7f
+session_id: 2026-07-18T17:55:00Z
+prev_head: 8535766e74e0f2e2e9e65de2f531484592615c50
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md. CYCLE 6 END GOAL (operator): fully mouseless, keyboard-only navigation across all of Weft; macOS/Linux platform work OUT OF SCOPE this cycle."
 project_name: "weft"
 project_type: web
 spec_path: documents/steiner-spec.md
 test_cmd: pnpm test
 dev_server_port: 5173
-coverage_pct: 98
+coverage_pct: 98.54
 divergence_readings: []
-current_focus: "Cycle 6 (mouseless keyboard navigation) STABILISED and documented; 324 unit + 27 e2e green, coverage 98.48/96.47/97.15. Phase 7 budget check: leap 47/50 (0.94 ≥ 0.9) → graceful EL PSY KONGROO. If /dmail is re-invoked for a cycle 7, top candidates: user-customizable/remappable keybindings; unify the two dispatch switches (KeyAction vs CommandId) to prevent drift; palette-triggered terminal search + rename (needs signal stores); split panes; LSP; macOS/Linux (previously deferred)."
+current_focus: "Expansion 7 criterion 2 — a persisted, user-editable keymap (chord → CommandId) with reset-to-defaults, built on the now-unified dispatch (leap 49). Design: keymap resolution stays PURE in core/keybindings (make routeKey consult a keymap table rather than hardcoded chords; a default keymap derived from today's routeKey behavior); persist the user overrides (WorkspaceState v3→v4 migration, or a dedicated keymap store) and round-trip through save/load; a Reset-to-defaults action. Protected PTY-passthrough set must remain unbindable (criterion 3, likely same leap). Then: keybindings editor UI (crit 5), conflict detection (crit 4), and the three deferred palette/explorer fixes (crit 6-8)."
 blocked_on: null
-last_test_run: "324 unit + 27 e2e, 0 fail; coverage 98.48/96.47/97.15; typecheck clean"
+last_test_run: "350 pass, 1 env-only fail (hook-forwarder integration leaks CLAUDE_IDE_TAB when run inside a live Weft session; passes with it unset); coverage 98.54/96.58/97.2; typecheck clean"
 closed_worldlines: []
-next_action: "None — Cycle 6 end goal complete and sealed at el-psy-kongroo (budget 48/50). Re-invoke /dmail in weft/ to open cycle 7 with a fresh budget (candidates in current_focus)."
+next_action: "Implement Expansion 7 criterion 2 (user-editable persisted keymap). Start with Moeka exploring core/keybindings/keybinding-router.ts + how routeKey is consumed, then Daru: introduce a pure keymap data structure + default keymap, make routeKey resolve against it, add persistence + reset. Keep the protected passthrough set unbindable (criterion 3) in the same leap. spec ## Expansion 7."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:
@@ -31,7 +31,7 @@ review_items:
     - "test-gaps-cycle6: FIXED — added viewer.save, app-level Ctrl+S(+neg), overlay-stands-down, passthrough neighbors, real fuzzy stability, Explorer Home/End+left-to-parent, live region-cycle skip-absent (Leap 46; 324 unit)"
     - "focusEl-unused-return: FIXED — now void (Leap 46)"
     - "dead-explorer-category: FIXED — removed from CATEGORY_ORDER (Leap 46)"
-    - "dual-dispatch-drift: DEFERRED near-budget — unify onKey KeyAction switch + runCommand CommandId switch (root cause of the viewer.save drift); revisit next cycle"
+    - "dual-dispatch-drift: FIXED — Leap 49 (Cycle 7). Chords resolve to a CommandId via pure core/commands/action-dispatch.ts and dispatch through the single runCommand; onKey's parallel KeyAction switch removed; bidirectional no-drift regression test added."
     - "terminal-search-palette-noop: DEFERRED near-budget — 'Search in Terminal' focuses terminal but can't open the search bar (needs a TerminalPane open-search signal like viewer saveTick)"
     - "tab-rename-palette-noop: DEFERRED near-budget — 'Rename Tab' palette entry needs an active-tab rename signal; F2 on the focused tab works"
     - "expand-collapse-dup: DEFERRED near-budget — fold Explorer expandPath/collapsePath into one toggle helper"
@@ -53,7 +53,7 @@ review_items:
     - "save-validation-backup: fixed — schema-validated saves + config.bak fallback"
     - "watcher-error-unhandled: fixed — error listener with onError dep"
     - "bounds-clamp: fixed — pure clampBoundsToDisplays + z.int() schema"
-max_iterations: 50
+max_iterations: 62
 push_to_github: false
 bypass_playwright: false
 sern_no_progress_streak: 0
