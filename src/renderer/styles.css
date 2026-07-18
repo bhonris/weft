@@ -927,13 +927,25 @@ body,
 
 .help__head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 16px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   background: var(--panel);
+  z-index: 1;
+}
+
+.help__hint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
 }
 
 .help__title {
@@ -967,6 +979,14 @@ body,
   text-transform: uppercase;
   letter-spacing: 0.06em;
   opacity: 0.6;
+  color: var(--accent);
+}
+
+.help__cat-note {
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.75;
+  font-style: italic;
 }
 
 .help__list {
@@ -983,14 +1003,59 @@ body,
 
 .help__row-title {
   font-size: 13px;
+  padding-right: 8px;
 }
 
+.help__row-kbd {
+  flex-shrink: 0;
+}
+
+.help__keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.help__keygroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.help__plus {
+  opacity: 0.5;
+  font-size: 10px;
+}
+
+.help kbd,
 .help__row-kbd kbd {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 11px;
-  padding: 2px 6px;
-  border: 1px solid var(--border);
+  line-height: 1;
+  padding: 3px 6px;
+  color: var(--fg);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  border-bottom-width: 2px;
   border-radius: 4px;
+  white-space: nowrap;
+}
+
+.help kbd.kbd--plain {
+  background: var(--hover);
+  border-color: var(--border);
+}
+
+.help__via {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  border: 1px dashed color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 4px;
+  padding: 2px 7px;
   white-space: nowrap;
 }
 
@@ -1001,6 +1066,19 @@ body,
 :root[data-theme='cyberpunk'] .help__title {
   font-family: var(--font-display);
   color: var(--p2);
+}
+:root[data-theme='cyberpunk'] .help__cat {
+  color: var(--p2);
+  font-family: var(--font-display);
+}
+:root[data-theme='cyberpunk'] .help kbd {
+  color: #e7f4f8;
+  background: rgba(33, 230, 255, 0.08);
+  border-color: rgba(33, 230, 255, 0.35);
+}
+:root[data-theme='cyberpunk'] .help__via {
+  color: var(--p1);
+  border-color: rgba(255, 45, 120, 0.45);
 }
 
 /* ==========================================================================

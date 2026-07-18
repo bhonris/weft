@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { COMMANDS, CATEGORY_ORDER, type Command } from '@core/commands/registry'
+import {
+  COMMANDS,
+  CATEGORY_ORDER,
+  KEYBOARD_REFERENCE,
+  type Command
+} from '@core/commands/registry'
 
 interface KeyboardHelpProps {
   open: boolean
@@ -8,11 +13,47 @@ interface KeyboardHelpProps {
   onClose: () => void
 }
 
+/** Render a chord hint ("Ctrl+Shift+P") as keycaps joined by "+". */
+function Chord({ hint }: { hint: string }): React.ReactElement {
+  const keys = hint.split('+')
+  return (
+    <span className="help__keys">
+      {keys.map((key, i) => (
+        <span key={i} className="help__keygroup">
+          {i > 0 && <span className="help__plus">+</span>}
+          <kbd>{key}</kbd>
+        </span>
+      ))}
+    </span>
+  )
+}
+
+/** Render a reference key string ("↑ / ↓", "Home / End", "always") as tokens. */
+function RefKeys({ keys }: { keys: string }): React.ReactElement {
+  const tokens = keys.split(/\s+/)
+  return (
+    <span className="help__keys">
+      {tokens.map((tok, i) =>
+        tok === '/' ? (
+          <span key={i} className="help__plus">
+            /
+          </span>
+        ) : (
+          <kbd key={i} className="kbd--plain">
+            {tok}
+          </kbd>
+        )
+      )}
+    </span>
+  )
+}
+
 /**
- * A read-only cheat-sheet of every keyboard shortcut, grouped by category
- * (Ctrl+Shift+/). Modal + focus-trapped; Esc closes and focus is restored to
- * the previously-focused element. Only commands that advertise a `shortcutHint`
- * appear here — commands without a chord are still runnable via the palette.
+ * The in-app keyboard cheat-sheet (Ctrl+Shift+/ or the "Keyboard Shortcuts"
+ * command). A complete, grouped reference: every command (with its chord, or a
+ * "palette" tag when it has no dedicated key) plus region-local key references
+ * (explorer navigation, terminal). Modal + focus-trapped; Esc closes and focus
+ * is restored to the previously-focused element.
  */
 export function KeyboardHelp({
   open,
@@ -22,13 +63,15 @@ export function KeyboardHelp({
   const dialogRef = useRef<HTMLDivElement>(null)
   const restoreRef = useRef<HTMLElement | null>(null)
 
-  const groups = useMemo(() => {
-    const withKeys = commands.filter((c) => c.shortcutHint)
-    return CATEGORY_ORDER.map((cat) => ({
-      cat,
-      items: withKeys.filter((c) => c.category === cat)
-    })).filter((g) => g.items.length > 0)
-  }, [commands])
+  // Every command grouped by category (palette-only commands included, tagged).
+  const commandGroups = useMemo(
+    () =>
+      CATEGORY_ORDER.map((cat) => ({
+        cat,
+        items: commands.filter((c) => c.category === cat)
+      })).filter((g) => g.items.length > 0),
+    [commands]
+  )
 
   useEffect(() => {
     if (open) {
@@ -69,13 +112,22 @@ export function KeyboardHelp({
         onKeyDown={onKeyDown}
       >
         <header className="help__head">
-          <h2 className="help__title">Keyboard shortcuts</h2>
+          <div>
+            <h2 className="help__title">Keyboard shortcuts</h2>
+            <p className="help__hint">
+              Tip: press <kbd>Ctrl</kbd>
+              <span className="help__plus">+</span>
+              <kbd>Shift</kbd>
+              <span className="help__plus">+</span>
+              <kbd>P</kbd> to run any command by name.
+            </p>
+          </div>
           <button type="button" className="help__close" aria-label="close" onClick={onClose}>
             ×
           </button>
         </header>
         <div className="help__groups">
-          {groups.map(({ cat, items }) => (
+          {commandGroups.map(({ cat, items }) => (
             <section key={cat} className="help__group">
               <h3 className="help__cat">{cat}</h3>
               <dl className="help__list">
@@ -83,7 +135,30 @@ export function KeyboardHelp({
                   <div key={c.id} className="help__row">
                     <dt className="help__row-title">{c.title}</dt>
                     <dd className="help__row-kbd">
-                      <kbd>{c.shortcutHint}</kbd>
+                      {c.shortcutHint ? (
+                        <Chord hint={c.shortcutHint} />
+                      ) : (
+                        <span className="help__via">palette</span>
+                      )}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))}
+
+          {KEYBOARD_REFERENCE.map((sec) => (
+            <section key={sec.title} className="help__group">
+              <h3 className="help__cat">
+                {sec.title}
+                {sec.note && <span className="help__cat-note"> {sec.note}</span>}
+              </h3>
+              <dl className="help__list">
+                {sec.rows.map((r) => (
+                  <div key={r.label} className="help__row">
+                    <dt className="help__row-title">{r.label}</dt>
+                    <dd className="help__row-kbd">
+                      <RefKeys keys={r.keys} />
                     </dd>
                   </div>
                 ))}

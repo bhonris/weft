@@ -79,6 +79,19 @@ test('a complete session is driven with the keyboard only (no mouse)', async () 
   await expect
     .poll(() => page.evaluate(() => document.documentElement.dataset['theme']))
     .not.toBe(before)
+
+  // 6) The in-app cheat-sheet opens on Ctrl+? and is the COMPLETE reference:
+  //    commands, palette-only actions, and region-local keys (explorer/terminal).
+  await page.keyboard.press('Control+Shift+/')
+  const help = page.getByTestId('keyboard-help')
+  await expect(help).toBeVisible()
+  await expect(help).toContainText('Command Palette')
+  await expect(help).toContainText('Explorer')
+  await expect(help).toContainText('Expand folder / step in')
+  await expect(help).toContainText('Terminal')
+  await page.screenshot({ path: 'screenshots/keyboard-help-overlay.png' })
+  await page.keyboard.press('Escape')
+  await expect(help).toBeHidden()
 })
 
 test('keyboard focus shows a visible focus ring', async () => {

@@ -18,19 +18,37 @@ describe('KeyboardHelp', () => {
     expect(screen.queryByTestId('keyboard-help')).toBeNull()
   })
 
-  it('shows only shortcut-bearing commands, grouped by category, with keys', () => {
+  it('lists every command grouped by category, with chords split into keycaps', () => {
     render(<KeyboardHelp open commands={CMDS} onClose={vi.fn()} />)
     expect(screen.getByText('Command Palette')).toBeTruthy()
     expect(screen.getByText('New Tab')).toBeTruthy()
     expect(screen.getByText('Rename Tab')).toBeTruthy()
-    // A command without a shortcut hint is not a "shortcut" — excluded here.
-    expect(screen.queryByText('Open Project…')).toBeNull()
     // Category headings present.
     expect(screen.getByText('General')).toBeTruthy()
     expect(screen.getByText('Tabs')).toBeTruthy()
-    // Shortcut labels rendered.
-    expect(screen.getByText('Ctrl+Shift+P')).toBeTruthy()
-    expect(screen.getByText('F2')).toBeTruthy()
+    // Chords are rendered as individual keycaps (not one "Ctrl+Shift+P" string).
+    const paletteRow = screen.getByText('Command Palette').closest('.help__row') as HTMLElement
+    const caps = paletteRow.querySelectorAll('kbd')
+    expect([...caps].map((k) => k.textContent)).toEqual(['Ctrl', 'Shift', 'P'])
+  })
+
+  it('includes palette-only commands, tagged "palette" instead of a key', () => {
+    render(<KeyboardHelp open commands={CMDS} onClose={vi.fn()} />)
+    // A command with no shortcutHint is still shown (discoverability) …
+    const row = screen.getByText('Open Project…').closest('.help__row') as HTMLElement
+    expect(row).not.toBeNull()
+    // … with a "palette" tag and no keycap.
+    expect(row.querySelector('.help__via')?.textContent).toBe('palette')
+    expect(row.querySelectorAll('kbd')).toHaveLength(0)
+  })
+
+  it('appends the region-local key reference (explorer + terminal)', () => {
+    render(<KeyboardHelp open commands={CMDS} onClose={vi.fn()} />)
+    // From KEYBOARD_REFERENCE — not commands, but part of the cheat-sheet.
+    expect(screen.getByText('Explorer')).toBeTruthy()
+    expect(screen.getByText('Terminal')).toBeTruthy()
+    expect(screen.getByText('Expand folder / step in')).toBeTruthy()
+    expect(screen.getByText(/Shell keys pass straight through/)).toBeTruthy()
   })
 
   it('focuses the dialog on open and is labelled', () => {

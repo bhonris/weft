@@ -158,3 +158,41 @@ export const COMMANDS: readonly Command[] = [
 
 /** Categories in display order for the help overlay grouping. */
 export const CATEGORY_ORDER: readonly CommandCategory[] = ['General', 'Tabs', 'Focus', 'Viewer']
+
+/**
+ * Reference-only rows for the keyboard-help cheat-sheet that are NOT executable
+ * commands — region-local keys handled inside a component (explorer tree
+ * navigation, terminal passthrough/search). Kept here so the in-app overlay is a
+ * complete reference. `keys` is a display string (space-separated tokens; `/`
+ * marks alternatives).
+ */
+export interface ReferenceRow {
+  label: string
+  keys: string
+}
+export interface ReferenceSection {
+  title: string
+  note?: string
+  rows: readonly ReferenceRow[]
+}
+
+export const KEYBOARD_REFERENCE: readonly ReferenceSection[] = [
+  {
+    title: 'Explorer',
+    note: 'when focused',
+    rows: [
+      { label: 'Move up / down', keys: '↑ / ↓' },
+      { label: 'Expand folder / step in', keys: '→' },
+      { label: 'Collapse / jump to parent', keys: '←' },
+      { label: 'First / last item', keys: 'Home / End' },
+      { label: 'Open file / toggle folder', keys: 'Enter' }
+    ]
+  },
+  {
+    title: 'Terminal',
+    rows: [
+      { label: 'Shell keys pass straight through (Ctrl+C, arrows, F-keys…)', keys: 'always' },
+      { label: 'Search: next / previous / close', keys: 'Enter / ↑ / Esc' }
+    ]
+  }
+]

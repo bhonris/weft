@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Manual entry (outside /dmail loop) — complete in-app cheat-sheet — 2026-07-18
+
+**Phase**: post-cycle-6 manual enhancement (not a Steiner leap; loop stays at `el-psy-kongroo`)
+**Changed**: Turned the `Ctrl+?` keyboard-help overlay into the **complete** cheat-sheet (operator asked for an easy in-app reference). It now lists **every** command — palette-only actions included, tagged `palette` instead of a key — and appends region-local key references (`KEYBOARD_REFERENCE` in `core/commands/registry.ts`: Explorer ↑/↓/→/←/Home/End/Enter, Terminal passthrough + search) that aren't executable commands. Chords render as individual keycaps (`Ctrl`+`Shift`+`P`), with a "run any command by name" tip; theme-aware keycap/tag styling incl. a cyberpunk neon variant. Verified in the real app via the mouseless E2E (opens help on Ctrl+?, asserts commands + palette tags + explorer/terminal reference, screenshot at `screenshots/keyboard-help-overlay.png`). Also shipped a standalone neon cheat-sheet as a shareable artifact.
+**SERN interference**: none
+**Divergence meter**: 326 unit + 27 e2e, 0 fail; typecheck clean.
+**Next target**: unchanged — next `/dmail` cycle 7 candidates (remappable keybindings, unify the dispatch switches, split panes, LSP, macOS/Linux).
+
+---
+
 ## EL PSY KONGROO — Leap 48 — the worldline is sealed (Cycle 6) — 2026-07-18
 
 **Operator end goal — a fully mouseless, keyboard-only Weft — is complete.** Every part of the app is now reachable and operable from the keyboard alone, with the terminal-key passthrough invariant intact.
