@@ -4,9 +4,25 @@
 Weft is a cross-platform (Windows-first) open-source Electron desktop app: a VS Code-style shell wrapped around browser-style tabs of Claude Code CLI sessions — one tab per project, each running a live interactive `claude` session in its own pseudo-terminal (node-pty + xterm.js). It adds an integrated file explorer, a Monaco read-only + diff viewer, tear-off tabs into separate OS windows, workspace persistence, and — the defining differentiator — per-tab Claude session status (working / waiting / done / error) driven by Claude Code's own lifecycle hooks (not output scraping), plus app-owned OS notifications that focus the right tab when a session needs attention. Market research confirms the wedge: no existing tool combines hook-driven per-session status + tab-focusing notifications + Windows-first + a tear-off VS Code shell.
 
 ## Current status
-Phase: EXPANSION CYCLE 6 planned — Mouseless / keyboard-only navigation (Leap 34/50, Cycle 6). Operator-declared end goal: Weft fully operable by keyboard alone (command palette, help overlay, region focus, explorer tree nav, keyboard tab/viewer/status control, visible focus rings) while preserving terminal-key passthrough. **Out of scope this cycle:** macOS/Linux platform work; split panes/LSP. Spec: `documents/steiner-spec.md` → Expansion 6; design: `documents/keyboard-navigation.md`.
+Phase: **CYCLE 6 STABILISED — Mouseless / keyboard-only navigation shipped** (Leap 47/50, Cycle 6). Weft is now fully operable by keyboard alone: command palette (`Ctrl+Shift+P`), keyboard-help overlay (`Ctrl+?`), region focus (`Ctrl+``/`Ctrl+Shift+E`/`Ctrl+F6`), full WAI-ARIA explorer tree nav, keyboard tab reorder/rename(F2)/type, viewer View/Edit/Diff/Reveal/Close + app-level `Ctrl+S`, status controls via commands, and theme-aware visible focus rings — all while the terminal-key passthrough invariant holds (regression-tested). Backed by a single pure `keybinding-router` + pure `commands`/`focus`/`explorer` core modules. **Out of scope this cycle (as directed):** macOS/Linux platform work; split panes/LSP. Spec: `documents/steiner-spec.md` → Expansion 6; design: `documents/keyboard-navigation.md`.
+Divergence meter: **324 unit + 27 Playwright-Electron E2E (incl. a no-mouse keyboard-only journey), all pass** · 98.5% statements. Cycle-6 review (Future Okabe ×3) found one real bug — the `viewer.save` palette command had no handler (a duplicate case displaced it) — fixed in convergence with regression tests.
 Two manual (outside-loop) enhancements shipped since v0.2.0: whole-tab status coloring (`documents/completed/tab-state-colors.md`) and a selectable **cyberpunk** theme, now the default (`documents/completed/cyberpunk-theme.md`).
 Prior status: v0.2.0 END GOAL REACHED (Leap 33/40, Cycle 5).
+
+## Acceptance criteria — Cycle 6 (Mouseless / keyboard-only navigation)
+- [x] All app chords route through the single pure `keybinding-router`; protected PTY-passthrough set regression-tested (Ctrl+C/R/D/Z/L/A/E, arrows, function keys, Alt/Meta, plain keys).
+- [x] `Ctrl+Shift+F` terminal-search folded through the router (no out-of-band special case).
+- [x] Command palette (`Ctrl+Shift+P`): fuzzy filter, ↑/↓/Enter/Esc, accessible listbox, focus restore.
+- [x] Pure command registry as the single source (id-uniqueness + no-drift shortcut test).
+- [x] Keyboard help overlay (`Ctrl+?`), grouped, Esc closes.
+- [x] Region focus: cycle (`Ctrl+F6`/`Ctrl+Shift+F6`) + direct (`Ctrl+``, `Ctrl+Shift+E`); skips absent regions.
+- [x] Theme-aware `:focus-visible` rings everywhere (incl. cyberpunk), motion-safe.
+- [x] Explorer WAI-ARIA tree keyboard nav (pure `tree-nav` + roving tabindex; aria-level/selected/expanded).
+- [x] Keyboard tab management: reorder (`Ctrl+Shift+PageUp/PageDown`), rename (`F2`), shell-vs-claude via palette.
+- [x] Viewer View/Edit/Diff/Reveal/Close by keyboard + app-level `Ctrl+S`.
+- [x] Status-bar theme/resume via commands.
+- [x] Overlays trap focus + suspend passthrough; restore on close; ARIA-correct.
+- [x] Full mouseless Playwright-Electron E2E (no `.click()`); coverage ≥ 95%.
 Divergence meter: **229 unit + 24 Electron E2E, all pass** · ~98% statements
 Cycle 3 shipped OSS hygiene (LICENSE/CONTRIBUTING/CI) + electron-builder packaging — the packaged Weft.exe is E2E-verified. Cycle 4: scrollback cap, WebGL trial rejected on a11y/testability evidence, v0.1.0 stamped with CHANGELOG.
 Cycle 2 (Expansion 2) shipped all 11 ACs: full hardening sweep (buffer caps, UDS perms, 5MB viewer guard, quotepath, dead-code removal, Reveal button, store-based spawn-failure, E2E hygiene with WEFT_*-stripped launches + deterministic persistence polling, correlator path normalization) + two features (Shift+Click shell tabs, Ctrl+Shift+F in-terminal search) + multi-tab/rename/theme restart E2E. Every review item from cycle 1 is now closed — none carried.

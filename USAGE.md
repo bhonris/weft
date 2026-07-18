@@ -14,9 +14,9 @@ pnpm install          # installs deps; downloads the Electron binary
 pnpm rebuild:native   # rebuilds node-pty for Electron's ABI (run once after install)
 pnpm dev              # launch the app in development (electron-vite)
 pnpm build            # production build of main + preload + renderer
-pnpm test             # unit/integration suite (vitest) — 229 tests
+pnpm test             # unit/integration suite (vitest) — 324 tests
 pnpm test:cov         # with the 95% statement coverage gate (currently ~98%)
-pnpm test:e2e         # builds, then drives the REAL Electron app (24 Playwright tests)
+pnpm test:e2e         # builds, then drives the REAL Electron app (27 Playwright tests)
 ```
 
 > **Prerequisite:** a working `claude` CLI on your PATH (Windows 10+ for ConPTY).
@@ -136,6 +136,59 @@ beneath is untouched.
 as you type). **Enter**/↓ next match, ↑ previous, **Esc** closes and puts focus
 back in the terminal.
 
+### Keyboard navigation (mouseless)
+
+Weft can be driven entirely from the keyboard — you never need the mouse.
+
+**Start here — you don't have to memorize anything:**
+
+- **`Ctrl+Shift+P`** — the **command palette**: a little search box listing every
+  action Weft can do. Start typing to filter; **↑/↓** move, **Enter** runs,
+  **Esc** cancels (and puts your cursor back where it was). Each row shows its
+  shortcut, so the palette also teaches you the keys.
+- **`Ctrl+Shift+/`** (that's **`Ctrl+?`**) — a printable-style **cheat-sheet** of
+  every shortcut, grouped by category. **Esc** closes.
+
+If you only remember one key, make it `Ctrl+Shift+P` — you can reach everything
+below from there by name.
+
+**Open a project without the mouse:** press `Ctrl+Shift+P`, type **"Open
+Project"**, and press **Enter** — the folder picker that appears is your
+operating system's own dialog, which you navigate with the arrow keys and Enter.
+Prefer a plain shell instead of a Claude session? Pick **"New Shell Tab"** the
+same way.
+
+**Moving "focus" between regions.** *Focus* just means the part of the window
+that's currently listening to your keys (it's highlighted with a ring that
+adapts to your theme). These move it:
+
+| Shortcut | Action |
+|---|---|
+| `` Ctrl+` `` (the backtick key, above **Tab**) | Put the cursor in the terminal |
+| `Ctrl+Shift+E` | Jump to the file explorer |
+| `Ctrl+F6` / `Ctrl+Shift+F6` | Hop to the next / previous region (tabs → explorer → terminal → viewer → status bar) |
+
+So to leave the terminal and get back to the file list, press `Ctrl+Shift+E`
+(or `Ctrl+F6` to cycle around).
+
+**File explorer** (once focused): **↑/↓** move, **→** expand a folder (or step
+into it), **←** collapse (or jump to the parent), **Home/End** first/last,
+**Enter** opens a file in the viewer or toggles a folder.
+
+**Tabs:** `Ctrl+T` new, `Ctrl+W` close, `Ctrl+Tab` / `Ctrl+Shift+Tab` cycle,
+`Ctrl+1`…`Ctrl+9` jump to tab N, `Ctrl+Shift+PageUp` / `PageDown` move the active
+tab left / right, **`F2`** rename the focused tab (Enter commits, Esc cancels —
+double-clicking the tab title does the same thing).
+
+**Viewer:** switch **View / Edit / Diff vs HEAD**, **Reveal**, or **Close** from
+the palette; **`Ctrl+S`** saves whenever the viewer is focused.
+
+**Search the terminal:** `Ctrl+Shift+F` (see *Find in terminal* below).
+
+Terminal keys are never stolen: `Ctrl+C`, `Ctrl+R`, arrows, function keys, and
+the like always reach your shell/Claude session. While the palette or help
+overlay is open it owns the keyboard, and closing it restores your focus.
+
 ### Workspace persistence
 
 Tabs (title, cwd, command, order), the theme, and the window geometry are saved
@@ -161,8 +214,10 @@ project's git branch (⎇).
 
 ### Themes
 
-The status-bar toggle cycles **system → light → dark**. `system` follows the OS
-preference live; the choice persists across restarts.
+The status-bar toggle cycles **system → light → dark → cyberpunk**. `system`
+follows the OS preference live; **cyberpunk** (a neon CRT look) is the default;
+the choice persists across restarts. You can also run **Cycle Theme** from the
+command palette.
 
 ### Error handling
 

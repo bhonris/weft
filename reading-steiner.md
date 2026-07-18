@@ -1,8 +1,8 @@
-phase: worldline-checkpoint
-leap_count: 46
-expansion_cycle: 6
+phase: worldline-expansion
+leap_count: 47
+expansion_cycle: 7
 session_id: 2026-07-18T10:30:00Z
-prev_head: 295752cf75f48a560049a7023e68b7136ef5e817
+prev_head: 4b142ce8b493dafcbde80d1d31ea1a40c1de57e5
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md. CYCLE 6 END GOAL (operator): fully mouseless, keyboard-only navigation across all of Weft; macOS/Linux platform work OUT OF SCOPE this cycle."
 project_name: "weft"
 project_type: web
@@ -11,11 +11,11 @@ test_cmd: pnpm test
 dev_server_port: 5173
 coverage_pct: 98
 divergence_readings: []
-current_focus: "Phase 6 checkpoint (cycle 6). Add a Keyboard Navigation section to USAGE.md (command palette Ctrl+Shift+P, help Ctrl+Shift+/, region focus Ctrl+`/Ctrl+Shift+E/Ctrl+F6, explorer arrows, tab reorder/rename F2, viewer modes + Ctrl+S, full keymap table); refresh README + USAGE test counts (324 unit + 27 e2e) and DOSSIER (Cycle 6 status + acceptance snapshot). Run final pnpm test:cov + pnpm test:e2e to confirm green. Spawn Mayuri (non-programmer) review of USAGE/DOSSIER for the keyboard feature. Append cycle-6 lessons_learned. Then Phase 7: with budget 46/50 (>0.9), expect EL PSY KONGROO."
+current_focus: "Cycle 6 (mouseless keyboard navigation) STABILISED and documented; 324 unit + 27 e2e green, coverage 98.48/96.47/97.15. Phase 7 budget check: leap 47/50 (0.94 ≥ 0.9) → graceful EL PSY KONGROO. If /dmail is re-invoked for a cycle 7, top candidates: user-customizable/remappable keybindings; unify the two dispatch switches (KeyAction vs CommandId) to prevent drift; palette-triggered terminal search + rename (needs signal stores); split panes; LSP; macOS/Linux (previously deferred)."
 blocked_on: null
-last_test_run: "324 unit, 0 fail; typecheck clean (e2e last green at 27 on Leap 44)"
-closed_worldlines: [worldline-expansion, time-leap-development, divergence-meter-reading, christinas-analysis, worldline-convergence]
-next_action: "Update USAGE.md (keyboard section) + README/DOSSIER; run test:cov + test:e2e; Mayuri review; append lessons; commit steiner: worldline-6-stable. Then Phase 7 expansion/EL PSY KONGROO."
+last_test_run: "324 unit + 27 e2e, 0 fail; coverage 98.48/96.47/97.15; typecheck clean"
+closed_worldlines: []
+next_action: "Phase 7 seal: write phase el-psy-kongroo, commit steiner: el-psy-kongroo. Re-invoke /dmail in weft/ to open cycle 7 with a fresh budget."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:
@@ -57,7 +57,7 @@ max_iterations: 50
 push_to_github: false
 bypass_playwright: false
 sern_no_progress_streak: 0
-lessons_learned: ["cycle 1: node-pty Electron rebuild blocked twice on Windows — (a) NoDefaultCurrentDirectoryInExePath=1 breaks winpty GetCommitHash.bat (now unset inside scripts/rebuild-native.mjs), (b) SpectreMitigation flag required Spectre VS libs (removed via committed pnpm patch node-pty@1.1.0). Rebuild reproducible via pnpm rebuild:native.", "cycle 1: api-level E2E can mask product-path bugs — always E2E the actual UI path for core guarantees. Guard every main->renderer send (destroyed webContents throw). ConPTY children pin process exit — hard-exit fallback after graceful shutdown. Pure-core + injected fakes kept 200+ tests fast; adversarial 3-reviewer pass found a critical bug 98% coverage missed.", "cycle 4: WebGL renderer removes terminal text from the DOM, killing a11y + all text-based E2E; DOM renderer only. Packaged-exe E2E catches asar/native packaging mistakes nothing else sees.", "cycle 6 (planning): keyboard chords MUST route through the single pure keybinding-router so the App listener and xterm attachCustomKeyEventHandler never disagree; the out-of-band Ctrl+Shift+F terminal-search special-case is the anti-pattern to fold back in. Any new chord must be regression-tested against the protected PTY-passthrough set."]
+lessons_learned: ["cycle 6: mouseless keyboard nav — a SINGLE pure keybinding-router as the one source for both the App window listener and xterm's attachCustomKeyEventHandler kept the PTY-passthrough invariant consistent (and regression-tested). The one real bug (viewer.save palette no-op) came from TWO parallel dispatch switches (KeyAction vs CommandId) drifting — a copy-pasted duplicate case displaced a handler; adversarial 3-reviewer pass caught it, 98% unit coverage did not. Region-local keys (F2 rename, explorer arrows, viewer Ctrl+S) are best handled by their components, NOT the global router, so they only act in-context and otherwise reach the PTY. E2E that presses a chord must wait for the shell to mount (domcontentloaded precedes React's listener attach) — a startup race that passed by luck once. Mayuri (non-programmer) review surfaced doc gaps devs assume (define 'focus', how to open a folder by keyboard).", "cycle 1: node-pty Electron rebuild blocked twice on Windows — (a) NoDefaultCurrentDirectoryInExePath=1 breaks winpty GetCommitHash.bat (now unset inside scripts/rebuild-native.mjs), (b) SpectreMitigation flag required Spectre VS libs (removed via committed pnpm patch node-pty@1.1.0). Rebuild reproducible via pnpm rebuild:native.", "cycle 1: api-level E2E can mask product-path bugs — always E2E the actual UI path for core guarantees. Guard every main->renderer send (destroyed webContents throw). ConPTY children pin process exit — hard-exit fallback after graceful shutdown. Pure-core + injected fakes kept 200+ tests fast; adversarial 3-reviewer pass found a critical bug 98% coverage missed.", "cycle 4: WebGL renderer removes terminal text from the DOM, killing a11y + all text-based E2E; DOM renderer only. Packaged-exe E2E catches asar/native packaging mistakes nothing else sees.", "cycle 6 (planning): keyboard chords MUST route through the single pure keybinding-router so the App listener and xterm attachCustomKeyEventHandler never disagree; the out-of-band Ctrl+Shift+F terminal-search special-case is the anti-pattern to fold back in. Any new chord must be regression-tested against the protected PTY-passthrough set."]
 
 # ── Expansion Cycle 6 (Leap 34+) — Mouseless / keyboard-only navigation ──
 # Operator END GOAL: keyboard-only operation of all of Weft. OUT OF SCOPE: macOS/Linux, split panes/LSP.

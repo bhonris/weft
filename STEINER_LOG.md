@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Worldline 6 Stabilised — Leap 47 — steiner: worldline-6-stable — 2026-07-18
+
+**Phase**: worldline-checkpoint → worldline-expansion
+**Changed**: Cycle-6 checkpoint. Final meter: **324 unit + 27 Playwright-Electron E2E, 0 fail; coverage 98.48/96.47/97.15** (gate 95/90). Docs: USAGE gained a full **Keyboard navigation (mouseless)** section; README + DOSSIER refreshed (counts + Cycle-6 acceptance snapshot, all 13 boxes checked). **Mayuri (non-programmer) review** verdict: DOCUMENTATION gap, not a code gap — she could go mouseless but the docs assumed knowledge; fixed immediately: added a "start here", a plain-words definition of *focus*/*region*, how to **open a project by keyboard** (palette → Open Project → the OS folder dialog is keyboard-navigable), the backtick-key hint, terminal-search cross-ref, and reconciled F2-vs-double-click rename. Fixed a Playwright startup race in the mouseless spec (wait for the shell to mount before the first chord — `domcontentloaded` precedes React's listener attach); verified stable across repeats. All 25 v1 + Expansion 2/3/5/6 criteria met.
+**SERN interference**: the E2E startup race (fixed with a shell-ready wait) — lesson recorded.
+**Divergence meter**: 324 unit + 27 e2e, 0 fail; 98.48% stmts.
+**Next target**: Phase 7 — Okabe budget check (leap 47/50 ≥ 0.9 → graceful EL PSY KONGROO).
+
+---
+
 ## Leap 46 — steiner: fix(convergence) — all must-fix resolved — 2026-07-18
 
 **Phase**: worldline-convergence

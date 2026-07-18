@@ -26,6 +26,9 @@ test.beforeEach(async () => {
   })
   page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
+  // Wait until the shell has mounted (and its window keydown listener is
+  // attached) before sending any chord — domcontentloaded can precede React.
+  await expect(page.getByTestId('status-bar')).toBeVisible()
 })
 
 test.afterEach(async () => {

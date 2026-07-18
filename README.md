@@ -2,7 +2,7 @@
 
 **A VS Code-style desktop workspace for running many Claude Code sessions at once — one browser-style tab per project, with live "which session needs me?" status driven by Claude Code's own hooks.**
 
-Weft is an open-source Electron app (Windows-first, cross-platform-clean). Each tab hosts a real, interactive `claude` CLI session in its own ConPTY pseudo-terminal. Around the terminals: a live file explorer, a Monaco read-only + git-diff viewer, tear-off tabs into separate OS windows, workspace persistence, and app-owned OS notifications that focus the exact tab that needs you.
+Weft is an open-source Electron app (Windows-first, cross-platform-clean). Each tab hosts a real, interactive `claude` CLI session in its own ConPTY pseudo-terminal. Around the terminals: a live file explorer, a Monaco read-only + git-diff viewer, tear-off tabs into separate OS windows, workspace persistence, app-owned OS notifications that focus the exact tab that needs you, and **fully mouseless keyboard navigation** — a command palette (`Ctrl+Shift+P`), a shortcuts overlay (`Ctrl+?`), and keyboard focus across every region — while your terminal keys always reach the shell.
 
 **The differentiator:** per-tab session status (● working · ‖ waiting-on-you · ✓ done · ✕ error) comes from **Claude Code lifecycle hooks over a local named pipe** — never from scraping terminal output. Your personal `~/.claude/settings.json` is never touched; hooks are injected per-session via `--settings` (which merges, session-only). No TCP ports, no telemetry.
 
@@ -29,8 +29,8 @@ Then click **+**, pick a project folder, and a `claude` session opens in that ta
 
 ## Test coverage
 
-**229 unit/integration tests + 24 Playwright-Electron E2E tests** · 97.9% statement / 96.3% branch coverage.
-The E2E suite drives the real built app: PTY round-trips, hook-payloads-over-the-pipe → badge flips, renderer-reload session survival (same PID), tear-off/re-dock, restart persistence, and a live-relay integration test that executes the actual hook forwarder against a real named pipe.
+**324 unit/integration tests + 27 Playwright-Electron E2E tests** · 98.5% statement / 96.5% branch coverage.
+The E2E suite drives the real built app: PTY round-trips, hook-payloads-over-the-pipe → badge flips, renderer-reload session survival (same PID), tear-off/re-dock, restart persistence, a live-relay integration test that executes the actual hook forwarder against a real named pipe, and a **fully mouseless keyboard-only journey** (no mouse events at all).
 
 ```bash
 pnpm test        # unit + integration (vitest)
