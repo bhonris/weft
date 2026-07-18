@@ -465,3 +465,82 @@ serve navigation. Budget extended to 50 leaps. Full design:
 - [x] The status-bar **theme cycle** and **resume toggle** are triggerable from the keyboard (command-palette entries and/or chords), not only by tabbing to the buttons.
 - [x] While the command palette, help overlay, or an inline text input is open, **terminal passthrough is suspended** (keys operate the overlay, Esc closes) and is restored on close; modal overlays **trap focus** (Tab cycles within) and restore focus on close. Overlays expose correct roles/aria and are screen-reader operable.
 - [x] A **Playwright-Electron E2E completes a full mouseless journey using keyboard input only (no `.click()`)**: open a project via the palette → focus the explorer → arrow-navigate and Enter to open a file in the viewer → focus and type into the terminal → switch tabs → cycle the theme — asserting each outcome; plus assertions that a focus ring is visible and that terminal-bound keys still reach the PTY. Overall statement coverage remains ≥ 95%.
+
+---
+
+## Manual addendum (post-v0.2.0, 2026-07-18) — clear `waiting` after a permission prompt
+
+Done **manually, outside the `/dmail` loop** (parked at `el-psy-kongroo`).
+Recorded here so the spec stays complete; intentionally **not** numbered
+"Expansion N" so it doesn't collide with the next autonomous cycle.
+
+**Bug:** A tab correctly turned `waiting` (amber) when Claude asked for input,
+but stayed amber after the user answered a **permission prompt**. Approving a
+tool fires no `UserPromptSubmit` — the only event that mapped back to `working`
+— so nothing reached Weft after approval and the tab held `waiting` until the
+next `Stop` (→ `done`). It never showed the "running again" color.
+
+**Fix:** Weft now also reports the `PostToolUse` hook and maps it to `working`.
+`PostToolUse` fires when the approved tool executes — i.e. the moment the agent
+resumes — so it clears `waiting` → `working`. The status server already dedups
+against the prior status, so the extra per-tool events collapse to no-ops during
+normal work. (Refines AC "A `UserPromptSubmit` hook payload transitions … to
+`working`" above.)
+
+### New acceptance criteria
+
+- [x] The `--settings` inline JSON registers a `PostToolUse` hook in addition to `UserPromptSubmit`, `Stop`, `StopFailure`, and `Notification` (the user's `~/.claude/settings.json` bytes stay unchanged).
+- [x] A `PostToolUse` hook payload transitions the mapped tab's badge to `working`; a tab in `waiting` after a `permission_prompt` returns to `working` once the approved tool runs, without needing a new `UserPromptSubmit`.
+- [x] Regression test in `status-mapper.test.ts` (`PostToolUse` → `working`); `hook-settings` tests assert the full reported-event set; typecheck clean and the unit suite green (aside from the documented `hook-forwarder.integration.test.ts` env-leak that only fails when the suite runs inside a live Weft/Claude session).
+
+---
+
+## Manual addendum (post-v0.2.0, 2026-07-18) — notifications on/off switch
+
+Done **manually, outside the `/dmail` loop**. Full design:
+`documents/completed/notifications-toggle.md`. A persisted global switch for OS
+toasts, enforced centrally in main (`NotificationService.isEnabled`), surfaced
+as a status-bar button + `general.toggleNotifications` command. Workspace schema
+bumped **v2 → v3** (`notificationsEnabled`, default `true`).
+
+### New acceptance criteria
+
+- [x] `WorkspaceState` gains `notificationsEnabled` (default `true`), persisted and round-tripped; a v2 blob migrates to v3 via `v2ToV3`, and the full v0→v3 chain yields a valid current-shape state.
+- [x] With the flag off, `NotificationService` raises no toast for any `waiting`/`done` change (suppressed before the cooldown check, so muting never consumes a cooldown slot); with it on, behavior is unchanged. A toggle takes effect on the next event without a restart.
+- [x] A status-bar toggle (`🔔 notify on` / `🔕 notify off`, `aria-label`d) and a `general.toggleNotifications` command flip and persist the flag; the in-app tab color/badge is unaffected when toasts are muted.
+- [x] Covered by service/migration/sync/store unit tests and `App.test.tsx` (palette + status-bar toggle); typecheck clean, 27/27 E2E green.
+
+---
+
+## Expansion 7 — Remappable keybindings + dispatch unification (operator-prepped plan)
+
+**Operator END GOAL (cycle 7):** make Weft's keyboard shortcuts **user-remappable**,
+and in doing so **eliminate the dual-dispatch drift** that caused Cycle 6's one
+real bug. Fold in the small keyboard-nav follow-ups Cycle 6 deferred near-budget.
+This section is the **operator plan for the next autonomous `/dmail` cycle**; the
+loop should execute and check these off (append refinements under this heading).
+
+**In scope**
+- A single source of truth mapping **chord → command**, consumed by both the
+  window key listener and xterm's `attachCustomKeyEventHandler`, replacing the
+  two parallel `KeyAction`/`CommandId` switches.
+- A persisted, user-editable keymap with reset-to-defaults, a keyboard-operable
+  editor UI, conflict detection, and an unbreakable PTY-passthrough guard.
+- The three deferred palette no-ops + one Explorer dedup.
+
+**Out of scope (unchanged from prior cycles)**
+- macOS/Linux platform work; split panes; LSP.
+- Multi-key chord *sequences* (e.g. `Ctrl+K Ctrl+S`) unless they fall out for free.
+
+### New acceptance criteria
+
+- [ ] **Dispatch unified:** command chords and palette/command invocations resolve through one pure mapping (chord → `CommandId` → single handler). A regression test proves every chord-reachable command and its palette entry invoke the **same** handler (the drift that displaced `viewer.save` in Cycle 6 is structurally impossible). The old parallel `KeyAction`-switch / `CommandId`-switch duplication is removed.
+- [ ] **User keymap:** a keymap overriding the built-in defaults is editable at runtime and **persisted** (round-trips through save/load; schema-migrated if stored in `WorkspaceState`). A **Reset to defaults** action restores the shipped bindings.
+- [ ] **Protected passthrough is unbreakable:** the reserved terminal set (`Ctrl+C/R/D/Z/L/A/E`, arrows, function keys, Alt/Meta combos, plain keys) can never be bound to an app command — an attempt is rejected with a clear reason — and a regression test asserts these still reach the PTY after arbitrary remaps.
+- [ ] **Conflict detection:** binding a chord already in use surfaces the conflict and applies a defined resolution rule (reject or reassign-with-warning); covered by unit tests.
+- [ ] **Keybindings editor UI:** an accessible, fully keyboard-operable editor (opened via a command; palette-reachable) lists each command with its current chord, lets the user capture a new chord and reset one/all, traps focus while open, and restores focus on close (ARIA-correct, motion-safe, themed incl. cyberpunk).
+- [ ] **`terminal-search-palette-noop` fixed:** the "Search in Terminal" palette command actually opens the in-terminal search bar (via a `TerminalPane` open-search signal, mirroring the viewer's save-tick pattern), not just focusing the terminal.
+- [ ] **`tab-rename-palette-noop` fixed:** the "Rename Tab" palette command triggers inline rename of the active tab (active-tab rename signal); `F2` on the focused tab keeps working.
+- [ ] **`expand-collapse-dup` folded:** the Explorer's `expandPath`/`collapsePath` become one pure toggle helper with unchanged behavior and retained coverage.
+- [ ] **Purity + coverage:** keymap resolution, conflict checks, and the protected-set guard live in pure `core/` with injected fakes; overall statement coverage stays ≥ 95% (branches ≥ 90%).
+- [ ] **E2E remap journey (no `.click()` where avoidable):** open the editor, rebind a command to a new chord, invoke it via that chord and observe the effect, reset to defaults, and confirm a protected chord still reaches the PTY. The custom keymap survives an app restart.
