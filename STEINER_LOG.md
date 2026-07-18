@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 46 — steiner: fix(convergence) — all must-fix resolved — 2026-07-18
+
+**Phase**: worldline-convergence
+**Changed**: Fixed the review's must-fix. **viewer-save-noop + duplicate-keyboardhelp-case**: replaced the dead duplicate `case 'general.keyboardHelp'` in `runCommand` with the missing `case 'viewer.save': requestSave()` — "Save File" from the palette now saves (data-loss bug gone). Cleanups: `focusEl` returns void; dropped the unused `'Explorer'` entry from `CATEGORY_ORDER`. **Added the cycle-6 regression tests** the reviewers asked for: viewer.save via palette + app-level Ctrl+S (with negative Ctrl+Alt/Meta+S), overlay-stands-down (Ctrl+T ignored while palette open), passthrough neighbors (plain Ctrl+F/P/N/B/G/H), a real fuzzy-stability test (distinguishable equal-score items) + separator-bonus + query-longer-than-text, and Explorer Home/End + ArrowLeft-to-parent, and live region-cycle skipping absent regions (explorer→status with no tab/viewer). Larger nice-to-haves (unify the two dispatch switches, palette-triggered terminal search / rename, expand/collapse dedup) deferred near-budget.
+**SERN interference**: none
+**Divergence meter**: 324 unit pass (was 316), 0 fail; typecheck clean. All Expansion 6 acceptance criteria still met.
+**Next target**: Phase 6 checkpoint — USAGE keyboard section + README/DOSSIER refresh + Mayuri review; final coverage + E2E; then Phase 7 (budget 46/50 → EL PSY KONGROO likely).
+
+---
+
 ## Leap 45 — steiner: christina-review — 3 must-fix, 2 nice-to-have — 2026-07-18
 
 **Phase**: christinas-analysis (Future Okabe ×3, parallel: simplicity / correctness+security / test-quality)

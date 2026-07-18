@@ -74,7 +74,9 @@ describe('routeKey', () => {
   it('passes terminal-bound Ctrl letter/digit keys through', () => {
     // Ctrl+C interrupt, Ctrl+R reverse-search, Ctrl+D EOF, Ctrl+Z suspend,
     // Ctrl+L clear, Ctrl+A/E line start/end, Ctrl+S/Q flow control, Ctrl+0.
-    for (const key of ['c', 'r', 'd', 'z', 'l', 'a', 'e', 's', 'q', 'k', 'u', '0']) {
+    // Plain Ctrl+F/Ctrl+P/Ctrl+N/Ctrl+B (readline motion) must NOT be swallowed
+    // just because their SHIFT variants are app chords (search/palette).
+    for (const key of ['c', 'r', 'd', 'z', 'l', 'a', 'e', 's', 'q', 'k', 'u', 'f', 'p', 'n', 'b', 'g', 'h', '0']) {
       expect(routeKey(k({ ctrlKey: true, key }))).toEqual({ kind: 'passthrough' })
     }
   })

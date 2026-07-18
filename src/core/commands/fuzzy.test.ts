@@ -54,9 +54,24 @@ describe('fuzzyFilter', () => {
   })
 
   it('is stable for equal scores (original order preserved)', () => {
-    // Two identical-scoring targets keep input order.
-    const dup = ['alpha match', 'alpha match']
-    const out = fuzzyFilter('alpha', dup, (s) => s)
-    expect(out).toHaveLength(2)
+    // Two DISTINGUISHABLE targets that score equally must keep input order.
+    const items = ['a x', 'b x']
+    const out = fuzzyFilter('x', items, (s) => s).map((r) => r.item)
+    expect(out).toEqual(['a x', 'b x'])
+    // Reversed input → reversed output (proves it's input order, not alphabetical).
+    const rev = fuzzyFilter('x', ['b x', 'a x'], (s) => s).map((r) => r.item)
+    expect(rev).toEqual(['b x', 'a x'])
+  })
+
+  it('scores word-boundary matches after non-space separators too', () => {
+    // A regression dropping '.' / '/' from SEPARATORS would lose this bonus.
+    expect(fuzzyMatch('tab', 'x.Tab')).not.toBeNull()
+    const boundary = fuzzyMatch('t', 'x.t')!
+    const midword = fuzzyMatch('t', 'xt')!
+    expect(boundary.score).toBeGreaterThan(midword.score)
+  })
+
+  it('returns null when the query is longer than the text', () => {
+    expect(fuzzyMatch('abcd', 'abc')).toBeNull()
   })
 })

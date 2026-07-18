@@ -152,6 +152,41 @@ describe('Explorer', () => {
     expect(screen.getByText('src').closest('li')?.getAttribute('aria-expanded')).toBe('false')
   })
 
+  it('Home/End jump to the first/last visible node', async () => {
+    listDir.mockResolvedValueOnce([
+      entry('src', 'dir'),
+      entry('README.md', 'file'),
+      entry('LICENSE', 'file')
+    ])
+    render(<Explorer root="/p" />)
+    await waitFor(() => screen.getByText('LICENSE'))
+    const tree = screen.getByTestId('explorer-tree')
+    const liOf = (t: string): HTMLElement | null => screen.getByText(t).closest('li')
+
+    fireEvent.keyDown(tree, { key: 'End' })
+    expect(liOf('LICENSE')?.getAttribute('aria-selected')).toBe('true')
+    fireEvent.keyDown(tree, { key: 'Home' })
+    expect(liOf('src')?.getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('ArrowLeft on a child moves selection to its parent (not collapse)', async () => {
+    listDir.mockResolvedValueOnce([entry('src', 'dir')])
+    listDir.mockResolvedValue([entry('index.ts', 'file', '/p/src')])
+    render(<Explorer root="/p" />)
+    await waitFor(() => screen.getByText('src'))
+    const tree = screen.getByTestId('explorer-tree')
+
+    fireEvent.keyDown(tree, { key: 'ArrowRight' }) // expand src
+    await waitFor(() => screen.getByText('index.ts'))
+    fireEvent.keyDown(tree, { key: 'ArrowDown' }) // select index.ts (child)
+    expect(screen.getByText('index.ts').closest('li')?.getAttribute('aria-selected')).toBe('true')
+
+    fireEvent.keyDown(tree, { key: 'ArrowLeft' }) // → parent, dir stays expanded
+    expect(screen.getByText('src').closest('li')?.getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByText('src').closest('li')?.getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getByText('index.ts')).toBeDefined() // still visible (not collapsed)
+  })
+
   it('Enter opens the selected file in the viewer', async () => {
     listDir.mockResolvedValueOnce([entry('a.dir', 'dir'), entry('notes.txt', 'file')])
     render(<Explorer root="/p" />)

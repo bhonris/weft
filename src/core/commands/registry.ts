@@ -157,10 +157,4 @@ export const COMMANDS: readonly Command[] = [
 ]
 
 /** Categories in display order for the help overlay grouping. */
-export const CATEGORY_ORDER: readonly CommandCategory[] = [
-  'General',
-  'Tabs',
-  'Focus',
-  'Explorer',
-  'Viewer'
-]
+export const CATEGORY_ORDER: readonly CommandCategory[] = ['General', 'Tabs', 'Focus', 'Viewer']

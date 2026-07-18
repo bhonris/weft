@@ -40,6 +40,7 @@ beforeEach(() => {
       saveWorkspace: vi.fn(async () => {}),
       listSessions: vi.fn(async () => []),
       createSession: vi.fn(),
+      openProject: vi.fn(async () => null),
       getGitBranch: vi.fn(async () => null),
       onSessionStatus: vi.fn((cb: (e: StatusEvent) => void) => {
         statusCb = cb
@@ -185,6 +186,18 @@ describe('App region focus (keyboard-only navigation)', () => {
     dispatch({ key: 'F6', ctrlKey: true })
     expect(document.activeElement).toBe(screen.getByTestId('terminal-region'))
   })
+
+  it('Ctrl+F6 skips absent regions (no tab, no viewer → explorer to status)', async () => {
+    useViewerStore.setState({ file: null })
+    render(<App />)
+    // No tabs (terminal absent) and no viewer file → present = [tabs, explorer, status].
+    dispatch({ key: 'E', ctrlKey: true, shiftKey: true })
+    expect(document.activeElement).toBe(screen.getByTestId('explorer'))
+    dispatch({ key: 'F6', ctrlKey: true })
+    // Terminal and viewer are absent, so the next region is the status bar.
+    const statusBtn = screen.getByTestId('status-bar').querySelector('button')
+    expect(document.activeElement).toBe(statusBtn)
+  })
 })
 
 describe('App keyboard tab management', () => {
@@ -238,6 +251,45 @@ describe('App viewer commands', () => {
     fireEvent.change(await screen.findByRole('combobox'), { target: { value: 'diff vs head' } })
     fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' })
     await waitFor(() => expect(useViewerStore.getState().mode).toBe('diff'))
+  })
+
+  it('runs viewer.save from the palette (requests a save)', async () => {
+    useViewerStore.setState({ file: null, mode: 'view', editing: false, saveTick: 0 })
+    render(<App />)
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'P', ctrlKey: true, shiftKey: true }))
+    })
+    fireEvent.change(await screen.findByRole('combobox'), { target: { value: 'save file' } })
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' })
+    await waitFor(() => expect(useViewerStore.getState().saveTick).toBe(1))
+  })
+
+  it('app-level Ctrl+S in the viewer region requests a save; Ctrl+Alt+S does not', async () => {
+    useViewerStore.setState({ file: null, mode: 'view', editing: false, saveTick: 0 })
+    render(<App />)
+    const region = screen.getByTestId('viewer-region')
+    fireEvent.keyDown(region, { key: 's', ctrlKey: true })
+    expect(useViewerStore.getState().saveTick).toBe(1)
+    // Modified chords must not hijack save.
+    fireEvent.keyDown(region, { key: 's', ctrlKey: true, altKey: true })
+    fireEvent.keyDown(region, { key: 's', ctrlKey: true, metaKey: true })
+    expect(useViewerStore.getState().saveTick).toBe(1)
+  })
+})
+
+describe('App overlay key handling', () => {
+  it('stands down while the palette is open (Ctrl+T does not open a project)', async () => {
+    render(<App />)
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'P', ctrlKey: true, shiftKey: true }))
+    })
+    await screen.findByTestId('command-palette')
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 't', ctrlKey: true }))
+    })
+    // The palette owns the keyboard: the global new-tab chord did not fire.
+    expect(window.api.openProject).not.toHaveBeenCalled()
+    expect(screen.getByTestId('command-palette')).toBeTruthy()
   })
 })
 

@@ -198,12 +198,8 @@ export function App(): React.ReactElement {
   const statusRef = useRef<HTMLElement>(null)
   const activeRegionRef = useRef<RegionId | null>(null)
 
-  const focusEl = (el: Element | null | undefined): boolean => {
-    if (el instanceof HTMLElement) {
-      el.focus()
-      return true
-    }
-    return false
+  const focusEl = (el: Element | null | undefined): void => {
+    if (el instanceof HTMLElement) el.focus()
   }
 
   const focusRegion = (id: RegionId): void => {
@@ -293,8 +289,8 @@ export function App(): React.ReactElement {
       case 'general.toggleResume':
         s.setResumeEnabled(!s.resumeEnabled)
         break
-      case 'general.keyboardHelp':
-        setOverlay('help')
+      case 'viewer.save':
+        useViewerStore.getState().requestSave()
         break
       case 'focus.terminal':
         focusRegion('terminal')
@@ -527,6 +523,7 @@ export function App(): React.ReactElement {
             </div>
             <div
               className="viewer-region"
+              data-testid="viewer-region"
               ref={viewerRef}
               onKeyDown={(e) => {
                 // App-level Ctrl+S: save whenever focus is anywhere in the
