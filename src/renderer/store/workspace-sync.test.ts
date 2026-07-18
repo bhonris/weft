@@ -35,7 +35,7 @@ describe('buildWorkspaceState', () => {
       }
     ])
     expect(ws.tabOrder).toEqual(['a', 'b'])
-    expect(ws.theme).toBe('system')
+    expect(ws.theme).toBe('cyberpunk')
     expect(ws.resumeEnabled).toBe(false)
   })
 

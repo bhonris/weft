@@ -12,7 +12,7 @@ export interface Tab {
   status: SessionStatus
 }
 
-export type ThemeChoice = 'system' | 'light' | 'dark'
+export type ThemeChoice = 'system' | 'light' | 'dark' | 'cyberpunk'
 
 export interface SpawnFailure {
   message: string
@@ -53,7 +53,7 @@ export interface SessionState {
 export const useSessionStore = create<SessionState>((set) => ({
   tabs: [],
   activeTabId: null,
-  theme: 'system',
+  theme: 'cyberpunk',
   setTheme: (theme) => set({ theme }),
   spawnFailure: null,
   setSpawnFailure: (spawnFailure) => set({ spawnFailure }),

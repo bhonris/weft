@@ -29,7 +29,7 @@ export interface WorkspaceState {
   /** tabId order in the strip. */
   tabOrder: string[]
   explorerRoots: string[]
-  theme: 'system' | 'light' | 'dark'
+  theme: 'system' | 'light' | 'dark' | 'cyberpunk'
   /** v2: restored claude tabs relaunch with `--resume <sessionId>`. */
   resumeEnabled: boolean
   windowBounds?: { x: number; y: number; width: number; height: number }

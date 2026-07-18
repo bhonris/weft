@@ -352,12 +352,27 @@ export function App(): React.ReactElement {
             type="button"
             className="status-bar__theme"
             aria-label={`theme: ${theme}`}
-            title="Cycle theme (system → light → dark)"
+            title="Cycle theme (system → light → dark → cyberpunk)"
             onClick={() =>
-              setTheme(theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system')
+              setTheme(
+                theme === 'system'
+                  ? 'light'
+                  : theme === 'light'
+                    ? 'dark'
+                    : theme === 'dark'
+                      ? 'cyberpunk'
+                      : 'system'
+              )
             }
           >
-            {theme === 'system' ? '◐' : theme === 'light' ? '☀' : '☾'} {theme}
+            {theme === 'system'
+              ? '◐'
+              : theme === 'light'
+                ? '☀'
+                : theme === 'dark'
+                  ? '☾'
+                  : '⚡'}{' '}
+            {theme}
           </button>
           <span>
             {tabs.length} session{tabs.length === 1 ? '' : 's'}

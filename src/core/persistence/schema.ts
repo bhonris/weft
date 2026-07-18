@@ -27,7 +27,7 @@ export const workspaceStateSchema = z.object({
   tabs: z.array(tabStateSchema),
   tabOrder: z.array(z.string()),
   explorerRoots: z.array(z.string()),
-  theme: z.enum(['system', 'light', 'dark']),
+  theme: z.enum(['system', 'light', 'dark', 'cyberpunk']),
   resumeEnabled: z.boolean(),
   windowBounds: windowBoundsSchema.optional()
 })

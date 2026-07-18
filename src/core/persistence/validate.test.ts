@@ -63,6 +63,21 @@ describe('loadWorkspace', () => {
     expect(r.ok).toBe(false)
   })
 
+  it('accepts the cyberpunk theme', () => {
+    const r = loadWorkspace({ ...validV1, theme: 'cyberpunk' })
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.value.state.theme).toBe('cyberpunk')
+  })
+
+  it('migrates a legacy blob that already names the cyberpunk theme', () => {
+    const r = loadWorkspace({ theme: 'cyberpunk', tabs: [] })
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.value.state.theme).toBe('cyberpunk')
+      expect(r.value.migrated).toBe(true)
+    }
+  })
+
   it('errors when the migrated theme is invalid', () => {
     const r = loadWorkspace({ version: 2, resumeEnabled: false, tabs: [], tabOrder: [], explorerRoots: [], theme: 'x' })
     expect(r.ok).toBe(false)

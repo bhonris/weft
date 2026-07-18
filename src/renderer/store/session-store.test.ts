@@ -109,6 +109,8 @@ describe('useSessionStore', () => {
   it('setTheme updates the theme choice', () => {
     useSessionStore.getState().setTheme('dark')
     expect(useSessionStore.getState().theme).toBe('dark')
+    useSessionStore.getState().setTheme('cyberpunk')
+    expect(useSessionStore.getState().theme).toBe('cyberpunk')
     useSessionStore.getState().setTheme('system')
     expect(useSessionStore.getState().theme).toBe('system')
   })

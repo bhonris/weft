@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup, act, waitFor } from '@testing-library/react'
+import { render, screen, cleanup, act, waitFor, fireEvent } from '@testing-library/react'
 import type { SessionStatus } from '@shared/status/hook-events'
 import type { WorkspaceState } from '@shared/ipc/api-contract'
 import { WORKSPACE_VERSION } from '@core/persistence/schema'
@@ -102,5 +102,22 @@ describe('App tab status coloring', () => {
     const [first, second] = screen.getAllByTestId('tab')
     expect(first!.classList.contains('tab--unknown')).toBe(true)
     expect(second!.classList.contains('tab--working')).toBe(true)
+  })
+})
+
+describe('App theme toggle', () => {
+  it('cycles system → light → dark → cyberpunk → system and reflects it on <html>', async () => {
+    act(() => useSessionStore.getState().setTheme('system'))
+    render(<App />)
+    const btn = await screen.findByRole('button', { name: /^theme:/ })
+    await waitFor(() => expect(document.documentElement.dataset['theme']).toBe('system'))
+
+    for (const expected of ['light', 'dark', 'cyberpunk', 'system']) {
+      fireEvent.click(btn)
+      await waitFor(() => expect(document.documentElement.dataset['theme']).toBe(expected))
+    }
+
+    // Back at the start; the toggle advertises the active theme for a11y.
+    expect(screen.getByRole('button', { name: 'theme: system' })).toBeTruthy()
   })
 })

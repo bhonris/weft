@@ -33,7 +33,8 @@ describe('v0ToV1', () => {
       tabs: [],
       tabOrder: [],
       explorerRoots: [],
-      theme: 'system'
+      // A legacy blob with no theme falls back to the app default (cyberpunk).
+      theme: 'cyberpunk'
     })
   })
 

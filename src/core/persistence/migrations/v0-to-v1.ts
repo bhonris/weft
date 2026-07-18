@@ -28,9 +28,9 @@ export function v0ToV1(blob: Record<string, unknown>): Record<string, unknown> {
     ? (blob['explorerRoots'] as unknown[]).filter((x): x is string => typeof x === 'string')
     : []
 
-  const theme = ['system', 'light', 'dark'].includes(blob['theme'] as string)
+  const theme = ['system', 'light', 'dark', 'cyberpunk'].includes(blob['theme'] as string)
     ? (blob['theme'] as string)
-    : 'system'
+    : 'cyberpunk'
 
   return { version: 1, tabs, tabOrder, explorerRoots, theme }
 }

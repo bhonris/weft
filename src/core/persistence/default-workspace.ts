@@ -8,7 +8,8 @@ export function defaultWorkspace(): WorkspaceState {
     tabs: [],
     tabOrder: [],
     explorerRoots: [],
-    theme: 'system',
+    // cyberpunk is the out-of-the-box default theme.
+    theme: 'cyberpunk',
     resumeEnabled: false
   }
 }

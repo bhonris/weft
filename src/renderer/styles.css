@@ -466,3 +466,309 @@ body,
   color: #fff;
   font-size: 12px;
 }
+
+/* ==========================================================================
+   Cyberpunk theme — implements documents/cyberpunk-theme.md ("Weft Cyberpunk"
+   design concept). A neon CRT restyle scoped entirely to data-theme=cyberpunk,
+   layered over the existing variables + class names so light/dark are untouched.
+   ========================================================================== */
+
+:root[data-theme='cyberpunk'] {
+  color-scheme: dark;
+  /* Palette (p1 = neon pink, p2 = cyan) from the design's dc-import props. */
+  --p1: #ff2d78;
+  --p2: #21e6ff;
+  --grid: rgba(33, 230, 255, 0.09);
+  --bg: #07070c;
+  --fg: #c8ccd8;
+  --panel: #0d0d15;
+  --border: rgba(255, 255, 255, 0.07);
+  --accent: var(--p2);
+  --hover: rgba(33, 230, 255, 0.08);
+  --font-display: 'Chakra Petch', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', monospace;
+  /* Session-state colors, retinted to the neon palette. The whole-tab tint
+     invariant is preserved — these just feed --st via .tab--<status>. */
+  --st-working: #ff2d78;
+  --st-waiting: #ffb000;
+  --st-done: #21e6ff;
+  --st-error: #f85149;
+  --st-unknown: #21e6ff;
+}
+
+:root[data-theme='cyberpunk'] body,
+:root[data-theme='cyberpunk'] #root {
+  font-family: var(--font-mono);
+}
+
+/* --- Full-shell CRT overlays: scanlines + vignette, above the chrome but
+   pointer-transparent so nothing below loses clicks. ---------------------- */
+:root[data-theme='cyberpunk'] .weft-shell {
+  position: relative;
+}
+:root[data-theme='cyberpunk'] .weft-shell::before,
+:root[data-theme='cyberpunk'] .weft-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+:root[data-theme='cyberpunk'] .weft-shell::before {
+  z-index: 200;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.16) 3px,
+    rgba(0, 0, 0, 0) 4px
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.5;
+}
+:root[data-theme='cyberpunk'] .weft-shell::after {
+  z-index: 199;
+  box-shadow:
+    inset 0 0 160px rgba(0, 0, 0, 0.7),
+    inset 0 0 40px rgba(0, 0, 0, 0.5);
+}
+
+/* --- Header / tab strip + WEFT wordmark ---------------------------------- */
+:root[data-theme='cyberpunk'] .tab-strip {
+  height: 44px;
+  gap: 6px;
+  padding: 0 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+:root[data-theme='cyberpunk'] .tab-strip::before {
+  content: '◈  WEFT';
+  align-self: center;
+  margin-right: 8px;
+  padding-right: 14px;
+  border-right: 1px solid var(--border);
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.36em;
+  font-size: 15px;
+  color: #fff;
+  text-shadow: 0 0 12px var(--p1);
+  animation: weft-flick 6s infinite;
+}
+
+:root[data-theme='cyberpunk'] .tab {
+  height: 32px;
+  align-self: flex-end;
+  margin-right: 0;
+  padding: 0 6px 0 12px;
+  border: 1px solid var(--st, rgba(255, 255, 255, 0.08));
+  border-top: 1px solid var(--st, rgba(255, 255, 255, 0.08));
+  border-bottom: 2px solid var(--st, rgba(255, 255, 255, 0.08));
+  border-radius: 0;
+  /* Angled bottom-left corner from the concept. */
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  background: rgba(255, 255, 255, 0.02);
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+}
+:root[data-theme='cyberpunk'] .tab--active {
+  background: color-mix(in srgb, var(--st, var(--p2)) 12%, var(--bg));
+  box-shadow:
+    0 0 14px -2px var(--st, var(--p2)),
+    inset 0 0 22px -14px var(--st, var(--p2));
+}
+:root[data-theme='cyberpunk'] .tab__label {
+  color: #fff;
+  font-weight: 600;
+}
+:root[data-theme='cyberpunk'] .tab__badge {
+  text-shadow: 0 0 8px currentColor;
+}
+:root[data-theme='cyberpunk'] .tab-strip__add {
+  align-self: center;
+  width: 28px;
+  height: 28px;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--p2);
+  text-shadow: 0 0 8px var(--p2);
+}
+:root[data-theme='cyberpunk'] .tab-strip__empty {
+  align-self: center;
+  font-family: var(--font-display);
+  letter-spacing: 0.14em;
+  color: var(--p2);
+  opacity: 0.7;
+}
+
+/* --- Explorer ------------------------------------------------------------ */
+:root[data-theme='cyberpunk'] .explorer {
+  border-right: 1px solid var(--border);
+  font-family: var(--font-mono);
+}
+:root[data-theme='cyberpunk'] .explorer::before {
+  content: 'EXPLORER  // WEFT';
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: block;
+  padding: 11px 14px 9px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  font-size: 10px;
+  color: var(--p2);
+  text-shadow: 0 0 10px var(--p2);
+}
+:root[data-theme='cyberpunk'] .explorer__item--dir .explorer__glyph {
+  color: var(--p2);
+  opacity: 1;
+}
+:root[data-theme='cyberpunk'] .explorer__item:hover {
+  background: linear-gradient(90deg, rgba(255, 45, 120, 0.14), transparent);
+  box-shadow: inset 2px 0 0 var(--p1);
+}
+
+/* --- Terminal host: neon frame + ambient grid (grid shows in the
+   no-session placeholder; the live xterm paints over it). ----------------- */
+:root[data-theme='cyberpunk'] .terminal-host {
+  background:
+    linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 40px 40px,
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 40px 40px,
+    var(--bg);
+  animation: weft-gridpan 8s linear infinite;
+  border-top: 1px solid var(--border);
+}
+/* Animated scanline sweep across the top of the terminal frame. */
+:root[data-theme='cyberpunk'] .terminal-host::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 6;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--p2), transparent);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  box-shadow: 0 0 12px var(--p2);
+  animation: weft-sweep 4.5s linear infinite;
+}
+/* Top-left neon corner bracket. */
+:root[data-theme='cyberpunk'] .terminal-host::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 14px;
+  height: 14px;
+  z-index: 6;
+  pointer-events: none;
+  border-top: 1px solid var(--p1);
+  border-left: 1px solid var(--p1);
+}
+:root[data-theme='cyberpunk'] .terminal-host__placeholder {
+  font-family: var(--font-display);
+  letter-spacing: 0.2em;
+  color: var(--p2);
+  text-shadow: 0 0 10px var(--p2);
+  opacity: 0.7;
+}
+
+/* --- Footer / status bar + WEFT badge ------------------------------------ */
+:root[data-theme='cyberpunk'] .status-bar {
+  height: 26px;
+  padding: 0;
+  gap: 0;
+  background: var(--panel);
+  color: var(--fg);
+  border-top: 1px solid var(--border);
+  font-family: var(--font-display);
+  letter-spacing: 0.1em;
+  font-size: 10.5px;
+}
+:root[data-theme='cyberpunk'] .status-bar > span:first-child {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--p1);
+  color: #0a0a10;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  box-shadow: 0 0 16px -2px var(--p1);
+}
+:root[data-theme='cyberpunk'] .status-bar__cwd {
+  margin-left: 0;
+  padding: 0 12px;
+}
+:root[data-theme='cyberpunk'] .status-bar__branch {
+  color: var(--p2);
+}
+:root[data-theme='cyberpunk'] .status-bar__theme {
+  padding: 0 12px;
+  margin-right: 0;
+  color: var(--p2);
+  text-shadow: 0 0 8px var(--p2);
+}
+:root[data-theme='cyberpunk'] .status-bar > span:last-child {
+  padding: 0 14px 0 12px;
+  color: #7a8090;
+}
+
+/* --- Keyframes new to the cyberpunk theme (weft-pulse already exists). --- */
+@keyframes weft-gridpan {
+  0% {
+    background-position:
+      0 0,
+      0 0,
+      0 0;
+  }
+  100% {
+    background-position:
+      0 -40px,
+      0 -40px,
+      0 0;
+  }
+}
+@keyframes weft-sweep {
+  0% {
+    background-position: -60% 0;
+  }
+  100% {
+    background-position: 160% 0;
+  }
+}
+@keyframes weft-flick {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  93% {
+    opacity: 0.4;
+  }
+  94% {
+    opacity: 1;
+  }
+  96% {
+    opacity: 0.6;
+  }
+  97% {
+    opacity: 1;
+  }
+}
+
+/* Ambient motion off for reduced-motion users (the badge pulse is already
+   handled by the earlier @media block). */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme='cyberpunk'] .terminal-host,
+  :root[data-theme='cyberpunk'] .terminal-host::before,
+  :root[data-theme='cyberpunk'] .tab-strip::before {
+    animation: none;
+  }
+}
