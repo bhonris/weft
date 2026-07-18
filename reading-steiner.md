@@ -1,8 +1,8 @@
-phase: worldline-expansion
-leap_count: 47
+phase: el-psy-kongroo
+leap_count: 48
 expansion_cycle: 7
 session_id: 2026-07-18T10:30:00Z
-prev_head: 4b142ce8b493dafcbde80d1d31ea1a40c1de57e5
+prev_head: 665a8e718217517961e0644369b75c7acd3ede7f
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md. CYCLE 6 END GOAL (operator): fully mouseless, keyboard-only navigation across all of Weft; macOS/Linux platform work OUT OF SCOPE this cycle."
 project_name: "weft"
 project_type: web
@@ -15,7 +15,7 @@ current_focus: "Cycle 6 (mouseless keyboard navigation) STABILISED and documente
 blocked_on: null
 last_test_run: "324 unit + 27 e2e, 0 fail; coverage 98.48/96.47/97.15; typecheck clean"
 closed_worldlines: []
-next_action: "Phase 7 seal: write phase el-psy-kongroo, commit steiner: el-psy-kongroo. Re-invoke /dmail in weft/ to open cycle 7 with a fresh budget."
+next_action: "None — Cycle 6 end goal complete and sealed at el-psy-kongroo (budget 48/50). Re-invoke /dmail in weft/ to open cycle 7 with a fresh budget (candidates in current_focus)."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:

@@ -2,6 +2,22 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## EL PSY KONGROO — Leap 48 — the worldline is sealed (Cycle 6) — 2026-07-18
+
+**Operator end goal — a fully mouseless, keyboard-only Weft — is complete.** Every part of the app is now reachable and operable from the keyboard alone, with the terminal-key passthrough invariant intact.
+
+**Shipped this cycle (all 13 Expansion 6 ACs):** single pure `keybinding-router` (passthrough regression-tested) with `Ctrl+Shift+F` folded in; command palette (`Ctrl+Shift+P`, pure registry + fuzzy, accessible listbox, focus restore); keyboard help overlay (`Ctrl+?`); region focus (`Ctrl+``, `Ctrl+Shift+E`, `Ctrl+F6`) that skips absent regions; theme-aware `:focus-visible` rings incl. cyberpunk; WAI-ARIA explorer tree keyboard nav (pure `tree-nav` + roving tabindex); keyboard tab reorder / `F2` rename / shell-vs-claude; viewer View/Edit/Diff/Reveal/Close + app-level `Ctrl+S`; status theme/resume commands; focus-trapped overlays that suspend passthrough; and a Playwright-Electron **mouseless journey (no `.click()`)**.
+
+**Final meter:** 324 unit + 27 Playwright-Electron E2E, 0 failures · 98.48% stmts / 96.47% branch · strict typecheck clean · 48 leaps, 6 cycles. Adversarial review (Future Okabe ×3) found and convergence fixed one real bug (viewer.save palette no-op) that 98% coverage had missed.
+
+**Scope honored:** macOS/Linux and split panes/LSP were left out per the operator's directive.
+
+**For the next worldline (re-invoke /dmail in weft/ for cycle 7):** user-customizable/remappable keybindings; unify the two dispatch switches (KeyAction vs CommandId) to prevent drift; palette-triggered terminal search + rename (need small signal stores); split panes; LSP; macOS/Linux; the one still-manual OS-toast check from v0.1.0.
+
+*El Psy Kongroo.*
+
+---
+
 ## Worldline 6 Stabilised — Leap 47 — steiner: worldline-6-stable — 2026-07-18
 
 **Phase**: worldline-checkpoint → worldline-expansion
