@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 36 — steiner: feat(commands) — pure registry + fuzzy match — 2026-07-18
+
+**Phase**: time-leap-development (cycle 6)
+**Changed**: The pure command layer (no UI, no I/O). `core/commands/registry.ts`: a `Command` type ({id, title, category, shortcutHint?, routes?}) + the canonical 24-command catalog (tabs, focus, viewer, general) + `CATEGORY_ORDER` for help grouping; `run` handlers stay in the renderer. `core/commands/chord.ts`: `parseChord("Ctrl+Shift+P")→KeyLike` (modifier aliases, null on empty/modifier-only). `core/commands/fuzzy.ts`: case-insensitive subsequence `fuzzyMatch` (word-boundary + consecutive-run scoring, leading-gap penalty) + stable `fuzzyFilter`. Tests (29 new across 3 files): registry id-uniqueness + **no-drift guard** — every `routes` command's `shortcutHint` really produces that KeyAction via `routeKey`, and every local-shortcut command (F2/Ctrl+S/Ctrl+Shift+F) routes to passthrough by design; chord parsing; fuzzy ranking/stability. Caught two bugs in-leap: a bad test fixture ('new' isn't a subsequence of 'Rename Tab') and two `noUncheckedIndexedAccess` typecheck errors.
+**SERN interference**: none (both issues fixed inline)
+**Divergence meter**: 267 unit pass (was 241), 0 fail; typecheck clean
+**Next target**: Leap 37 — CommandPalette overlay (Ctrl+Shift+P): accessible listbox, fuzzy filter, ↑/↓/Enter/Esc, focus restore; make the App listener robust (act only on handled KeyActions) and wire palette + the already-routed chords. First renderer leap of the cycle.
+
+---
+
 ## Leap 35 — steiner: feat(keybinding-router) — cycle-6 chords + passthrough guard — 2026-07-18
 
 **Phase**: time-leap-development (cycle 6)
