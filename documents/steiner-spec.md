@@ -437,3 +437,31 @@ Recorded here so the spec stays complete; intentionally **not** numbered
 - [x] An `onSessionStatus` update recolors only the targeted tab, not the others.
 - [x] The tab tint and the status glyph share one color source (`--st-*` CSS variables) so they can never drift; color remains redundant with the distinct glyph shapes + `aria-label` (no color-only signal).
 - [x] Covered by `src/renderer/App.test.tsx` (status→class transitions + per-tab scoping); renderer suite green, typecheck clean.
+
+---
+
+## Expansion 6 — Mouseless / keyboard-only navigation
+
+Operator-declared end goal (cycle 6): Weft must be fully operable with the
+keyboard alone — every mouse action gains a keyboard path, focus moves
+deliberately between regions, and the shortcuts are discoverable in-app — while
+the terminal-key passthrough invariant is preserved. **Out of scope this cycle:**
+macOS/Linux platform work (stay Windows-first); split panes / LSP unless they
+serve navigation. Budget extended to 50 leaps. Full design:
+`documents/keyboard-navigation.md`.
+
+### New acceptance criteria
+
+- [ ] All new app chords are added to the **pure** `keybinding-router` (`routeKey`) as the single source of truth; the App-level `window` keydown listener and xterm's `attachCustomKeyEventHandler` both consult it. A regression test asserts the protected passthrough set still routes to `passthrough`: `Ctrl+C/R/D/Z/L/A/E`, plain keys, arrow keys, function keys, and all Alt/Meta combos — and that no new chord collides with them.
+- [ ] The previously out-of-band terminal-search chord (`Ctrl+Shift+F`) is routed through `routeKey` (not special-cased in `TerminalPane`), so the router and terminal handler agree; terminal search still opens and Esc still returns focus to the terminal.
+- [ ] A **command palette** opens on `Ctrl+Shift+P`: a fuzzy-filtered, keyboard-only list of every registered app command, each row showing its shortcut hint; typing filters, ↑/↓ move the highlight, Enter runs the highlighted command, Esc closes. It uses accessible `role="listbox"`/`option` with `aria-activedescendant`, and on close restores DOM focus to the region that was active before it opened.
+- [ ] The palette is backed by a single **pure command registry** (`core/commands`) with unique ids and a title + shortcut hint per command; a unit test asserts id uniqueness and that every shortcut hint referenced by the help overlay corresponds to a real router chord (no drift).
+- [ ] A **keyboard help overlay** opens on `Ctrl+Shift+/` (Ctrl+?), listing all shortcuts grouped by category (Tabs / Focus / Explorer / Viewer / General); Esc closes it. (May be implemented as a distinct overlay or a palette mode.)
+- [ ] A **region-focus system** moves DOM focus between the main regions (tab strip, explorer, terminal, viewer/editor, status bar): `Ctrl+F6` / `Ctrl+Shift+F6` cycle regions forward/back (skipping absent regions), `` Ctrl+` `` focuses the terminal (xterm textarea, so typing reaches the PTY), and `Ctrl+Shift+E` focuses the explorer. Each focus move calls `.focus()` on the region's target element (verified by asserting `document.activeElement`).
+- [ ] A **visible, theme-aware focus indicator** (`:focus-visible`) is present on every interactive element — tabs, explorer nodes, viewer toolbar buttons, status-bar controls, and overlay options — including a cyberpunk-theme variant; any focus transition respects `prefers-reduced-motion`. (Asserted via the rendered class/style and an E2E focus-ring check.)
+- [ ] The **explorer tree** is fully keyboard-navigable per the WAI-ARIA tree pattern via **pure** `core/explorer/tree-nav` logic + a roving-tabindex view: exactly one node is a tab stop; ↑/↓ move between visible nodes, → expands (or moves to first child), ← collapses (or moves to parent), Enter/Space opens a file or toggles a directory, Home/End jump to first/last node; nodes expose `aria-level` and `aria-selected`. Unit tests cover the nav transitions; an E2E opens a file using only the keyboard.
+- [ ] Tab management is keyboard-complete: the active tab can be **reordered** (`Ctrl+Shift+PageUp`/`PageDown` move it left/right, updating `tabOrder`), **renamed** from the keyboard (`F2` enters the inline rename input; Enter commits, Esc cancels), and the **tab type** (claude vs plain shell) can be chosen without the mouse (a command-palette entry and/or chord), replacing the mouse-only Shift+Click.
+- [ ] The Monaco viewer's **View / Edit / Diff** mode switches plus **Reveal** and **Close** are reachable by keyboard (command palette and/or chords), not mouse-only; and **`Ctrl+S` saves whenever the viewer region is focused** (app-level fallback through the existing root-confined, ≤5 MB `saveFile` IPC), not only when the Monaco editor itself holds focus.
+- [ ] The status-bar **theme cycle** and **resume toggle** are triggerable from the keyboard (command-palette entries and/or chords), not only by tabbing to the buttons.
+- [ ] While the command palette, help overlay, or an inline text input is open, **terminal passthrough is suspended** (keys operate the overlay, Esc closes) and is restored on close; modal overlays **trap focus** (Tab cycles within) and restore focus on close. Overlays expose correct roles/aria and are screen-reader operable.
+- [ ] A **Playwright-Electron E2E completes a full mouseless journey using keyboard input only (no `.click()`)**: open a project via the palette → focus the explorer → arrow-navigate and Enter to open a file in the viewer → focus and type into the terminal → switch tabs → cycle the theme — asserting each outcome; plus assertions that a focus ring is visible and that terminal-bound keys still reach the PTY. Overall statement coverage remains ≥ 95%.

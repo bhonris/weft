@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 34 — steiner: expansion-6-planned — mouseless keyboard navigation — 2026-07-18
+
+**Phase**: worldline-expansion → time-leap-development (cycle 6 opened, budget extended to 50)
+**Changed**: Operator re-opened the worldline with a new END GOAL: a fully mouseless, keyboard-only experience. Audited current keyboard/focus support (pure `keybinding-router` exists with Ctrl+T/W/Tab/1-9; explorer has ARIA roles but no arrow-key nav; ZERO focus styling in CSS; region-to-region focus, viewer mode switches, status-bar controls, tab reorder/rename/type all mouse-only; no command palette/help). Authored `documents/keyboard-navigation.md` (feature doc, global New Feature Workflow) and appended `## Expansion 6` to `documents/steiner-spec.md` with 12 machine-checkable ACs: extend the single pure router (regression-test the protected passthrough set + route the out-of-band Ctrl+Shift+F through it), command palette (Ctrl+Shift+P, pure registry + fuzzy), help overlay (Ctrl+?), region focus (Ctrl+F6 cycle, Ctrl+` terminal, Ctrl+Shift+E explorer), theme-aware `:focus-visible` rings (incl. cyberpunk), pure `tree-nav` explorer keyboard nav with roving tabindex, keyboard tab reorder/rename(F2)/type, viewer mode switches + app-level Ctrl+S, status controls via commands, overlay focus-trap + passthrough suspend, and a no-`.click()` mouseless E2E journey. Scope explicitly excludes macOS/Linux + split panes/LSP. Also recorded the two post-v0.2.0 manual enhancements (whole-tab coloring, cyberpunk default theme) in DOSSIER.
+**SERN interference**: none
+**Divergence meter**: 241 unit pass, 0 fail; typecheck clean (baseline before cycle-6 code)
+**Next target**: Leap 35 — extend `keybinding-router` with the new KeyActions + regression-test the passthrough set + route terminal-search through it (pure core, no UI yet).
+
+---
+
 ## Manual entry (outside /dmail loop) — whole-tab state coloring — 2026-07-18
 
 **Phase**: post-end-goal manual enhancement (not a Steiner leap; loop remains at `el-psy-kongroo`)
