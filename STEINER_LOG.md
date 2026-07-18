@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 50 — feat(keymap) data-driven chord resolution — 2026-07-18
+
+**Phase**: time-leap-development (Expansion 7)
+**Changed**: Made `routeKey` **data-driven** — the groundwork for user-remappable keybindings. New pure `core/keybindings/keymap.ts`: `chordOf(e)` canonicalizes an event to `"ctrl[+shift]+<key>"` (lowercased, `?`→`/`; returns `null` for anything that must pass through, which is what preserves the §7.4 passthrough invariant), and `DEFAULT_KEYMAP` is the single source of the built-in chord→action table. `routeKey(e, keymap = DEFAULT_KEYMAP)` now canonicalizes + looks up instead of hardcoded if-chains; `jump-tab` (Ctrl+1..9) stays a non-remappable positional built-in. A future user keymap just overrides `DEFAULT_KEYMAP` — no further router change needed.
+**SERN interference**: none — all 11 existing router passthrough/chord tests pass **unchanged**, proving behavior preservation.
+**Divergence meter**: 98.55% stmts / 96.36% branches / 97.23% funcs — 350 pass (hook-forwarder integration passes with `CLAUDE_IDE_TAB` unset).
+**Next target**: Expansion 7 criteria 2/3 — persist a user keymap (WorkspaceState v3→v4 + migration) with a pure rebind/reset API, and make the protected terminal-passthrough set unbindable.
+
+---
+
 ## Leap 49 — feat(dispatch-unification) — Cycle 7 opens — 2026-07-18
 
 **Phase**: time-leap-development (Expansion 7 — remappable keybindings + dispatch unification)
