@@ -1,6 +1,6 @@
 # Feature: Mouseless / keyboard-only navigation
 
-> Status: **In progress** — `/dmail` Expansion Cycle 6 (operator-declared end goal).
+> Status: **Complete** — all Expansion 6 acceptance criteria met and E2E-verified (Leap 44).
 > Spec criteria live in `documents/steiner-spec.md` → `## Expansion 6`.
 > Scope constraint for this cycle: **macOS/Linux platform work is out of scope**
 > (stay Windows-first); split panes / LSP are deprioritized unless they serve
@@ -229,15 +229,15 @@ Reveal, open project, new shell tab) is runnable from the command palette.
 
 ## 14. Todo list
 
-- [ ] Extend `keybinding-router` with new actions; route terminal-search through
+- [x] Extend `keybinding-router` with new actions; route terminal-search through
       it; regression-test the passthrough set.
-- [ ] Pure command registry + fuzzy match (unit-tested).
-- [ ] Command palette overlay (accessible, focus-trapped, reduced-motion).
-- [ ] Keyboard help overlay.
-- [ ] Region-focus system + visible `:focus-visible` styling (all themes).
-- [ ] Explorer keyboard nav (pure `tree-nav` + roving tabindex view).
-- [ ] Tab reorder / rename (F2) / shell-vs-claude by keyboard.
-- [ ] Viewer mode switches + app-level Ctrl+S.
-- [ ] Status-bar controls via commands.
-- [ ] Full mouseless E2E journey; coverage ≥ 95%.
-- [ ] Update USAGE.md (keyboard section) + README.
+- [x] Pure command registry + fuzzy match (unit-tested).
+- [x] Command palette overlay (accessible, focus-trapped, reduced-motion).
+- [x] Keyboard help overlay.
+- [x] Region-focus system + visible `:focus-visible` styling (all themes).
+- [x] Explorer keyboard nav (pure `tree-nav` + roving tabindex view).
+- [x] Tab reorder / rename (F2) / shell-vs-claude by keyboard.
+- [x] Viewer mode switches + app-level Ctrl+S.
+- [x] Status-bar controls via commands.
+- [x] Full mouseless E2E journey; coverage ≥ 95%.
+- [x] Update USAGE.md (keyboard section) + README.

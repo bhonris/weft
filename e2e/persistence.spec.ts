@@ -93,7 +93,8 @@ test('multi-tab order, renamed titles, and the theme override all survive a rest
   await page1.getByLabel('rename tab').fill('beta-project')
   await page1.getByLabel('rename tab').press('Enter')
 
-  // system → light → dark
+  // cyberpunk (default) → system → light → dark
+  await page1.getByRole('button', { name: /^theme:/ }).click()
   await page1.getByRole('button', { name: /^theme:/ }).click()
   await page1.getByRole('button', { name: /^theme:/ }).click()
   await expect(page1.getByRole('button', { name: /^theme:/ })).toContainText('dark')

@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 44 — steiner: test(e2e) — mouseless keyboard journey (all 13 ACs done) — 2026-07-18
+
+**Phase**: time-leap-development → christinas-analysis (all Expansion 6 criteria met)
+**Changed**: `e2e/keyboard-nav.spec.ts` — a Playwright-Electron spec proving the whole experience with the KEYBOARD ONLY (zero `.click()`/mouse): open a tab via the command palette, Ctrl+Shift+E → arrow-nav → Enter to open a file into the viewer, Ctrl+` → type into the terminal (echo round-trips), Ctrl+C reaches the PTY (tab not closed, terminal still interactive), Ctrl+Shift+P → Cycle Theme flips `<html data-theme>`; plus a focus-ring test (keyboard focus yields a non-zero `outlineWidth`). Both pass against the real app. Fixed two PRE-EXISTING E2E theme assertions that assumed a `system` default — they broke when cyberpunk became the default theme (committed before this cycle; E2E hadn't been run since): spawn-error now expects cyberpunk→system→light→dark; persistence clicks 3× to reach dark. Marked all Expansion 6 ACs `[x]` in the spec and completed the feature-doc todo list.
+**SERN interference**: the two stale theme E2E assertions (cyberpunk-default fallout) — fixed; lesson: run the full E2E after any default-changing manual commit.
+**Divergence meter**: 316 unit + **27 Playwright-Electron E2E, all pass**; typecheck clean. Full mouseless journey machine-verified in the real Electron app.
+**Next target**: Phase 4 — Future Okabe ×3 adversarial review (simplicity / correctness+security / test quality) of the cycle-6 surface.
+
+---
+
 ## Leap 43 — steiner: feat(terminal-search-routing + status-commands) — 2026-07-18
 
 **Phase**: time-leap-development (cycle 6) — AC2 closed

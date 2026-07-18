@@ -37,7 +37,7 @@ test('a missing claude binary shows an actionable error with Retry — no crash'
   await app.close()
 })
 
-test('the theme toggle cycles system → light → dark and applies to the document', async () => {
+test('the theme toggle cycles cyberpunk → system → light → dark and applies to the document', async () => {
   const app = await launchWeft({
       WEFT_USER_DATA_DIR: mkdtempSync(join(tmpdir(), 'weft-ud-'))
     })
@@ -47,6 +47,10 @@ test('the theme toggle cycles system → light → dark and applies to the docum
   const themeAttr = (): Promise<string | undefined> =>
     page.evaluate(() => document.documentElement.dataset['theme'])
 
+  // Cyberpunk is the out-of-the-box default.
+  await expect.poll(themeAttr).toBe('cyberpunk')
+
+  await page.getByRole('button', { name: /^theme:/ }).click()
   await expect.poll(themeAttr).toBe('system')
 
   await page.getByRole('button', { name: /^theme:/ }).click()
