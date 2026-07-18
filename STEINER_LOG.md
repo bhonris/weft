@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 51 — feat(keymap) protected guard + rebind/reset API — 2026-07-18
+
+**Phase**: time-leap-development (Expansion 7)
+**Changed**: Delivered Expansion 7 criteria 3 & 4 as **pure core logic** in `core/keybindings/keymap.ts`. `isProtectedChord(chord)` is a conservative §7.4 guard — `Ctrl+Shift+*` is always bindable, while `Ctrl+1..9` (the jump-tab built-in) and every other plain `Ctrl+<key>` except the three Weft owns (`Ctrl+T/W/`` `) are protected terminal territory. `bindChord(map, chord, action)` is pure (never mutates), refuses protected chords with `{ok:false, reason:'protected'}`, and otherwise returns the new map plus any **displaced** binding so the editor can warn on a conflict (reassign-with-warning). `resetChord`/`resetAll` restore defaults. Tests prove a protected chord never enters the map (so it still reaches the PTY after an attempted remap), conflict reporting, and reset.
+**SERN interference**: none
+**Divergence meter**: 98.56% stmts / 96.42% branches / 97.29% funcs — 350 pass.
+**Next target**: Expansion 7 criterion 2 (persistence) — store the user's chord→action overrides in WorkspaceState (v3→v4 migration, default `{}`), merge `DEFAULT_KEYMAP` + overrides, and have App pass the merged keymap into routeKey; add a reset-to-defaults command.
+
+---
+
 ## Leap 50 — feat(keymap) data-driven chord resolution — 2026-07-18
 
 **Phase**: time-leap-development (Expansion 7)

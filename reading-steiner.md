@@ -1,21 +1,21 @@
 phase: time-leap-development
-leap_count: 50
+leap_count: 51
 expansion_cycle: 7
-session_id: 2026-07-18T18:05:00Z
-prev_head: 912d77cf94ae5cbc8c6a84e92c8fb77bb93d1ab5
+session_id: 2026-07-18T18:12:00Z
+prev_head: 6e9d0d88e0a1129dba009f8f8d0b516848f33a22
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md. CYCLE 6 END GOAL (operator): fully mouseless, keyboard-only navigation across all of Weft; macOS/Linux platform work OUT OF SCOPE this cycle."
 project_name: "weft"
 project_type: web
 spec_path: documents/steiner-spec.md
 test_cmd: pnpm test
 dev_server_port: 5173
-coverage_pct: 98.55
+coverage_pct: 98.56
 divergence_readings: []
-current_focus: "Expansion 7 criteria 2+3 — persist a user keymap and enforce the protected set. Leaps 49 (dispatch unified) + 50 (routeKey is data-driven over DEFAULT_KEYMAP via chordOf) are DONE. Next: (a) a pure rebind/reset API in core/keybindings/keymap.ts — `withBinding(map, chord, action)` and `resetBinding`/`DEFAULT_KEYMAP` — that REFUSES protected chords (criterion 3) and reports conflicts (criterion 4); define isProtectedChord using the §7.4 reserved terminal set (Ctrl+C/R/D/Z/L/A/E/S/Q/K/U/F/P/N/B/G/H, Ctrl+digit, arrows, Fn-keys). (b) Persist the user's chord→action overrides in WorkspaceState (v3→v4 migration, default {}), round-trip save/load, and have App pass the merged keymap (DEFAULT_KEYMAP + overrides) into routeKey. (c) Reset-to-defaults action. THEN: keybindings editor UI (crit 5), then deferred fixes crit 6 (terminal-search palette), 7 (rename palette), 8 (explorer expand/collapse dedup)."
+current_focus: "Expansion 7 criterion 2 (persistence). DONE so far: leap 49 dispatch unified; leap 50 routeKey data-driven over DEFAULT_KEYMAP via chordOf; leap 51 pure rebind/reset API + protected guard + conflict detection (criteria 3 & 4 checked). NEXT (leap 52): persist the user's chord→action overrides. Plan: add `keymapOverrides` (a chord→KeyAction record, default {}) to WorkspaceState with a v3→v4 migration + schema/default-workspace/validate/workspace-sync updates (mirror how notificationsEnabled/resumeEnabled are threaded); add a session-store field + setter; on load, merge DEFAULT_KEYMAP with overrides into an effective keymap held in the store; App passes that merged keymap into routeKey (routeKey already accepts a keymap arg). Persist overrides via the existing save-on-change effect. Add a `general.resetKeybindings` command (resetAll). Update the many WorkspaceState fixtures/tests again (schema/migrations/default-workspace/validate/workspace-store/workspace-sync/App/create-bridge). THEN: keybindings editor UI (crit 5), then deferred fixes crit 6 (terminal-search palette), 7 (rename palette), 8 (explorer expand/collapse dedup)."
 blocked_on: null
-last_test_run: "350 pass, 1 env-only fail (hook-forwarder integration leaks CLAUDE_IDE_TAB when run inside a live Weft session; passes with it unset); coverage 98.55/96.36/97.23; typecheck clean"
+last_test_run: "350 pass, 1 env-only fail (hook-forwarder integration leaks CLAUDE_IDE_TAB when run inside a live Weft session; passes with it unset); coverage 98.56/96.42/97.29; typecheck clean"
 closed_worldlines: []
-next_action: "Add the pure keymap mutation API + protected guard to core/keybindings/keymap.ts: isProtectedChord(chord), withBinding(map, chord, action) that refuses protected chords and surfaces conflicts, resetBinding/resetAll. Unit-test criteria 3 (protected unbindable) and 4 (conflict detection). Then persist user overrides in WorkspaceState (v3→v4 migration, default {}) and merge them into the keymap App passes to routeKey. spec ## Expansion 7."
+next_action: "Persist user keymap overrides (criterion 2). Add `keymapOverrides` (Record<chord, KeyAction>, default {}) to WorkspaceState via a v3→v4 migration (v3ToV4), update schema/default-workspace/validate/workspace-sync + all their fixtures; add a session-store field + setter; merge DEFAULT_KEYMAP+overrides into an effective keymap the store holds and App passes to routeKey; persist via the existing save-on-change effect; add a general.resetKeybindings command. spec ## Expansion 7."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:
