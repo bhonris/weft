@@ -1,8 +1,8 @@
 phase: time-leap-development
-leap_count: 41
+leap_count: 42
 expansion_cycle: 6
 session_id: 2026-07-18T10:30:00Z
-prev_head: 98ffb5d0f2a2ffa822b9ab52c594384be386ed32
+prev_head: 39b831dac5f3327d66ab52f0c3622c67d4cd2d13
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md. CYCLE 6 END GOAL (operator): fully mouseless, keyboard-only navigation across all of Weft; macOS/Linux platform work OUT OF SCOPE this cycle."
 project_name: "weft"
 project_type: web
@@ -11,11 +11,11 @@ test_cmd: pnpm test
 dev_server_port: 5173
 coverage_pct: 98
 divergence_readings: []
-current_focus: "Expansion 6 AC10 (viewer keyboard control). Lift the viewer's edit mode into the viewer-store (add mode 'edit' OR an `editing` boolean + setEditing; ViewerPane reads it instead of local state) so palette commands can drive it. Wire runCommand: viewer.view→store view+editing off, viewer.edit→editing on, viewer.diff→mode diff, viewer.reveal→window.api.revealInOs(file.path), viewer.close→viewer close. Add an APP-LEVEL Ctrl+S: when the viewer region is focused (activeRegionRef==='viewer' or focus within viewerRef) and a file is open, save via window.api.saveFile(path, currentContent) — need the editor's current value; simplest: keep the Monaco Ctrl+S (already works when editor focused) AND add a viewer-region key handler that triggers save via an exposed ref/handle or via the store. Consider exposing a save() on the viewer store set by ViewerPane, or move save wiring so App can call it. Keep viewer.* commands no-op-safe when no file open. Tests: viewer-store edit state; ViewerPane renders edit from store; App viewer.* dispatch. NOTE the viewer commands only meaningful with a file open — that's fine."
+current_focus: "Expansion 6 AC2 + AC11 finish. (1) Fold the out-of-band Ctrl+Shift+F terminal-search through the router (AC2): add {kind:'terminal-search'} to routeKey for Ctrl+Shift+F; in TerminalPane's attachCustomKeyEventHandler, decide via routeKey (kind==='terminal-search' → open search + swallow; kind==='passthrough' → let through; else swallow) instead of the hardcoded special-case; add general.terminalSearch command routes:'terminal-search'; keep the registry no-drift test green. Ensure the App window listener does NOT act on terminal-search (it's terminal-local) — add a case that returns/no-ops so it doesn't preventDefault globally (or leave default:return but then App would swallow it when terminal NOT focused; acceptable — search only relevant with terminal focused). Verify terminal-router agreement + update the router test (Ctrl+Shift+F now → terminal-search, adjust the passthrough test). (2) Confirm status-bar theme/resume commands (already wired) with an App palette test for toggle resume. Then Leap 44: full mouseless E2E."
 blocked_on: null
-last_test_run: "311 unit pass, 0 fail; typecheck clean"
+last_test_run: "315 unit pass, 0 fail; typecheck clean"
 closed_worldlines: [worldline-expansion]
-next_action: "Lift viewer edit state into viewer-store; wire viewer.* commands + app-level Ctrl+S when viewer focused; add tests. Run pnpm test + typecheck, commit steiner: feat(viewer-keyboard-control)."
+next_action: "Fold Ctrl+Shift+F into routeKey as terminal-search; update TerminalPane to use routeKey; add general.terminalSearch routes; update router test; add App toggle-resume palette test. Run pnpm test + typecheck, commit steiner: feat(terminal-search-routing + status-commands)."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:

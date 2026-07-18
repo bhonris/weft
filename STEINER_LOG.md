@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 42 — steiner: feat(viewer-keyboard-control) — modes + app Ctrl+S — 2026-07-18
+
+**Phase**: time-leap-development (cycle 6)
+**Changed**: Made the Monaco viewer fully keyboard-operable. Lifted edit mode into the viewer-store (`editing`, `setEditing` — implies view mode; `setMode('diff')` drops editing; `saveTick` + `requestSave()`). ViewerPane now reads editing from the store and exposes a single `doSaveRef` save routine used by BOTH Monaco's Ctrl+S command (editor-focused) and a new saveTick effect (app-level). Wired `viewer.view/edit/diff/reveal/close` palette commands and an **app-level Ctrl+S** on the viewer-region wrapper: when focus is anywhere in the viewer region and a file is open+editing, it saves via the existing root-confined `saveFile` IPC — not only when Monaco holds focus. Commands are no-op-safe with no file open. Tests: viewer-store editing/saveTick/diff-resets-editing/close-resets; App runs viewer.diff via the palette.
+**SERN interference**: none
+**Divergence meter**: 315 unit pass (was 311), 0 fail; typecheck clean. 4 new tests.
+**Next target**: Leap 43 — status-bar controls via commands (general.cycleTheme + general.toggleResume already dispatch — verify + add App palette tests) and fold the out-of-band Ctrl+Shift+F terminal-search through the router (AC2): add terminal-search to routeKey, route it in TerminalPane via routeKey instead of the special-case, keep App standing down while... actually terminal-search stays terminal-local; ensure the router + TerminalPane agree. Then Leap 44 mouseless E2E.
+
+---
+
 ## Leap 41 — steiner: feat(keyboard-tab-management) — reorder + F2 rename — 2026-07-18
 
 **Phase**: time-leap-development (cycle 6)

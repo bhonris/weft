@@ -12,18 +12,39 @@ type Editor = ReturnType<typeof MonacoNs.editor.create>
 export function ViewerPane(): React.ReactElement | null {
   const file = useViewerStore((s) => s.file)
   const mode = useViewerStore((s) => s.mode)
+  const editing = useViewerStore((s) => s.editing)
+  const saveTick = useViewerStore((s) => s.saveTick)
   const setMode = useViewerStore((s) => s.setMode)
+  const setEditing = useViewerStore((s) => s.setEditing)
   const close = useViewerStore((s) => s.close)
   const hostRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<Editor | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [editing, setEditing] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  // Leaving the file or switching mode exits edit state.
+  // Latest save routine, kept in a ref so the saveTick effect stays stable.
+  const doSaveRef = useRef<() => void>(() => {})
+  doSaveRef.current = (): void => {
+    const ed = editorRef.current
+    const model = ed?.getModel()
+    if (!file || !model || !useViewerStore.getState().editing) return
+    void window.api
+      .saveFile(file.path, model.getValue())
+      .then(() => {
+        setDirty(false)
+        setSaveError(null)
+      })
+      .catch((e: unknown) => setSaveError(e instanceof Error ? e.message : String(e)))
+  }
+
+  // App-level Ctrl+S (viewer region focused) increments saveTick → save now.
   useEffect(() => {
-    setEditing(false)
+    if (saveTick > 0) doSaveRef.current()
+  }, [saveTick])
+
+  // Leaving the file or switching mode clears transient save state.
+  useEffect(() => {
     setDirty(false)
     setSaveError(null)
   }, [file, mode])
@@ -70,17 +91,10 @@ export function ViewerPane(): React.ReactElement | null {
           const editor = monaco.editor.create(host, { ...common, model })
           editorRef.current = editor
           const changeSub = model.onDidChangeContent(() => setDirty(true))
-          // Ctrl+S saves through the validated IPC.
+          // Ctrl+S while the editor is focused saves through the shared routine
+          // (the app-level viewer-region Ctrl+S uses the same path via saveTick).
           editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-            void window.api
-              .saveFile(file.path, model.getValue())
-              .then(() => {
-                setDirty(false)
-                setSaveError(null)
-              })
-              .catch((e: unknown) =>
-                setSaveError(e instanceof Error ? e.message : String(e))
-              )
+            doSaveRef.current()
           })
           dispose = () => {
             changeSub.dispose()

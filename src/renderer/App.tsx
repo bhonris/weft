@@ -308,7 +308,27 @@ export function App(): React.ReactElement {
       case 'focus.cyclePrev':
         cycleRegion(-1)
         break
-      // Wired in later cycle-6 leaps: viewer.*, general.terminalSearch.
+      case 'viewer.view': {
+        const v = useViewerStore.getState()
+        v.setMode('view')
+        v.setEditing(false)
+        break
+      }
+      case 'viewer.edit':
+        useViewerStore.getState().setEditing(true)
+        break
+      case 'viewer.diff':
+        useViewerStore.getState().setMode('diff')
+        break
+      case 'viewer.reveal': {
+        const f = useViewerStore.getState().file
+        if (f) void window.api.revealInOs(f.path)
+        break
+      }
+      case 'viewer.close':
+        useViewerStore.getState().close()
+        break
+      // Wired in later cycle-6 leaps: general.terminalSearch.
       // (tab.rename is a local F2 key on the focused tab, not a dispatch entry.)
       default:
         break
@@ -501,7 +521,18 @@ export function App(): React.ReactElement {
                 <div className="terminal-host__placeholder">No active session</div>
               )}
             </div>
-            <div className="viewer-region" ref={viewerRef}>
+            <div
+              className="viewer-region"
+              ref={viewerRef}
+              onKeyDown={(e) => {
+                // App-level Ctrl+S: save whenever focus is anywhere in the
+                // viewer region (not only when Monaco itself holds focus).
+                if (e.ctrlKey && !e.altKey && !e.metaKey && (e.key === 's' || e.key === 'S')) {
+                  e.preventDefault()
+                  useViewerStore.getState().requestSave()
+                }
+              }}
+            >
               <ViewerPane />
             </div>
           </section>
