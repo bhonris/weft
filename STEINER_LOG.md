@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 45 — steiner: christina-review — 3 must-fix, 2 nice-to-have — 2026-07-18
+
+**Phase**: christinas-analysis (Future Okabe ×3, parallel: simplicity / correctness+security / test-quality)
+**Changed**: Adversarial review of the entire cycle-6 surface. All three reviewers independently found the same real defect: **`viewer.save` ("Save File") has no `runCommand` handler** — a duplicate `case 'general.keyboardHelp'` sits where the viewer.save case belongs, so the palette command is a silent no-op (data-loss risk in edit mode). Correctness verdict otherwise strong: the PTY-passthrough invariant holds (Ctrl+S is passthrough + viewer-region-local; no chord collides with terminal keys), focus trap/restore + stale-closure avoidance are sound, moveActiveTab/nextRegion/tree-nav edge cases correct. Recorded must-fix (viewer.save + the duplicate case + a batch of high-value missing regression tests) and 2 cheap nice-to-haves (focusEl unused return, dead 'Explorer' category). Larger items (unify the two dispatch switches; palette-triggered terminal search; palette-triggered rename; expand/collapse dedup) DEFERRED near-budget (leap 45/50) per the 0.8 budget rule.
+**SERN interference**: none — the review working as designed (found a bug 98% coverage missed, exactly the cycle-1 lesson).
+**Divergence meter**: 316 unit + 27 e2e, 0 fail; coverage 98.49/96.49/97.15 (gate 95/90).
+**Next target**: Phase 5 convergence — fix viewer.save (+cleanups) and add the cycle-6 regression tests; keep green.
+
+---
+
 ## Leap 44 — steiner: test(e2e) — mouseless keyboard journey (all 13 ACs done) — 2026-07-18
 
 **Phase**: time-leap-development → christinas-analysis (all Expansion 6 criteria met)

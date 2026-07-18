@@ -1,8 +1,8 @@
-phase: christinas-analysis
-leap_count: 44
+phase: worldline-convergence
+leap_count: 45
 expansion_cycle: 6
 session_id: 2026-07-18T10:30:00Z
-prev_head: 84f983a27059d26f2d4b7915225740a4b487636a
+prev_head: 0ff830a834190f4ab23cc5f82da62c7bc7ed1ca7
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md. CYCLE 6 END GOAL (operator): fully mouseless, keyboard-only navigation across all of Weft; macOS/Linux platform work OUT OF SCOPE this cycle."
 project_name: "weft"
 project_type: web
@@ -11,11 +11,11 @@ test_cmd: pnpm test
 dev_server_port: 5173
 coverage_pct: 98
 divergence_readings: []
-current_focus: "Phase 4 — Future Okabe ×3 adversarial review of the cycle-6 keyboard-navigation surface (keybinding-router, commands/registry+fuzzy+chord, focus/region-cycle, explorer/tree-nav, CommandPalette, KeyboardHelp, Explorer rewrite, App focus manager + dispatch, viewer-store/ViewerPane save path, terminal-search routing). Consolidate findings into review_items.must_fix / nice_to_have, then Phase 5 convergence (fix must-fix), Phase 6 checkpoint (USAGE/README/DOSSIER + Mayuri), Phase 7 expansion decision."
+current_focus: "Phase 5 convergence — fix must-fix: (1) add `case 'viewer.save': useViewerStore.getState().requestSave()` to runCommand, replacing the duplicate general.keyboardHelp case (App.tsx). (2) Cheap cleanups: focusEl → void return; drop 'Explorer' from CATEGORY_ORDER. (3) Add the cycle-6 regression tests listed in review_items.test-gaps-cycle6. Keep suite green + coverage >=95%. Then Phase 6 checkpoint (USAGE keyboard section + README/DOSSIER refresh + Mayuri review) and Phase 7 (likely EL PSY KONGROO — leap ~46/50)."
 blocked_on: null
-last_test_run: "316 unit + 27 e2e, 0 fail; typecheck clean"
-closed_worldlines: [worldline-expansion, time-leap-development, divergence-meter-reading]
-next_action: "Run pnpm test:cov to confirm >=95% gate; spawn Future Okabe ×3 review (simplicity / correctness+security / test quality); consolidate review_items; then converge."
+last_test_run: "316 unit + 27 e2e, 0 fail; coverage 98.49/96.49/97.15; typecheck clean"
+closed_worldlines: [worldline-expansion, time-leap-development, divergence-meter-reading, christinas-analysis]
+next_action: "Fix viewer.save handler (replace dup keyboardHelp case) + cleanups; add regression tests; run pnpm test + typecheck (+cov); commit steiner: fix(convergence). Then checkpoint."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:
@@ -23,9 +23,18 @@ decisions:
   - testing: "vitest + @vitest/coverage-v8 (95%/90% thresholds), node + jsdom projects; pure logic via injected fakes; Playwright-for-Electron E2E incl. a keyboard-only (no .click()) mouseless journey."
   - stack: "TypeScript, Electron 34 + electron-vite 3, pnpm, React 19 + Vite 6, zustand 5, xterm.js 5.5, chokidar 4, electron-store 10, monaco 0.52, zod 3, node-pty; @fontsource chakra-petch + jetbrains-mono (cyberpunk theme). No new runtime deps planned for cycle 6 (fuzzy match hand-rolled + pure)."
 review_items:
-  must_fix: []
-  nice_to_have: []
+  must_fix:
+    - "viewer-save-noop: 'Save File' (viewer.save) palette command has no runCommand handler → silent no-op, data-loss risk in edit mode (src/renderer/App.tsx runCommand; registry.ts:131)"
+    - "duplicate-keyboardhelp-case: dead duplicate `case 'general.keyboardHelp'` in runCommand displaced the viewer.save handler (src/renderer/App.tsx ~287 & ~296)"
+    - "test-gaps-cycle6: add regression tests — viewer.save via palette, app-level Ctrl+S saving (+negative Ctrl+Alt/Meta+S), palette focus-restore-on-run vs skipRestore, live region-cycle skipping absent regions, passthrough neighbors Ctrl+F/Ctrl+P, fuzzy stability (real, not tautological), Explorer Home/End + ArrowLeft-to-parent, overlay-stands-down (Ctrl+T while palette open)"
+  nice_to_have:
+    - "focusEl-unused-return: make void (App.tsx)"
+    - "dead-explorer-category: 'Explorer' in CATEGORY_ORDER is unused by any command (registry.ts)"
   closed:
+    - "dual-dispatch-drift: DEFERRED near-budget — unify onKey KeyAction switch + runCommand CommandId switch (root cause of the viewer.save drift); revisit next cycle"
+    - "terminal-search-palette-noop: DEFERRED near-budget — 'Search in Terminal' focuses terminal but can't open the search bar (needs a TerminalPane open-search signal like viewer saveTick)"
+    - "tab-rename-palette-noop: DEFERRED near-budget — 'Rename Tab' palette entry needs an active-tab rename signal; F2 on the focused tab works"
+    - "expand-collapse-dup: DEFERRED near-budget — fold Explorer expandPath/collapsePath into one toggle helper"
     - "frame-parser-buffer-cap: fixed (1MB cap + recovery test)"
     - "uds-perms-unlink: fixed (chmod 0600 + unlink on close)"
     - "readfile-size-guard: fixed (5MB stat guard + viewer error)"
