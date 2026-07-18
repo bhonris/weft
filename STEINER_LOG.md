@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 35 — steiner: feat(keybinding-router) — cycle-6 chords + passthrough guard — 2026-07-18
+
+**Phase**: time-leap-development (cycle 6)
+**Changed**: Extended the pure `keybinding-router` (`routeKey`) with the Expansion-6 global chords — `command-palette` (Ctrl+Shift+P), `help-overlay` (Ctrl+Shift+/ or Ctrl+?), `focus-region` (Ctrl+` → terminal, Ctrl+Shift+E → explorer), `focus-cycle` (Ctrl+F6 / Ctrl+Shift+F6), `move-tab` (Ctrl+Shift+PageUp/PageDown) — plus a new `FocusRegion` type. Deliberately kept region-LOCAL keys OUT of the global router (F2-rename on a focused tab, explorer arrows, Ctrl+S while viewer-focused) so they only act in context and otherwise pass through to the PTY. Left `Ctrl+Shift+F` as passthrough so the existing TerminalPane in-terminal search keeps working (fold-in deferred to the consumer-wiring leap). Rewrote the router test into an 11-case suite with a hardened **passthrough regression**: Ctrl+C/R/D/Z/L/A/E/S/Q/K/U/0, plain keys, Alt/Meta, all function keys except Ctrl+F6 (incl. plain F2), arrows, Home/End, plain+Ctrl PageUp/PageDown, Ctrl+Shift+F, and unclaimed Ctrl+Shift+letters all route to `passthrough`.
+**SERN interference**: none
+**Divergence meter**: keybindings suite 11 pass; typecheck clean (consumers untouched this leap — new chords are inert no-ops until wired next leap)
+**Next target**: Leap 36 — pure `core/commands` registry (id/title/category/shortcutHint, unique-id + shortcut-integrity tests) + pure `core/commands/fuzzy` match/rank; no UI yet.
+
+---
+
 ## Leap 34 — steiner: expansion-6-planned — mouseless keyboard navigation — 2026-07-18
 
 **Phase**: worldline-expansion → time-leap-development (cycle 6 opened, budget extended to 50)

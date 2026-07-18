@@ -1,8 +1,8 @@
 phase: time-leap-development
-leap_count: 34
+leap_count: 35
 expansion_cycle: 6
 session_id: 2026-07-18T10:30:00Z
-prev_head: 89cc47d6da0419d5cc3d86e908fe9f0161a50b6d
+prev_head: da2c9795af24947c89b1c1b3f524ed8b146cc001
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md. CYCLE 6 END GOAL (operator): fully mouseless, keyboard-only navigation across all of Weft; macOS/Linux platform work OUT OF SCOPE this cycle."
 project_name: "weft"
 project_type: web
@@ -11,11 +11,11 @@ test_cmd: pnpm test
 dev_server_port: 5173
 coverage_pct: 98
 divergence_readings: []
-current_focus: "Expansion 6 AC1/AC2: extend the pure keybinding-router (routeKey) with new KeyActions (command-palette, help-overlay, focus-region, focus-cycle, move-tab, rename-tab, save-file) and route the existing terminal-search chord through it; add a regression test asserting the protected passthrough set (Ctrl+C/R/D/Z/L/A/E, plain keys, arrows, function keys, Alt/Meta) still routes to passthrough and no new chord collides. Pure core only, no UI yet."
+current_focus: "Expansion 6 AC3/AC4: build the pure command layer. (1) src/core/commands/registry.ts — a Command type {id, title, category, shortcutHint?} + the canonical CYCLE-6 command list (new/close/cycle tab, open project, new shell tab, focus terminal/explorer, cycle focus, move tab, rename tab, command palette, help, terminal search, viewer view/edit/diff/reveal/close+save, cycle theme, toggle resume). run handlers are injected by the renderer, NOT in core. (2) src/core/commands/fuzzy.ts — subsequence match + score/rank. Unit tests: registry id-uniqueness + every shortcutHint corresponds to a real routeKey chord (no drift) + fuzzy ranking. No UI yet."
 blocked_on: null
-last_test_run: "unit 241 pass, 0 fail; typecheck clean (cycle-6 baseline)"
+last_test_run: "keybindings suite 11 pass; typecheck clean (full suite last green at 241 on cycle-6 baseline)"
 closed_worldlines: [worldline-expansion]
-next_action: "Edit src/core/keybindings/keybinding-router.ts to add the new KeyActions per the Expansion 6 keymap, extend keybinding-router.test.ts with the protected-passthrough regression + new-chord routing, run pnpm test, commit steiner: feat(keybinding-router) — cycle-6 chords + passthrough guard."
+next_action: "Create src/core/commands/registry.ts + registry.test.ts and src/core/commands/fuzzy.ts + fuzzy.test.ts (pure). Then run pnpm test + pnpm typecheck, commit steiner: feat(commands) — pure registry + fuzzy match."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:
