@@ -115,6 +115,66 @@ describe('Explorer', () => {
     await waitFor(() => expect(screen.getByText(/Cannot read folder: EPERM/)).toBeDefined())
   })
 
+  it('ArrowDown/ArrowUp move the roving selection (keyboard nav)', async () => {
+    listDir.mockResolvedValueOnce([entry('src', 'dir'), entry('README.md', 'file')])
+    render(<Explorer root="/p" />)
+    await waitFor(() => screen.getByText('src'))
+    const tree = screen.getByTestId('explorer-tree')
+
+    const liOf = (text: string): HTMLElement | null => screen.getByText(text).closest('li')
+    // First node selected by default.
+    expect(liOf('src')?.getAttribute('aria-selected')).toBe('true')
+
+    fireEvent.keyDown(tree, { key: 'ArrowDown' })
+    expect(liOf('README.md')?.getAttribute('aria-selected')).toBe('true')
+    expect(liOf('src')?.getAttribute('aria-selected')).toBe('false')
+    // Roving tabindex: exactly one node is a tab stop.
+    expect(screen.getByText('README.md').getAttribute('tabindex')).toBe('0')
+    expect(screen.getByText('src').getAttribute('tabindex')).toBe('-1')
+
+    fireEvent.keyDown(tree, { key: 'ArrowUp' })
+    expect(liOf('src')?.getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('ArrowRight expands a directory and ArrowLeft collapses it', async () => {
+    listDir.mockResolvedValueOnce([entry('src', 'dir')])
+    listDir.mockResolvedValue([entry('index.ts', 'file', '/p/src')])
+    render(<Explorer root="/p" />)
+    await waitFor(() => screen.getByText('src'))
+    const tree = screen.getByTestId('explorer-tree')
+
+    fireEvent.keyDown(tree, { key: 'ArrowRight' }) // expand
+    await waitFor(() => expect(screen.getByText('index.ts')).toBeDefined())
+    expect(screen.getByText('src').closest('li')?.getAttribute('aria-expanded')).toBe('true')
+
+    fireEvent.keyDown(tree, { key: 'ArrowLeft' }) // collapse
+    expect(screen.queryByText('index.ts')).toBeNull()
+    expect(screen.getByText('src').closest('li')?.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('Enter opens the selected file in the viewer', async () => {
+    listDir.mockResolvedValueOnce([entry('a.dir', 'dir'), entry('notes.txt', 'file')])
+    render(<Explorer root="/p" />)
+    await waitFor(() => screen.getByText('notes.txt'))
+    const tree = screen.getByTestId('explorer-tree')
+
+    fireEvent.keyDown(tree, { key: 'ArrowDown' }) // move to notes.txt
+    fireEvent.keyDown(tree, { key: 'Enter' })
+    expect(useViewerStore.getState().file).toEqual({ path: '/p/notes.txt', name: 'notes.txt' })
+  })
+
+  it('exposes aria-level for nesting depth', async () => {
+    listDir.mockResolvedValueOnce([entry('src', 'dir')])
+    listDir.mockResolvedValue([entry('index.ts', 'file', '/p/src')])
+    render(<Explorer root="/p" />)
+    await waitFor(() => screen.getByText('src'))
+    expect(screen.getByText('src').closest('li')?.getAttribute('aria-level')).toBe('1')
+
+    fireEvent.click(screen.getByText('src'))
+    await waitFor(() => screen.getByText('index.ts'))
+    expect(screen.getByText('index.ts').closest('li')?.getAttribute('aria-level')).toBe('2')
+  })
+
   it('renders empty children for an unreadable subdirectory', async () => {
     listDir.mockResolvedValueOnce([entry('secret', 'dir')])
     listDir.mockRejectedValueOnce(new Error('EACCES'))

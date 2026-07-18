@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 40 — steiner: feat(explorer-keyboard-nav) — ARIA tree — 2026-07-18
+
+**Phase**: time-leap-development (cycle 6)
+**Changed**: Pure `core/explorer/tree-nav.ts` (`treeNav(nodes, index, key) → intent`: ↑/↓ clamp, Home/End, →/← expand-or-first-child / collapse-or-parent, Enter/Space activate; 11 tests over a fixture tree). Rewrote `Explorer.tsx` from per-node local state into a **flattened roving-tabindex tree**: centralized `expanded` Set + `childrenByPath` cache, a memoized `visible` flatten, exactly one node with `tabIndex=0`, `onKeyDown`→`treeNav`→apply (move focus / expand / collapse / open-file-or-toggle), and `aria-level`/`aria-selected`/`aria-expanded`. Lazy-load stays (expanded dirs fetched, refetched on fs-change version bump). `focusRegion('explorer')` now targets the roving node. Click/dblclick behavior preserved. Existing 9 Explorer tests stayed green through the rewrite; added 4 keyboard tests (arrow roving + tabindex, right/left expand/collapse, Enter opens file, aria-level).
+**SERN interference**: none — the pre-existing Explorer suite passing unchanged validated the refactor kept behavior.
+**Divergence meter**: 307 unit pass (was 293), 0 fail; typecheck clean. 15 new tests.
+**Next target**: Leap 41 — keyboard tab management: reorder active tab (Ctrl+Shift+PageUp/PageDown → move-tab), rename via F2 (local key on the focused tab), and shell-vs-claude new tab by keyboard (palette 'tab.newShell'/'tab.new' already dispatch; verify + a chord if needed). Add store `moveActiveTab(dir)`.
+
+---
+
 ## Leap 39 — steiner: feat(region-focus + focus-rings) — 2026-07-18
 
 **Phase**: time-leap-development (cycle 6)

@@ -208,7 +208,12 @@ export function App(): React.ReactElement {
         )
         break
       case 'explorer':
-        focusEl(explorerRef.current?.querySelector('[role="treeitem"]') ?? explorerRef.current)
+        // The roving (tabindex 0) node, else the first, else the shell.
+        focusEl(
+          explorerRef.current?.querySelector('.explorer__item[tabindex="0"]') ??
+            explorerRef.current?.querySelector('.explorer__item') ??
+            explorerRef.current
+        )
         break
       case 'terminal':
         // xterm's hidden textarea when live; the region shell otherwise.

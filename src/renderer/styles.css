@@ -376,6 +376,10 @@ body,
   background: var(--hover);
 }
 
+.explorer__item--active {
+  background: var(--hover);
+}
+
 .explorer__glyph {
   width: 12px;
   opacity: 0.7;

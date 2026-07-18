@@ -1,8 +1,8 @@
 phase: time-leap-development
-leap_count: 39
+leap_count: 40
 expansion_cycle: 6
 session_id: 2026-07-18T10:30:00Z
-prev_head: 1779817b7112a69211865e21bf059ea76279897b
+prev_head: 018b0b04ddf404806896834f89f2dfe3155b6280
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md. CYCLE 6 END GOAL (operator): fully mouseless, keyboard-only navigation across all of Weft; macOS/Linux platform work OUT OF SCOPE this cycle."
 project_name: "weft"
 project_type: web
@@ -11,11 +11,11 @@ test_cmd: pnpm test
 dev_server_port: 5173
 coverage_pct: 98
 divergence_readings: []
-current_focus: "Expansion 6 AC8 (explorer keyboard nav). Build pure src/core/explorer/tree-nav.ts implementing the WAI-ARIA tree pattern over a FLATTENED list of visible nodes: given (nodes[], currentIndex, key) return an intent {type: 'move', index} | {type:'expand'} | {type:'collapse'} | {type:'open'} | {type:'none'}. Keys: ArrowDown/Up move ±1 (clamp), Home/End first/last, ArrowRight expands a collapsed dir else moves to first child, ArrowLeft collapses an expanded dir else moves to parent, Enter/Space opens file or toggles dir. Then refactor src/renderer/components/Explorer.tsx to a roving-tabindex tree (exactly ONE node tabIndex=0, rest -1), an onKeyDown calling tree-nav + moving focus to the resulting node, and aria-level/aria-selected/aria-setsize. Keep existing click-to-open/expand. Unit-test tree-nav transitions; jsdom-test Explorer arrow nav + Enter open (window.api.readFileText/openFile). Ensure focusRegion('explorer') targets the roving (tabIndex=0) node."
+current_focus: "Expansion 6 AC9 (keyboard tab management). (1) Add store action moveActiveTab(dir: 1|-1) that reorders the active tab left/right within tabs[] (clamp at ends), plus a unit test. (2) Wire router move-tab action + tab.moveLeft/moveRight commands in App to call it. (3) Rename via F2: a LOCAL key handler on the focused tab button (not the global router) — pressing F2 while a tab label button is focused enters the existing inline rename input; Enter commits, Esc cancels (already implemented in TabButton). Add onKeyDown to the tab label button for F2→setEditing(true). (4) shell-vs-claude: tab.new/tab.newShell already dispatch openProject()/openProject('shell'); verify. Tests: store moveActiveTab unit; App test Ctrl+Shift+PageDown reorders active tab; TabButton F2 enters rename."
 blocked_on: null
-last_test_run: "293 unit pass, 0 fail; typecheck clean"
+last_test_run: "307 unit pass, 0 fail; typecheck clean"
 closed_worldlines: [worldline-expansion]
-next_action: "Create src/core/explorer/tree-nav.ts + test; refactor Explorer.tsx to roving tabindex + onKeyDown + aria; add Explorer keyboard tests. Run pnpm test + typecheck, commit steiner: feat(explorer-keyboard-nav)."
+next_action: "Add moveActiveTab to session-store (+test); wire move-tab action + tab.move* commands; add F2 rename to TabButton label; add tests. Run pnpm test + typecheck, commit steiner: feat(keyboard-tab-management)."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:

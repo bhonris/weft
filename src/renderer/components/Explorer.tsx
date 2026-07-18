@@ -1,17 +1,38 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { DirEntry } from '@shared/ipc/api-contract'
 import { useViewerStore } from '../store/viewer-store'
+import { treeNav, type NavNode } from '@core/explorer/tree-nav'
+
+/** A flattened, currently-visible tree row. */
+interface VisibleNode {
+  entry: DirEntry
+  depth: number
+  isDir: boolean
+  expanded: boolean
+}
 
 /**
- * Lazy file tree for the active project's cwd. Directories load their children
- * on first expand via `window.api.listDir`; files open with the OS default
- * handler. Read-only in v1 (Monaco viewer arrives separately).
+ * Lazy file tree for the active project's cwd, navigable entirely by keyboard
+ * (WAI-ARIA tree pattern via `core/explorer/tree-nav`): a flat roving-tabindex
+ * list where ↑/↓ move, →/← expand/collapse or hop parent/child, Enter/Space
+ * open a file or toggle a directory. Directories load children on first expand.
  */
 export function Explorer({ root }: { root: string | null }): React.ReactElement {
-  const [entries, setEntries] = useState<DirEntry[] | null>(null)
+  const [rootEntries, setRootEntries] = useState<DirEntry[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  // Bumped on every external fs change; open nodes re-list themselves.
   const [version, setVersion] = useState(0)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [childrenByPath, setChildrenByPath] = useState<Record<string, DirEntry[]>>({})
+  const [activeIndex, setActiveIndex] = useState(0)
+  const treeRef = useRef<HTMLUListElement>(null)
+  const openInViewer = useViewerStore((s) => s.openFile)
+
+  // Reset when the project changes.
+  useEffect(() => {
+    setExpanded(new Set())
+    setChildrenByPath({})
+    setActiveIndex(0)
+  }, [root])
 
   // Watch the root; any add/change/unlink refreshes the visible tree (≤1s AC).
   useEffect(() => {
@@ -35,17 +56,18 @@ export function Explorer({ root }: { root: string | null }): React.ReactElement 
     }
   }, [root])
 
+  // Load (and refresh) the root listing.
   useEffect(() => {
     setError(null)
     if (!root) {
-      setEntries(null)
+      setRootEntries(null)
       return
     }
     let cancelled = false
     window.api
       .listDir(root)
       .then((list) => {
-        if (!cancelled) setEntries(list)
+        if (!cancelled) setRootEntries(list)
       })
       .catch((e: unknown) => {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e))
@@ -55,84 +77,155 @@ export function Explorer({ root }: { root: string | null }): React.ReactElement 
     }
   }, [root, version])
 
-  if (!root) return <div className="explorer__empty">No project open</div>
-  if (error) return <div className="explorer__empty">Cannot read folder: {error}</div>
-  if (entries === null) return <div className="explorer__empty">Loading…</div>
-
-  return (
-    <ul className="explorer__list" role="tree" data-testid="explorer-tree">
-      {entries.map((e) => (
-        <ExplorerNode key={e.path} entry={e} depth={0} version={version} />
-      ))}
-    </ul>
-  )
-}
-
-function ExplorerNode({
-  entry,
-  depth,
-  version
-}: {
-  entry: DirEntry
-  depth: number
-  version: number
-}): React.ReactElement {
-  const [open, setOpen] = useState(false)
-  const [children, setChildren] = useState<DirEntry[] | null>(null)
-  const isDir = entry.kind === 'dir'
-
-  // Keep an expanded directory current when external changes arrive.
+  // Load (and refresh) every expanded directory's children.
   useEffect(() => {
-    if (!isDir || !open) return
+    if (!root || expanded.size === 0) return
     let cancelled = false
-    window.api
-      .listDir(entry.path)
-      .then((list) => {
-        if (!cancelled) setChildren(list)
+    const paths = [...expanded]
+    void Promise.all(
+      paths.map((p) =>
+        window.api
+          .listDir(p)
+          .then((list) => [p, list] as const)
+          .catch(() => [p, [] as DirEntry[]] as const)
+      )
+    ).then((pairs) => {
+      if (cancelled) return
+      setChildrenByPath((prev) => {
+        const next = { ...prev }
+        for (const [p, list] of pairs) next[p] = list
+        return next
       })
-      .catch(() => {
-        if (!cancelled) setChildren([])
-      })
+    })
     return () => {
       cancelled = true
     }
-  }, [version, isDir, open, entry.path])
+  }, [expanded, version, root])
 
-  const openInViewer = useViewerStore((s) => s.openFile)
-
-  const onClick = (): void => {
-    if (!isDir) {
-      // Single click: in-app read-only Monaco viewer (spec §2 diff-on-demand).
-      openInViewer(entry.path, entry.name)
-      return
+  // Flatten the tree into the currently-visible rows.
+  const visible = useMemo(() => {
+    const out: VisibleNode[] = []
+    const walk = (entries: DirEntry[], depth: number): void => {
+      for (const e of entries) {
+        const isDir = e.kind === 'dir'
+        const isExp = isDir && expanded.has(e.path)
+        out.push({ entry: e, depth, isDir, expanded: isExp })
+        if (isExp) {
+          const kids = childrenByPath[e.path]
+          if (kids) walk(kids, depth + 1)
+        }
+      }
     }
-    // The effect above owns (re)fetching whenever the node is open.
-    setOpen((o) => !o)
+    if (rootEntries) walk(rootEntries, 0)
+    return out
+  }, [rootEntries, expanded, childrenByPath])
+
+  const active = visible.length > 0 ? Math.min(activeIndex, visible.length - 1) : 0
+
+  const focusIdx = (i: number): void => {
+    const el = treeRef.current?.querySelector<HTMLElement>(`[data-idx="${i}"]`)
+    el?.focus()
   }
 
+  const expandPath = (path: string): void =>
+    setExpanded((s) => {
+      if (s.has(path)) return s
+      const next = new Set(s)
+      next.add(path)
+      return next
+    })
+
+  const collapsePath = (path: string): void =>
+    setExpanded((s) => {
+      if (!s.has(path)) return s
+      const next = new Set(s)
+      next.delete(path)
+      return next
+    })
+
+  const activate = (n: VisibleNode): void => {
+    if (n.isDir) {
+      if (n.expanded) collapsePath(n.entry.path)
+      else expandPath(n.entry.path)
+    } else {
+      openInViewer(n.entry.path, n.entry.name)
+    }
+  }
+
+  const onKeyDown = (e: React.KeyboardEvent): void => {
+    const navNodes: NavNode[] = visible.map((v) => ({
+      depth: v.depth,
+      isDir: v.isDir,
+      expanded: v.expanded
+    }))
+    const intent = treeNav(navNodes, active, e.key)
+    if (intent.type === 'none') return
+    e.preventDefault()
+    e.stopPropagation()
+    const cur = visible[active]
+    switch (intent.type) {
+      case 'move':
+        setActiveIndex(intent.index)
+        focusIdx(intent.index)
+        break
+      case 'expand':
+        if (cur?.isDir) expandPath(cur.entry.path)
+        break
+      case 'collapse':
+        if (cur?.isDir) collapsePath(cur.entry.path)
+        break
+      case 'activate':
+        if (cur) activate(cur)
+        break
+    }
+  }
+
+  if (!root) return <div className="explorer__empty">No project open</div>
+  if (error) return <div className="explorer__empty">Cannot read folder: {error}</div>
+  if (rootEntries === null) return <div className="explorer__empty">Loading…</div>
+  if (visible.length === 0) return <div className="explorer__empty">Empty folder</div>
+
   return (
-    <li role="treeitem" aria-expanded={isDir ? open : undefined}>
-      <button
-        type="button"
-        className={`explorer__item explorer__item--${entry.kind}`}
-        style={{ paddingLeft: `${8 + depth * 14}px` }}
-        onClick={onClick}
-        onDoubleClick={() => {
-          // Double click: hand off to the OS default handler.
-          if (!isDir) void window.api.openWithDefault(entry.path)
-        }}
-        title={entry.path}
-      >
-        <span className="explorer__glyph">{isDir ? (open ? '▾' : '▸') : '·'}</span>
-        {entry.name}
-      </button>
-      {isDir && open && children && (
-        <ul className="explorer__list" role="group">
-          {children.map((c) => (
-            <ExplorerNode key={c.path} entry={c} depth={depth + 1} version={version} />
-          ))}
-        </ul>
-      )}
-    </li>
+    <ul
+      className="explorer__list"
+      role="tree"
+      aria-label="Files"
+      data-testid="explorer-tree"
+      ref={treeRef}
+      onKeyDown={onKeyDown}
+    >
+      {visible.map((n, i) => (
+        <li
+          key={n.entry.path}
+          role="treeitem"
+          aria-level={n.depth + 1}
+          aria-selected={i === active}
+          aria-expanded={n.isDir ? n.expanded : undefined}
+        >
+          <button
+            type="button"
+            data-idx={i}
+            tabIndex={i === active ? 0 : -1}
+            className={`explorer__item explorer__item--${n.entry.kind}${
+              i === active ? ' explorer__item--active' : ''
+            }`}
+            style={{ paddingLeft: `${8 + n.depth * 14}px` }}
+            onClick={() => {
+              setActiveIndex(i)
+              activate(n)
+            }}
+            onDoubleClick={() => {
+              if (!n.isDir) void window.api.openWithDefault(n.entry.path)
+            }}
+            title={n.entry.path}
+          >
+            <span className="explorer__glyph">
+              {n.isDir ? (n.expanded ? '▾' : '▸') : '·'}
+            </span>
+            {n.entry.name}
+          </button>
+        </li>
+      ))}
+    </ul>
   )
 }
