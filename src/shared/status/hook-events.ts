@@ -7,6 +7,7 @@
 
 export type HookEventName =
   | 'UserPromptSubmit'
+  | 'PostToolUse'
   | 'Stop'
   | 'StopFailure'
   | 'Notification'

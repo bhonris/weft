@@ -24,7 +24,8 @@ const emptyWorkspace: WorkspaceState = {
   tabOrder: [],
   explorerRoots: [],
   theme: 'system',
-  resumeEnabled: false
+  resumeEnabled: false,
+  notificationsEnabled: true
 }
 
 const noop = (): void => {}
@@ -303,6 +304,27 @@ describe('App status commands', () => {
     fireEvent.change(await screen.findByRole('combobox'), { target: { value: 'toggle resume' } })
     fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' })
     await waitFor(() => expect(useSessionStore.getState().resumeEnabled).toBe(true))
+  })
+
+  it('toggles notifications from the palette', async () => {
+    act(() => useSessionStore.setState({ notificationsEnabled: true }))
+    render(<App />)
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'P', ctrlKey: true, shiftKey: true }))
+    })
+    fireEvent.change(await screen.findByRole('combobox'), {
+      target: { value: 'toggle notifications' }
+    })
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' })
+    await waitFor(() => expect(useSessionStore.getState().notificationsEnabled).toBe(false))
+  })
+
+  it('toggles notifications from the status-bar button', async () => {
+    act(() => useSessionStore.setState({ notificationsEnabled: true }))
+    render(<App />)
+    const btn = await screen.findByLabelText('notifications: on')
+    fireEvent.click(btn)
+    await waitFor(() => expect(useSessionStore.getState().notificationsEnabled).toBe(false))
   })
 })
 

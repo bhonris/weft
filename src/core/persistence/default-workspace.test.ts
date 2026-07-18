@@ -10,6 +10,8 @@ describe('defaultWorkspace', () => {
     expect(ws.tabOrder).toEqual([])
     expect(ws.explorerRoots).toEqual([])
     expect(ws.resumeEnabled).toBe(false)
+    // Notifications ship on by default (the "which session needs me?" signal).
+    expect(ws.notificationsEnabled).toBe(true)
   })
 
   // Regression guard: cyberpunk is the out-of-the-box default theme. A fresh

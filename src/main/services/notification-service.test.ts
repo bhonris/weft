@@ -1,11 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
 import { NotificationService, type ToastRequest } from './notification-service'
 
-function setup(focused: boolean, opts: { cooldownMs?: number } = {}) {
+function setup(focused: boolean, opts: { cooldownMs?: number; enabled?: boolean } = {}) {
   const toasts: ToastRequest[] = []
   const focusTab = vi.fn()
   let now = 0
+  let enabled = opts.enabled ?? true
   const svc = new NotificationService({
+    isEnabled: () => enabled,
     isAppFocused: () => focused,
     showToast: (t) => toasts.push(t),
     focusTab,
@@ -13,7 +15,13 @@ function setup(focused: boolean, opts: { cooldownMs?: number } = {}) {
     now: () => now,
     ...(opts.cooldownMs !== undefined ? { cooldownMs: opts.cooldownMs } : {})
   })
-  return { svc, toasts, focusTab, advance: (ms: number) => (now += ms) }
+  return {
+    svc,
+    toasts,
+    focusTab,
+    advance: (ms: number) => (now += ms),
+    setEnabled: (v: boolean) => (enabled = v)
+  }
 }
 
 describe('NotificationService', () => {
@@ -38,6 +46,24 @@ describe('NotificationService', () => {
     const { svc, toasts } = setup(false)
     svc.handleStatus({ tabId: 't1', status: 'done' })
     expect(toasts[0]!.title).toBe('my-proj — done')
+  })
+
+  it('suppresses every toast while notifications are disabled', () => {
+    const { svc, toasts } = setup(false, { enabled: false })
+    svc.handleStatus({ tabId: 't1', status: 'waiting', message: 'Allow edit?' })
+    svc.handleStatus({ tabId: 't1', status: 'done' })
+    expect(toasts).toHaveLength(0)
+  })
+
+  it('does not consume the per-tab cooldown while disabled', () => {
+    // A muted event must not "use up" the cooldown: the first toast after
+    // re-enabling should fire immediately, not be swallowed as a repeat.
+    const { svc, toasts, setEnabled } = setup(false, { cooldownMs: 10_000, enabled: false })
+    svc.handleStatus({ tabId: 't1', status: 'waiting' })
+    expect(toasts).toHaveLength(0)
+    setEnabled(true)
+    svc.handleStatus({ tabId: 't1', status: 'waiting' })
+    expect(toasts).toHaveLength(1)
   })
 
   it('stays silent while the app is focused', () => {

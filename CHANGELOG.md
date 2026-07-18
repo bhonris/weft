@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- **Notifications on/off switch.** A status-bar toggle (`🔔 notify on` /
+  `🔕 notify off`) and a **Toggle Notifications** command mute or restore Weft's
+  OS toasts (the "session needs you / finished" popups). The choice persists
+  across restarts (workspace schema v2 → v3) and defaults to on. The tab
+  color/badge signal stays live even when toasts are muted. Enforced centrally
+  in the main process, so all windows honor one setting and a toggle takes
+  effect without a restart.
+- **Fix: tab stuck on `waiting` (amber) after approving a permission prompt.**
+  Answering a permission prompt fires no `UserPromptSubmit`, so the tab never
+  returned to `working` until the next `Stop`. Weft now also reports the
+  `PostToolUse` hook and maps it to `working`, so the tab flips back to the
+  running color the moment the approved tool executes.
+
 ## 0.2.0 — "Daily Driver" — 2026-07-18
 
 The declared end-goal release: Weft becomes strictly better than a bare

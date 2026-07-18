@@ -1,17 +1,19 @@
 import { describe, it, expect } from 'vitest'
 import { migrate, migrations } from './index'
 import { v0ToV1 } from './v0-to-v1'
+import { v2ToV3 } from './v2-to-v3'
 
 describe('migrate', () => {
   it('returns the same blob when already current', () => {
-    const blob = { version: 2, tabs: [] }
-    expect(migrate(blob, 2)).toBe(blob)
+    const blob = { version: 3, tabs: [] }
+    expect(migrate(blob, 3)).toBe(blob)
   })
 
-  it('runs the v0->v1 step for a legacy blob', () => {
+  it('runs the full chain for a legacy blob', () => {
     const out = migrate({ theme: 'dark' }, 0)
-    expect(out['version']).toBe(2) // full chain: v0 -> v1 -> v2
+    expect(out['version']).toBe(3) // full chain: v0 -> v1 -> v2 -> v3
     expect(out['resumeEnabled']).toBe(false)
+    expect(out['notificationsEnabled']).toBe(true)
   })
 
   it('throws when a migration step is missing', () => {
@@ -77,5 +79,16 @@ describe('v0ToV1', () => {
   it('handles null entries in the tabs array', () => {
     const out = v0ToV1({ tabs: [null] }) as { tabs: Array<{ title: string }> }
     expect(out.tabs[0]!.title).toBe('session')
+  })
+})
+
+describe('v2ToV3', () => {
+  it('adds notificationsEnabled (on) and bumps the version, preserving other fields', () => {
+    expect(v2ToV3({ version: 2, resumeEnabled: true, theme: 'dark' })).toEqual({
+      version: 3,
+      resumeEnabled: true,
+      theme: 'dark',
+      notificationsEnabled: true
+    })
   })
 })

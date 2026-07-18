@@ -41,6 +41,9 @@ export interface SessionState {
   /** Restored claude tabs relaunch with --resume (opt-in; costs tokens). */
   resumeEnabled: boolean
   setResumeEnabled: (enabled: boolean) => void
+  /** Raise OS toasts for unfocused waiting/done sessions (on by default). */
+  notificationsEnabled: boolean
+  setNotificationsEnabled: (enabled: boolean) => void
   addTab: (
     tab: Omit<Tab, 'status' | 'command' | 'sessionId'> & {
       status?: SessionStatus
@@ -70,6 +73,8 @@ export const useSessionStore = create<SessionState>((set) => ({
   setSpawnFailure: (spawnFailure) => set({ spawnFailure }),
   resumeEnabled: false,
   setResumeEnabled: (resumeEnabled) => set({ resumeEnabled }),
+  notificationsEnabled: true,
+  setNotificationsEnabled: (notificationsEnabled) => set({ notificationsEnabled }),
 
   addTab: (tab) =>
     set((s) => {

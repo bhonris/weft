@@ -17,7 +17,8 @@ export type WorkspaceSyncApi = Pick<WeftBridge, 'createSession' | 'listSessions'
 export function buildWorkspaceState(
   tabs: readonly Tab[],
   theme: WorkspaceState['theme'] = 'cyberpunk',
-  resumeEnabled = false
+  resumeEnabled = false,
+  notificationsEnabled = true
 ): WorkspaceState {
   return {
     version: WORKSPACE_VERSION,
@@ -34,7 +35,8 @@ export function buildWorkspaceState(
     tabOrder: tabs.map((t) => t.tabId),
     explorerRoots: [],
     theme,
-    resumeEnabled
+    resumeEnabled,
+    notificationsEnabled
   }
 }
 

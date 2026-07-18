@@ -183,6 +183,8 @@ export function App(): React.ReactElement {
   const [gitBranch, setGitBranch] = useState<string | null>(null)
   const resumeEnabled = useSessionStore((s) => s.resumeEnabled)
   const setResumeEnabled = useSessionStore((s) => s.setResumeEnabled)
+  const notificationsEnabled = useSessionStore((s) => s.notificationsEnabled)
+  const setNotificationsEnabled = useSessionStore((s) => s.setNotificationsEnabled)
   const [overlay, setOverlay] = useState<'none' | 'palette' | 'help'>('none')
   // Read inside the stable window keydown listener without re-subscribing it.
   const overlayOpenRef = useRef(false)
@@ -288,6 +290,9 @@ export function App(): React.ReactElement {
         break
       case 'general.toggleResume':
         s.setResumeEnabled(!s.resumeEnabled)
+        break
+      case 'general.toggleNotifications':
+        s.setNotificationsEnabled(!s.notificationsEnabled)
         break
       case 'viewer.save':
         useViewerStore.getState().requestSave()
@@ -435,6 +440,7 @@ export function App(): React.ReactElement {
       void window.api.loadWorkspace().then(async (saved) => {
         useSessionStore.getState().setTheme(saved.theme)
         useSessionStore.getState().setResumeEnabled(saved.resumeEnabled)
+        useSessionStore.getState().setNotificationsEnabled(saved.notificationsEnabled)
         const restored = await restoreWorkspace(window.api, saved)
         if (disposed) return
         const add = useSessionStore.getState().addTab
@@ -445,10 +451,16 @@ export function App(): React.ReactElement {
       if (
         state.tabs !== prev.tabs ||
         state.theme !== prev.theme ||
-        state.resumeEnabled !== prev.resumeEnabled
+        state.resumeEnabled !== prev.resumeEnabled ||
+        state.notificationsEnabled !== prev.notificationsEnabled
       ) {
         void window.api.saveWorkspace(
-          buildWorkspaceState(state.tabs, state.theme, state.resumeEnabled)
+          buildWorkspaceState(
+            state.tabs,
+            state.theme,
+            state.resumeEnabled,
+            state.notificationsEnabled
+          )
         )
       }
     })
@@ -551,6 +563,15 @@ export function App(): React.ReactElement {
             </span>
           )}
           <span className="status-bar__spacer" />
+          <button
+            type="button"
+            className="status-bar__theme"
+            aria-label={`notifications: ${notificationsEnabled ? 'on' : 'off'}`}
+            title="Turn OS notifications on/off (toasts when an unfocused session needs you or finishes). The tab color/badge stays live either way."
+            onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+          >
+            {notificationsEnabled ? '🔔 notify on' : '🔕 notify off'}
+          </button>
           <button
             type="button"
             className="status-bar__theme"

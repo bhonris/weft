@@ -75,7 +75,7 @@ lifecycle hooks** — never output scraping:
 | Badge | Meaning | Driven by |
 | --- | --- | --- |
 | ○ unknown | No hook has reported yet (or endpoint down) | default |
-| ● working | Claude is processing | `UserPromptSubmit` |
+| ● working | Claude is processing | `UserPromptSubmit` / `PostToolUse` |
 | ‖ waiting | **Blocked on you** (permission, input, idle) | `Notification` types |
 | ✓ done | Turn finished | `Stop` / `agent_completed` |
 | ✕ error | Failure or non-zero exit | `StopFailure` / PTY exit |
@@ -91,6 +91,12 @@ second. The working badge pulses; under OS reduced-motion it stays static.
 When a session enters **waiting** or **done** while Weft is unfocused, an OS
 toast appears ("my-proj — needs you"); clicking it focuses the window and
 activates that tab. Toasts are rate-limited to one per tab per 10s.
+
+**Turning toasts off:** the status-bar **🔔 notify on / 🔕 notify off** button
+(or the **Toggle Notifications** command in the palette) mutes and restores OS
+toasts. The choice persists across restarts and defaults to on. Muting affects
+OS toasts only — the tab color/badge stays live, so you can still see which
+session needs you at a glance.
 
 ### Terminal sessions & reload-safe recovery
 

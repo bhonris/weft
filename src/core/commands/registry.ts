@@ -39,6 +39,7 @@ export type CommandId =
   | 'general.terminalSearch'
   | 'general.cycleTheme'
   | 'general.toggleResume'
+  | 'general.toggleNotifications'
 
 export interface Command {
   id: CommandId
@@ -153,7 +154,8 @@ export const COMMANDS: readonly Command[] = [
     routes: 'terminal-search'
   },
   { id: 'general.cycleTheme', title: 'Cycle Theme', category: 'General' },
-  { id: 'general.toggleResume', title: 'Toggle Resume on Restore', category: 'General' }
+  { id: 'general.toggleResume', title: 'Toggle Resume on Restore', category: 'General' },
+  { id: 'general.toggleNotifications', title: 'Toggle Notifications', category: 'General' }
 ]
 
 /** Categories in display order for the help overlay grouping. */

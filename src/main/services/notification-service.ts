@@ -8,6 +8,8 @@ export interface ToastRequest {
 }
 
 export interface NotificationDeps {
+  /** User's on/off switch — read per event so a toggle needs no restart. */
+  isEnabled: () => boolean
   /** True when any Weft window currently has OS focus. */
   isAppFocused: () => boolean
   /** Raise an OS toast (Electron Notification in production). */
@@ -34,6 +36,9 @@ export class NotificationService {
   constructor(private readonly deps: NotificationDeps) {}
 
   handleStatus(change: StatusChange): void {
+    // Muted by the user: suppress before the cooldown check so muting never
+    // consumes a per-tab cooldown slot.
+    if (!this.deps.isEnabled()) return
     if (change.status !== 'waiting' && change.status !== 'done') return
     if (this.deps.isAppFocused()) return
 

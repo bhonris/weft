@@ -65,9 +65,30 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
   })
   const settingsJson = buildHookSettingsJson({ forwarderCommand: `"${wrapperPath}"` })
 
+  // Workspace persistence: electron-store JSON blob + pre-migration backup.
+  // Constructed here (before notifications) so the notification service can read
+  // the persisted on/off switch straight from it.
+  const { default: ElectronStore } = await import('electron-store')
+  const electronStore = new ElectronStore()
+  const workspaceStore = new WorkspaceStore({
+      store: {
+        get: (key) => electronStore.get(key),
+        set: (key, value) => electronStore.set(key, value)
+      },
+      backup: (blob) => {
+        void fsPromises.writeFile(
+          join(app.getPath('userData'), 'config.bak'),
+          JSON.stringify(blob, null, 2)
+        )
+      },
+      onWarn: (message) => console.warn(`[weft-workspace] ${message}`)
+  })
+
   // App-owned notifications: toast on waiting/done while unfocused; click
-  // focuses the window and activates the tab (spec §4.4.7).
+  // focuses the window and activates the tab (spec §4.4.7). Muted centrally when
+  // the user turns notifications off — read per event so no restart is needed.
   const notifications = new NotificationService({
+    isEnabled: () => workspaceStore.load().notificationsEnabled,
     isAppFocused: () => BrowserWindow.getAllWindows().some((w) => w.isFocused()),
     getTitle: (tabId) => {
       const ref = pty.tabRefs().find((r) => r.tabId === tabId)
@@ -186,22 +207,6 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
     }
   })
 
-  // Workspace persistence: electron-store JSON blob + pre-migration backup.
-  const { default: ElectronStore } = await import('electron-store')
-  const electronStore = new ElectronStore()
-  const workspaceStore = new WorkspaceStore({
-      store: {
-        get: (key) => electronStore.get(key),
-        set: (key, value) => electronStore.set(key, value)
-      },
-      backup: (blob) => {
-        void fsPromises.writeFile(
-          join(app.getPath('userData'), 'config.bak'),
-          JSON.stringify(blob, null, 2)
-        )
-      },
-      onWarn: (message) => console.warn(`[weft-workspace] ${message}`)
-  })
   registerWorkspaceIpc({ ipcMain, store: workspaceStore })
 
   // Main-process introspection for the E2E suite (never exposed to the renderer).

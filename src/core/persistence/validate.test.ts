@@ -4,8 +4,9 @@ import { defaultWorkspace } from './default-workspace'
 import { migrations } from './migrations'
 
 const validV1 = {
-  version: 2,
+  version: 3,
   resumeEnabled: false,
+  notificationsEnabled: true,
   tabs: [
     {
       tabId: 't1',
@@ -41,7 +42,7 @@ describe('loadWorkspace', () => {
     expect(r.ok).toBe(true)
     if (r.ok) {
       expect(r.value.state.theme).toBe('dark')
-      expect(r.value.fromVersion).toBe(2)
+      expect(r.value.fromVersion).toBe(3)
       expect(r.value.migrated).toBe(false)
     }
   })
@@ -50,9 +51,10 @@ describe('loadWorkspace', () => {
     const r = loadWorkspace({ theme: 'light', tabs: [] })
     expect(r.ok).toBe(true)
     if (r.ok) {
-      expect(r.value.state.version).toBe(2)
+      expect(r.value.state.version).toBe(3)
       expect(r.value.state.theme).toBe('light')
       expect(r.value.state.resumeEnabled).toBe(false)
+      expect(r.value.state.notificationsEnabled).toBe(true)
       expect(r.value.fromVersion).toBe(0)
       expect(r.value.migrated).toBe(true)
     }

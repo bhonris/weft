@@ -9,7 +9,9 @@
  * Pure: the forwarder command is injected.
  */
 
-export const REPORTED_EVENTS = ['UserPromptSubmit', 'Stop', 'StopFailure', 'Notification'] as const
+// PostToolUse is reported so that resuming after a permission prompt (which
+// fires no UserPromptSubmit) flips the tab from `waiting` back to `working`.
+export const REPORTED_EVENTS = ['UserPromptSubmit', 'PostToolUse', 'Stop', 'StopFailure', 'Notification'] as const
 
 export interface HookSettingsInput {
   /** Absolute path (already quoted-safe) of the forwarder wrapper to execute. */

@@ -15,7 +15,7 @@ const tab = (id: string, over: Partial<Tab> = {}): Tab => ({
 describe('buildWorkspaceState', () => {
   it('serializes tabs, order, and defaults at the current version', () => {
     const ws = buildWorkspaceState([tab('a'), tab('b', { command: 'shell' })])
-    expect(ws.version).toBe(2)
+    expect(ws.version).toBe(3)
     expect(ws.tabs).toEqual([
       {
         tabId: 'a',
@@ -37,11 +37,18 @@ describe('buildWorkspaceState', () => {
     expect(ws.tabOrder).toEqual(['a', 'b'])
     expect(ws.theme).toBe('cyberpunk')
     expect(ws.resumeEnabled).toBe(false)
+    // Notifications default on when the caller doesn't specify.
+    expect(ws.notificationsEnabled).toBe(true)
   })
 
   it('persists an explicit theme override', () => {
     expect(buildWorkspaceState([], 'dark').theme).toBe('dark')
     expect(buildWorkspaceState([], 'light').theme).toBe('light')
+  })
+
+  it('persists an explicit notifications-off choice', () => {
+    expect(buildWorkspaceState([], 'cyberpunk', false, false).notificationsEnabled).toBe(false)
+    expect(buildWorkspaceState([], 'cyberpunk', false, true).notificationsEnabled).toBe(true)
   })
 })
 

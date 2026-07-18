@@ -10,6 +10,8 @@ export function defaultWorkspace(): WorkspaceState {
     explorerRoots: [],
     // cyberpunk is the out-of-the-box default theme.
     theme: 'cyberpunk',
-    resumeEnabled: false
+    resumeEnabled: false,
+    // OS notifications are on out of the box (the "which session needs me?" signal).
+    notificationsEnabled: true
   }
 }

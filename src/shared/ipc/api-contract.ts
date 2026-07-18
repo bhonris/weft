@@ -32,6 +32,8 @@ export interface WorkspaceState {
   theme: 'system' | 'light' | 'dark' | 'cyberpunk'
   /** v2: restored claude tabs relaunch with `--resume <sessionId>`. */
   resumeEnabled: boolean
+  /** v3: raise OS toasts for unfocused waiting/done sessions (default true). */
+  notificationsEnabled: boolean
   windowBounds?: { x: number; y: number; width: number; height: number }
 }
 

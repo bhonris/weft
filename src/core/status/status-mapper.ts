@@ -32,6 +32,14 @@ export function mapHookToStatus(payload: HookPayload): StatusUpdate {
     case 'UserPromptSubmit':
       return { status: 'working' }
 
+    // Answering a permission prompt (approve a tool) is NOT a prompt
+    // submission, so it fires no UserPromptSubmit — the tab would otherwise
+    // stay `waiting` (amber) until the next Stop. PostToolUse fires once the
+    // approved tool runs, i.e. the moment the agent resumes, so it's the
+    // signal that clears `waiting` back to `working`.
+    case 'PostToolUse':
+      return { status: 'working' }
+
     case 'Stop':
       return { status: 'done' }
 

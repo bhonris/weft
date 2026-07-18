@@ -11,6 +11,15 @@ describe('mapHookToStatus', () => {
     })
   })
 
+  it('maps PostToolUse to working', () => {
+    // Regression: answering a permission prompt fires no UserPromptSubmit, so
+    // PostToolUse is what clears `waiting` back to `working` when the approved
+    // tool runs. Without it the tab stays amber until the next Stop.
+    expect(mapHookToStatus({ ...base, event: 'PostToolUse' })).toEqual({
+      status: 'working'
+    })
+  })
+
   it('maps Stop to done', () => {
     expect(mapHookToStatus({ ...base, event: 'Stop' })).toEqual({
       status: 'done'
