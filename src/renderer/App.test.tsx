@@ -128,6 +128,25 @@ describe('App command palette', () => {
   })
 })
 
+describe('App keyboard help', () => {
+  it('opens the help overlay on Ctrl+Shift+/ and closes on Escape', async () => {
+    render(<App />)
+    expect(screen.queryByTestId('keyboard-help')).toBeNull()
+
+    act(() => {
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { key: '/', ctrlKey: true, shiftKey: true })
+      )
+    })
+    const help = await screen.findByTestId('keyboard-help')
+    expect(help).toBeTruthy()
+    expect(screen.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeTruthy()
+
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByTestId('keyboard-help')).toBeNull())
+  })
+})
+
 describe('App theme toggle', () => {
   it('cycles system → light → dark → cyberpunk → system and reflects it on <html>', async () => {
     act(() => useSessionStore.getState().setTheme('system'))

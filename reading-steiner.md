@@ -1,8 +1,8 @@
 phase: time-leap-development
-leap_count: 37
+leap_count: 38
 expansion_cycle: 6
 session_id: 2026-07-18T10:30:00Z
-prev_head: d439421e55845398dfd19c5fd233c47df5862b00
+prev_head: a175184b12354801553b33c27baa0bec17a7911f
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md. CYCLE 6 END GOAL (operator): fully mouseless, keyboard-only navigation across all of Weft; macOS/Linux platform work OUT OF SCOPE this cycle."
 project_name: "weft"
 project_type: web
@@ -11,11 +11,11 @@ test_cmd: pnpm test
 dev_server_port: 5173
 coverage_pct: 98
 divergence_readings: []
-current_focus: "Expansion 6 AC5 (keyboard help overlay). Build src/renderer/components/KeyboardHelp.tsx: a focus-trapped modal opened by Ctrl+Shift+/ (help-overlay action), rendering COMMANDS grouped by CATEGORY_ORDER as a cheat-sheet (title + shortcutHint <kbd>), Esc closes, focus restored on close. Wire the help-overlay action in App.tsx (open help; guarded by overlayOpenRef like the palette) and add a 'general.keyboardHelp' dispatch entry that opens it. Add a jsdom test (renders groups, shows shortcuts, Esc closes, focus restore) + an App test (Ctrl+Shift+/ opens). Keep the two overlays mutually aware (opening one closes/omits the other) via a single 'overlay' state or two booleans + shared ref."
+current_focus: "Expansion 6 AC6/AC7 (region focus + focus rings). (1) Region-focus system: a focus manager (hook or refs) owning the ordered regions [tab strip, explorer, terminal, viewer, status bar]; wire routeKey actions focus-region (Ctrl+` → terminal xterm textarea, Ctrl+Shift+E → explorer active/first tree node) and focus-cycle (Ctrl+F6/Ctrl+Shift+F6 → next/prev present region, skipping absent ones). Move DOM focus via .focus() and assert document.activeElement in tests. TerminalPane needs a way to focus its xterm (expose a ref/imperative handle or focus the .xterm textarea via the terminal-host container). Wire dispatch focus.terminal/explorer/cycleNext/cyclePrev. (2) Add theme-aware :focus-visible rings in styles.css for tabs, tab buttons, explorer nodes, status-bar buttons, palette/help options + a cyberpunk neon variant; respect prefers-reduced-motion. Tests: a region-focus unit/jsdom test (Ctrl+` focuses terminal region, Ctrl+Shift+E focuses explorer, Ctrl+F6 cycles) — may need to give the terminal-host/explorer focusable targets (tabIndex) in the App."
 blocked_on: null
-last_test_run: "276 unit pass, 0 fail; typecheck clean"
+last_test_run: "283 unit pass, 0 fail; typecheck clean"
 closed_worldlines: [worldline-expansion]
-next_action: "Create src/renderer/components/KeyboardHelp.tsx + test; wire help-overlay action + general.keyboardHelp in App.tsx (share the overlay-open ref so the palette listener stands down). Run pnpm test + typecheck, commit steiner: feat(keyboard-help)."
+next_action: "Implement region-focus (App refs + wire focus-region/focus-cycle actions + dispatch; make terminal + explorer focusable targets) and :focus-visible CSS. Add jsdom tests for focus movement. Run pnpm test + typecheck, commit steiner: feat(region-focus + focus-rings)."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:

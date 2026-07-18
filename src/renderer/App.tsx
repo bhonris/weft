@@ -6,6 +6,7 @@ import { Explorer } from './components/Explorer'
 import { ViewerPane } from './components/ViewerPane'
 import { WorkbenchErrorBoundary } from './components/WorkbenchErrorBoundary'
 import { CommandPalette } from './components/CommandPalette'
+import { KeyboardHelp } from './components/KeyboardHelp'
 import { routeKey } from '@core/keybindings/keybinding-router'
 import type { CommandId } from '@core/commands/registry'
 import type { SessionStatus } from '@shared/status/hook-events'
@@ -172,12 +173,12 @@ export function App(): React.ReactElement {
   const [gitBranch, setGitBranch] = useState<string | null>(null)
   const resumeEnabled = useSessionStore((s) => s.resumeEnabled)
   const setResumeEnabled = useSessionStore((s) => s.setResumeEnabled)
-  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [overlay, setOverlay] = useState<'none' | 'palette' | 'help'>('none')
   // Read inside the stable window keydown listener without re-subscribing it.
   const overlayOpenRef = useRef(false)
   useEffect(() => {
-    overlayOpenRef.current = paletteOpen
-  }, [paletteOpen])
+    overlayOpenRef.current = overlay !== 'none'
+  }, [overlay])
 
   // Renderer-owned command dispatch: maps a CommandId to its side effect.
   // Handlers not yet wired this cycle are safe no-ops until their leap lands.
@@ -201,7 +202,10 @@ export function App(): React.ReactElement {
         s.cycleTab(-1)
         break
       case 'general.commandPalette':
-        setPaletteOpen(true)
+        setOverlay('palette')
+        break
+      case 'general.keyboardHelp':
+        setOverlay('help')
         break
       case 'general.cycleTheme':
         s.setTheme(nextTheme(s.theme))
@@ -209,8 +213,11 @@ export function App(): React.ReactElement {
       case 'general.toggleResume':
         s.setResumeEnabled(!s.resumeEnabled)
         break
+      case 'general.keyboardHelp':
+        setOverlay('help')
+        break
       // Wired in later cycle-6 leaps: focus.*, viewer.*, tab.move*/rename,
-      // general.keyboardHelp, general.terminalSearch.
+      // general.terminalSearch.
       default:
         break
     }
@@ -284,7 +291,10 @@ export function App(): React.ReactElement {
           break
         }
         case 'command-palette':
-          setPaletteOpen(true)
+          setOverlay('palette')
+          break
+        case 'help-overlay':
+          setOverlay('help')
           break
         default:
           return // passthrough + not-yet-wired chords: do not intercept
@@ -422,9 +432,13 @@ export function App(): React.ReactElement {
           </span>
         </footer>
         <CommandPalette
-          open={paletteOpen}
+          open={overlay === 'palette'}
           onRun={runCommand}
-          onClose={() => setPaletteOpen(false)}
+          onClose={() => setOverlay((o) => (o === 'palette' ? 'none' : o))}
+        />
+        <KeyboardHelp
+          open={overlay === 'help'}
+          onClose={() => setOverlay((o) => (o === 'help' ? 'none' : o))}
         />
       </div>
     </WorkbenchErrorBoundary>

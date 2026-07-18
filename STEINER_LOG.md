@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 38 — steiner: feat(keyboard-help) — Ctrl+Shift+/ cheat sheet — 2026-07-18
+
+**Phase**: time-leap-development (cycle 6)
+**Changed**: `KeyboardHelp.tsx` — a modal, focus-trapped cheat sheet (Ctrl+Shift+/) listing every shortcut-bearing command grouped by `CATEGORY_ORDER` (two-column `<dl>` with `<kbd>` labels), Esc + × close, focus restored on close. Refactored App's overlay state from a lone `paletteOpen` boolean to a single `overlay: 'none'|'palette'|'help'` union (mutually exclusive), with each overlay's `onClose` using a functional guard (`o === 'palette' ? 'none' : o`) so running a command that opens the OTHER overlay from the palette isn't clobbered by the palette's own close. Wired `help-overlay` (router chord) + `general.keyboardHelp` (dispatch). Added help CSS (theme-agnostic + cyberpunk).
+**SERN interference**: none
+**Divergence meter**: 283 unit pass (was 276), 0 fail; typecheck clean. 7 new tests (6 help + 1 App Ctrl+Shift+/).
+**Next target**: Leap 39 — region-focus system (Ctrl+F6/Ctrl+Shift+F6 cycle, Ctrl+` terminal, Ctrl+Shift+E explorer) via a focus manager + refs, wired to focus-region/focus-cycle actions; plus theme-aware `:focus-visible` rings on tabs/tree/buttons/options (incl. cyberpunk), reduced-motion-safe. First real DOM-focus movement between regions.
+
+---
+
 ## Leap 37 — steiner: feat(command-palette) — Ctrl+Shift+P + robust dispatch — 2026-07-18
 
 **Phase**: time-leap-development (cycle 6, first renderer leap)
