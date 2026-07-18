@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 37 — steiner: feat(command-palette) — Ctrl+Shift+P + robust dispatch — 2026-07-18
+
+**Phase**: time-leap-development (cycle 6, first renderer leap)
+**Changed**: `CommandPalette.tsx` — an accessible, focus-trapped modal combobox+listbox backed by `COMMANDS` + `fuzzyFilter`: autofocused search input, ↑/↓/Home/End move the highlight (aria-activedescendant), Enter runs, Esc closes, backdrop-click closes, Tab trapped, and DOM focus RESTORED to the prior element on close. Wired into `App.tsx`: added `paletteOpen` state + an `overlayOpenRef` so the stable window keydown listener can stand down while an overlay owns the keyboard; a renderer-owned `runCommand(id)` dispatch (tab new/shell/open/close/next/prev, cycle theme, toggle resume wired now; focus/viewer/move/rename/help/search are safe no-ops until their leaps). **Hardened the App listener**: it now preventDefaults/acts ONLY on handled KeyActions and `default: return`s for passthrough + not-yet-wired chords, so they reach the PTY instead of being swallowed. Extracted `nextTheme`/`THEME_CYCLE` into the store and reused them for both the status-bar toggle and the Cycle-Theme command. Added palette CSS (theme-agnostic + cyberpunk variant).
+**SERN interference**: none. (Avoided a jest-dom trap: repo has no `@testing-library/jest-dom`, so tests use `document.activeElement` instead of `toHaveFocus`.)
+**Divergence meter**: 276 unit pass (was 267), 0 fail; typecheck clean. 9 new tests (8 palette + 1 App Ctrl+Shift+P→open→run→close).
+**Next target**: Leap 38 — KeyboardHelp overlay (Ctrl+Shift+/): grouped shortcut cheat-sheet from COMMANDS/CATEGORY_ORDER, Esc closes, focus-trap + restore; wire help-overlay action + guard it under overlayOpenRef.
+
+---
+
 ## Leap 36 — steiner: feat(commands) — pure registry + fuzzy match — 2026-07-18
 
 **Phase**: time-leap-development (cycle 6)

@@ -14,6 +14,15 @@ export interface Tab {
 
 export type ThemeChoice = 'system' | 'light' | 'dark' | 'cyberpunk'
 
+/** The status-bar toggle / "Cycle Theme" command order. */
+export const THEME_CYCLE: readonly ThemeChoice[] = ['system', 'light', 'dark', 'cyberpunk']
+
+/** The next theme in the cycle after `theme` (wraps). */
+export function nextTheme(theme: ThemeChoice): ThemeChoice {
+  const i = THEME_CYCLE.indexOf(theme)
+  return THEME_CYCLE[(i + 1) % THEME_CYCLE.length]!
+}
+
 export interface SpawnFailure {
   message: string
   cwd: string

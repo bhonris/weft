@@ -1,8 +1,8 @@
 phase: time-leap-development
-leap_count: 36
+leap_count: 37
 expansion_cycle: 6
 session_id: 2026-07-18T10:30:00Z
-prev_head: 2d26c9efeff159aba49ead8690fdbea2263fabaf
+prev_head: d439421e55845398dfd19c5fd233c47df5862b00
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md. CYCLE 6 END GOAL (operator): fully mouseless, keyboard-only navigation across all of Weft; macOS/Linux platform work OUT OF SCOPE this cycle."
 project_name: "weft"
 project_type: web
@@ -11,11 +11,11 @@ test_cmd: pnpm test
 dev_server_port: 5173
 coverage_pct: 98
 divergence_readings: []
-current_focus: "Expansion 6 AC3 (command palette). Build src/renderer/components/CommandPalette.tsx: a focus-trapped modal opened by Ctrl+Shift+P, backed by COMMANDS + fuzzyFilter, with role=listbox/option + aria-activedescendant, a search input (autofocus), ↑/↓ move highlight, Enter runs the selected command's injected handler, Esc closes and RESTORES focus to the previously-active element. Also make the App window keydown listener robust: only preventDefault/act on KeyActions it actually handles (so newly-routed-but-unwired chords fall through to the PTY), and wire: command-palette → open palette; keep existing tab chords. A small command-dispatch map (id → handler) lives in the renderer. Add a jsdom test for palette filter/keyboard-select/Esc-restore/aria."
+current_focus: "Expansion 6 AC5 (keyboard help overlay). Build src/renderer/components/KeyboardHelp.tsx: a focus-trapped modal opened by Ctrl+Shift+/ (help-overlay action), rendering COMMANDS grouped by CATEGORY_ORDER as a cheat-sheet (title + shortcutHint <kbd>), Esc closes, focus restored on close. Wire the help-overlay action in App.tsx (open help; guarded by overlayOpenRef like the palette) and add a 'general.keyboardHelp' dispatch entry that opens it. Add a jsdom test (renders groups, shows shortcuts, Esc closes, focus restore) + an App test (Ctrl+Shift+/ opens). Keep the two overlays mutually aware (opening one closes/omits the other) via a single 'overlay' state or two booleans + shared ref."
 blocked_on: null
-last_test_run: "267 unit pass, 0 fail; typecheck clean"
+last_test_run: "276 unit pass, 0 fail; typecheck clean"
 closed_worldlines: [worldline-expansion]
-next_action: "Create src/renderer/components/CommandPalette.tsx + CommandPalette.test.tsx; add a renderer command-dispatch map; make App.tsx onKey handle only known actions + open the palette on command-palette. Run pnpm test + typecheck, commit steiner: feat(command-palette)."
+next_action: "Create src/renderer/components/KeyboardHelp.tsx + test; wire help-overlay action + general.keyboardHelp in App.tsx (share the overlay-open ref so the palette listener stands down). Run pnpm test + typecheck, commit steiner: feat(keyboard-help)."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:

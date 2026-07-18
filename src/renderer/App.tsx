@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
-import { useSessionStore, type Tab, type SpawnFailure } from './store/session-store'
+import { useEffect, useRef, useState } from 'react'
+import { useSessionStore, nextTheme, type Tab, type SpawnFailure } from './store/session-store'
 import { buildWorkspaceState, restoreWorkspace } from './store/workspace-sync'
 import { TerminalPane } from './components/TerminalPane'
 import { Explorer } from './components/Explorer'
 import { ViewerPane } from './components/ViewerPane'
 import { WorkbenchErrorBoundary } from './components/WorkbenchErrorBoundary'
+import { CommandPalette } from './components/CommandPalette'
 import { routeKey } from '@core/keybindings/keybinding-router'
+import type { CommandId } from '@core/commands/registry'
 import type { SessionStatus } from '@shared/status/hook-events'
 
 // Module-level guard: React StrictMode double-invokes effects in dev; the
@@ -170,6 +172,49 @@ export function App(): React.ReactElement {
   const [gitBranch, setGitBranch] = useState<string | null>(null)
   const resumeEnabled = useSessionStore((s) => s.resumeEnabled)
   const setResumeEnabled = useSessionStore((s) => s.setResumeEnabled)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  // Read inside the stable window keydown listener without re-subscribing it.
+  const overlayOpenRef = useRef(false)
+  useEffect(() => {
+    overlayOpenRef.current = paletteOpen
+  }, [paletteOpen])
+
+  // Renderer-owned command dispatch: maps a CommandId to its side effect.
+  // Handlers not yet wired this cycle are safe no-ops until their leap lands.
+  const runCommand = (id: CommandId): void => {
+    const s = useSessionStore.getState()
+    switch (id) {
+      case 'tab.new':
+      case 'tab.openProject':
+        void openProject()
+        break
+      case 'tab.newShell':
+        void openProject('shell')
+        break
+      case 'tab.close':
+        if (s.activeTabId) closeTab(s.activeTabId)
+        break
+      case 'tab.next':
+        s.cycleTab(1)
+        break
+      case 'tab.prev':
+        s.cycleTab(-1)
+        break
+      case 'general.commandPalette':
+        setPaletteOpen(true)
+        break
+      case 'general.cycleTheme':
+        s.setTheme(nextTheme(s.theme))
+        break
+      case 'general.toggleResume':
+        s.setResumeEnabled(!s.resumeEnabled)
+        break
+      // Wired in later cycle-6 leaps: focus.*, viewer.*, tab.move*/rename,
+      // general.keyboardHelp, general.terminalSearch.
+      default:
+        break
+    }
+  }
 
   // Git branch for the active project (blank for non-repos).
   useEffect(() => {
@@ -211,13 +256,14 @@ export function App(): React.ReactElement {
     }
   }, [])
 
-  // Reserved chords (Ctrl+T/W/Tab/1..9); everything else reaches the PTY.
+  // Global chords route through the single pure keybinding-router. We act on —
+  // and only preventDefault for — the actions we actually handle; everything
+  // else (passthrough, plus chords not yet wired this cycle) reaches the PTY.
+  // While an overlay is open it owns the keyboard, so we stand down entirely.
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
+      if (overlayOpenRef.current) return
       const action = routeKey(e)
-      if (action.kind === 'passthrough') return
-      e.preventDefault()
-      e.stopPropagation()
       const s = useSessionStore.getState()
       switch (action.kind) {
         case 'new-tab':
@@ -237,7 +283,14 @@ export function App(): React.ReactElement {
           if (target) s.setActive(target.tabId)
           break
         }
+        case 'command-palette':
+          setPaletteOpen(true)
+          break
+        default:
+          return // passthrough + not-yet-wired chords: do not intercept
       }
+      e.preventDefault()
+      e.stopPropagation()
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
@@ -353,17 +406,7 @@ export function App(): React.ReactElement {
             className="status-bar__theme"
             aria-label={`theme: ${theme}`}
             title="Cycle theme (system → light → dark → cyberpunk)"
-            onClick={() =>
-              setTheme(
-                theme === 'system'
-                  ? 'light'
-                  : theme === 'light'
-                    ? 'dark'
-                    : theme === 'dark'
-                      ? 'cyberpunk'
-                      : 'system'
-              )
-            }
+            onClick={() => setTheme(nextTheme(theme))}
           >
             {theme === 'system'
               ? '◐'
@@ -378,6 +421,11 @@ export function App(): React.ReactElement {
             {tabs.length} session{tabs.length === 1 ? '' : 's'}
           </span>
         </footer>
+        <CommandPalette
+          open={paletteOpen}
+          onRun={runCommand}
+          onClose={() => setPaletteOpen(false)}
+        />
       </div>
     </WorkbenchErrorBoundary>
   )

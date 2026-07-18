@@ -105,6 +105,29 @@ describe('App tab status coloring', () => {
   })
 })
 
+describe('App command palette', () => {
+  it('opens on Ctrl+Shift+P and closes on Escape', async () => {
+    render(<App />)
+    expect(screen.queryByTestId('command-palette')).toBeNull()
+
+    act(() => {
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'P', ctrlKey: true, shiftKey: true })
+      )
+    })
+    const palette = await screen.findByTestId('command-palette')
+    expect(palette).toBeTruthy()
+    expect(screen.getByRole('combobox')).toBeTruthy()
+
+    // Running a command from the palette (Cycle Theme) applies and closes it.
+    act(() => useSessionStore.getState().setTheme('system'))
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'cycle theme' } })
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' })
+    await waitFor(() => expect(screen.queryByTestId('command-palette')).toBeNull())
+    expect(useSessionStore.getState().theme).toBe('light')
+  })
+})
+
 describe('App theme toggle', () => {
   it('cycles system → light → dark → cyberpunk → system and reflects it on <html>', async () => {
     act(() => useSessionStore.getState().setTheme('system'))
