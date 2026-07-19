@@ -76,32 +76,7 @@ export function isProtectedChord(chord: Chord): boolean {
   return !BINDABLE_PLAIN_CTRL.has(chord)
 }
 
-/** Outcome of {@link bindChord}: either the new keymap (plus any displaced
- *  binding, so the editor can warn about a conflict) or a refusal reason. */
-export type BindResult =
-  | { ok: true; keymap: Keymap; displaced: KeyAction | null }
-  | { ok: false; reason: 'protected' }
-
-/**
- * Assign `chord` → `action`, returning a NEW keymap (never mutates the input).
- * Refuses protected chords (criterion 3). When `chord` was already bound to a
- * different action the binding still wins, but the displaced action is reported
- * so the caller can surface the conflict (criterion 4 — reassign-with-warning).
- */
-export function bindChord(keymap: Keymap, chord: Chord, action: KeyAction): BindResult {
-  if (isProtectedChord(chord)) return { ok: false, reason: 'protected' }
-  return { ok: true, keymap: { ...keymap, [chord]: action }, displaced: keymap[chord] ?? null }
-}
-
-/** Restore a single chord to its built-in default (or unbind it if it has none). */
-export function resetChord(keymap: Keymap, chord: Chord): Keymap {
-  const next: Record<Chord, KeyAction> = { ...keymap }
-  if (chord in DEFAULT_KEYMAP) next[chord] = DEFAULT_KEYMAP[chord]!
-  else delete next[chord]
-  return next
-}
-
-/** A fresh copy of the built-in defaults (reset-to-defaults). */
-export function resetAll(): Keymap {
-  return { ...DEFAULT_KEYMAP }
-}
+// Note: user rebinds go through the overrides model in effective-keymap.ts
+// (rebindCommand / clearCommandBinding), which is what the editor uses. An
+// earlier chord→KeyAction mutation API (bindChord/resetChord/resetAll) was
+// superseded by that and removed as dead code (Cycle-7 review).

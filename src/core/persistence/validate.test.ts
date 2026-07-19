@@ -67,6 +67,13 @@ describe('loadWorkspace', () => {
     expect(r.ok).toBe(false)
   })
 
+  it('preserves populated keymapOverrides (incl. the unbound sentinel) through load', () => {
+    const overrides = { 'ctrl+shift+g': 'general.commandPalette', 'ctrl+shift+p': '' }
+    const r = loadWorkspace({ ...validV1, keymapOverrides: overrides })
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.value.state.keymapOverrides).toEqual(overrides)
+  })
+
   it('accepts the cyberpunk theme', () => {
     const r = loadWorkspace({ ...validV1, theme: 'cyberpunk' })
     expect(r.ok).toBe(true)

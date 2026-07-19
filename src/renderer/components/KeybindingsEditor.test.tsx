@@ -47,6 +47,50 @@ describe('KeybindingsEditor', () => {
     expect(next['ctrl+t']).toBe('') // old default unbound
   })
 
+  it('warns about a conflict when rebinding onto an in-use chord', () => {
+    const onChange = vi.fn()
+    render(<KeybindingsEditor open overrides={{}} commands={CMDS} onChange={onChange} onClose={vi.fn()} />)
+    // active row 0 = New Tab; rebind onto Ctrl+Shift+P (Command Palette's default).
+    fireEvent.keyDown(dialog(), { key: 'Enter' })
+    fireEvent.keyDown(dialog(), { key: 'p', ctrlKey: true, shiftKey: true })
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('status').textContent).toMatch(/reassigned|was/i)
+  })
+
+  it('keeps waiting when a bare modifier is pressed during capture', () => {
+    const onChange = vi.fn()
+    render(<KeybindingsEditor open overrides={{}} commands={CMDS} onChange={onChange} onClose={vi.fn()} />)
+    fireEvent.keyDown(dialog(), { key: 'Enter' })
+    fireEvent.keyDown(dialog(), { key: 'Shift', shiftKey: true }) // not a chord
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.getByText('press a key…')).toBeTruthy() // still capturing
+  })
+
+  it('resets the active command on the Delete alias too', () => {
+    const onChange = vi.fn()
+    render(
+      <KeybindingsEditor
+        open
+        overrides={{ 'ctrl+shift+g': 'tab.new', 'ctrl+t': '' }}
+        commands={CMDS}
+        onChange={onChange}
+        onClose={vi.fn()}
+      />
+    )
+    fireEvent.keyDown(dialog(), { key: 'Delete' })
+    expect(onChange).toHaveBeenCalledTimes(1)
+  })
+
+  it('rebinds a NON-first command after arrow navigation', () => {
+    const onChange = vi.fn()
+    render(<KeybindingsEditor open overrides={{}} commands={CMDS} onChange={onChange} onClose={vi.fn()} />)
+    fireEvent.keyDown(dialog(), { key: 'ArrowDown' }) // move to Command Palette (row 1)
+    fireEvent.keyDown(dialog(), { key: 'Enter' })
+    fireEvent.keyDown(dialog(), { key: 'y', ctrlKey: true, shiftKey: true })
+    const next = onChange.mock.calls[0]![0] as Record<string, string>
+    expect(next['ctrl+shift+y']).toBe('general.commandPalette')
+  })
+
   it('refuses a protected chord and does not persist', () => {
     const onChange = vi.fn()
     render(<KeybindingsEditor open overrides={{}} commands={CMDS} onChange={onChange} onClose={vi.fn()} />)

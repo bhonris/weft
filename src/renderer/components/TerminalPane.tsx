@@ -3,7 +3,9 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { SearchAddon } from '@xterm/addon-search'
 import { routeKey } from '@core/keybindings/keybinding-router'
+import { buildKeymap } from '@core/keybindings/effective-keymap'
 import { useTerminalStore } from '../store/terminal-store'
+import { useSessionStore } from '../store/session-store'
 import '@xterm/xterm/css/xterm.css'
 
 interface Props {
@@ -41,6 +43,16 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
     }
   }, [searchTick])
 
+  // xterm's key handler must resolve against the SAME effective keymap as the
+  // app-level listener, or a remapped/freed chord and the terminal disagree
+  // (a §7.4 passthrough regression). Read live via a ref so a rebind applies
+  // without re-attaching the handler.
+  const keymapOverrides = useSessionStore((s) => s.keymapOverrides)
+  const keymapRef = useRef(buildKeymap(keymapOverrides))
+  useEffect(() => {
+    keymapRef.current = buildKeymap(keymapOverrides)
+  }, [keymapOverrides])
+
   useEffect(() => {
     const host = hostRef.current
     if (!host) return
@@ -62,7 +74,7 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
     // bar (and is swallowed); passthrough reaches the PTY; any other reserved
     // app chord is swallowed here so the app-level listener handles it.
     term.attachCustomKeyEventHandler((e) => {
-      const action = routeKey(e)
+      const action = routeKey(e, keymapRef.current)
       if (e.type === 'keydown' && action.kind === 'terminal-search') {
         setSearchOpen(true)
         return false

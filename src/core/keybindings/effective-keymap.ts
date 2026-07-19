@@ -19,6 +19,15 @@ function actionEq(a: KeyAction, b: KeyAction): boolean {
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
+/** A copy of `overrides` with every chord that maps to `commandId` removed. */
+function withoutCommand(overrides: KeymapOverrides, commandId: string): Record<Chord, string> {
+  const next: Record<Chord, string> = {}
+  for (const [chord, id] of Object.entries(overrides)) {
+    if (id !== commandId) next[chord] = id
+  }
+  return next
+}
+
 /**
  * Merge user overrides onto {@link DEFAULT_KEYMAP} to get the effective keymap
  * `routeKey` should resolve against. An override that names a protected chord,
@@ -86,14 +95,14 @@ export function rebindCommand(
 
   const effective = buildKeymap(overrides)
   const at = effective[chord]
-  const displaced = at ? commandIdForAction(at) : null
+  // commandIdForAction maps terminal-search → null (it's passthrough, not a
+  // dispatched command), so recover it explicitly for the conflict warning.
+  const displaced = at
+    ? (commandIdForAction(at) ?? (at.kind === 'terminal-search' ? 'general.terminalSearch' : null))
+    : null
   const oldChord = chordForCommand(overrides, commandId)
 
-  const next: Record<Chord, string> = {}
-  for (const [c, id] of Object.entries(overrides)) {
-    if (id === commandId) continue // drop this command's prior custom chords
-    next[c] = id
-  }
+  const next = withoutCommand(overrides, commandId) // drop its prior custom chords
   // If the command sat on a built-in default chord, suppress it so it moves.
   if (oldChord && oldChord !== chord && defaultChordForCommand(commandId) === oldChord) {
     next[oldChord] = UNBOUND
@@ -107,11 +116,7 @@ export function clearCommandBinding(
   overrides: KeymapOverrides,
   commandId: string
 ): Record<Chord, string> {
-  const next: Record<Chord, string> = {}
-  for (const [c, id] of Object.entries(overrides)) {
-    if (id === commandId) continue // remove custom chords for this command
-    next[c] = id
-  }
+  const next = withoutCommand(overrides, commandId) // remove its custom chords
   const def = defaultChordForCommand(commandId)
   if (def && next[def] === UNBOUND) delete next[def] // restore a suppressed default
   return next

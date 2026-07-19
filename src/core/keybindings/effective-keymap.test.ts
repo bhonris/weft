@@ -117,10 +117,37 @@ describe('rebindCommand', () => {
     })
   })
 
-  it('reports the displaced command when the target chord was in use', () => {
+  it('reports the displaced command AND that command actually loses its chord', () => {
     const r = rebindCommand({}, 'tab.new', 'ctrl+shift+p')
     expect(r.ok).toBe(true)
-    if (r.ok) expect(r.displaced).toBe('general.commandPalette')
+    if (r.ok) {
+      expect(r.displaced).toBe('general.commandPalette')
+      const map = buildKeymap(r.overrides)
+      // ctrl+shift+p now runs New Tab, and the palette has no chord left.
+      expect(routeKey(k({ ctrlKey: true, shiftKey: true, key: 'p' }), map)).toEqual({
+        kind: 'new-tab'
+      })
+      expect(chordForCommand(r.overrides, 'general.commandPalette')).toBeNull()
+    }
+  })
+
+  it('reports terminal-search as displaced even though it is a passthrough action', () => {
+    // Ctrl+Shift+F defaults to terminal-search; rebinding another command onto it
+    // must still surface the conflict (commandIdForAction maps it to null).
+    const r = rebindCommand({}, 'tab.new', 'ctrl+shift+f')
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.displaced).toBe('general.terminalSearch')
+  })
+
+  it('rebinding a command to its own current chord is a no-op-ish success', () => {
+    const r = rebindCommand({}, 'general.commandPalette', 'ctrl+shift+p')
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      const map = buildKeymap(r.overrides)
+      expect(routeKey(k({ ctrlKey: true, shiftKey: true, key: 'p' }), map)).toEqual({
+        kind: 'command-palette'
+      })
+    }
   })
 
   it('drops a prior custom chord when the command is rebound again', () => {

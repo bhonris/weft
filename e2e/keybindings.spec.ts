@@ -75,6 +75,40 @@ test('rebind a command, invoke the new chord, and reject a reserved chord', asyn
   await app.close()
 })
 
+test('a remapped terminal-search chord opens search inside the terminal', async () => {
+  // Regression for the Cycle-7 review must-fix: xterm's key handler must resolve
+  // against the EFFECTIVE keymap, not the defaults — or a remapped terminal-search
+  // chord never opens the search bar in-terminal.
+  const userDataDir = mkdtempSync(join(tmpdir(), 'weft-ud-'))
+  const projectDir = mkdtempSync(join(tmpdir(), 'weft-kb3-'))
+  writeFileSync(join(projectDir, 'a.txt'), 'hi')
+
+  const app = await launch(userDataDir, projectDir)
+  const page = await app.firstWindow()
+  await page.waitForLoadState('domcontentloaded')
+  await expect(page.getByTestId('status-bar')).toBeVisible()
+  await page.getByRole('button', { name: 'open project' }).click()
+  await expect(page.getByTestId('terminal-pane')).toBeVisible()
+
+  // Rebind "Search in Terminal" to Ctrl+Shift+K (click the row to start capture).
+  await page.keyboard.press('Control+Shift+P')
+  await expect(page.getByTestId('command-palette')).toBeVisible()
+  await page.keyboard.type('edit keybindings')
+  await page.keyboard.press('Enter')
+  await expect(page.getByTestId('keybindings-editor')).toBeVisible()
+  await page.getByRole('option', { name: /Search in Terminal/ }).click()
+  await page.keyboard.press('Control+Shift+K')
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('keybindings-editor')).toBeHidden()
+
+  // Focus the terminal and press the NEW chord — the in-terminal search opens.
+  await page.keyboard.press('Control+`')
+  await page.keyboard.press('Control+Shift+K')
+  await expect(page.getByTestId('terminal-search')).toBeVisible()
+
+  await app.close()
+})
+
 test('a rebind survives an app restart', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'weft-ud-'))
   const projectDir = mkdtempSync(join(tmpdir(), 'weft-kb2-'))
