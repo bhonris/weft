@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 53 — feat(keybindings) editor UI — remapping is real (crit 2 + 5) — 2026-07-19
+
+**Phase**: time-leap-development (Expansion 7)
+**Changed**: The visible payoff — an accessible **KeybindingsEditor** overlay (opened via the "Edit Keybindings…" palette command) that lets you rebind shortcuts live, and it persists. Core additions (pure, tested): `chordForCommand` (current chord for display), `rebindCommand` (moves a command to a new chord, **unbinding its old default** via a new `UNBOUND` `""` sentinel that `buildKeymap` now honors; refuses protected chords, reports the displaced command for conflict warnings), `clearCommandBinding` (reset one). The overlay is a listbox + `aria-activedescendant`: ↑/↓/Home/End move, Enter captures the next chord (`chordOf`) and applies it, Backspace resets the row, "Reset all" clears everything, Esc closes (Esc mid-capture cancels the capture); modal + focus-trapped with a live-region status line for conflict/refusal messages. All edits flow through `setKeymapOverrides` → persisted (leap 52). **Criteria 2 (user-editable + persisted) and 5 (editor UI) checked off.**
+**SERN interference**: none
+**Divergence meter**: 98.44% stmts / 96.3% branches / 97.42% funcs — 397 pass.
+**Next target**: the three deferred Cycle-6 fixes — criterion 6 (the "Search in Terminal" palette command opens the pane search via a TerminalPane signal store), 7 (the "Rename Tab" palette command triggers active-tab inline rename), 8 (fold Explorer expandPath/collapsePath into one toggle). Then the E2E remap-journey + Cycle-7 review/convergence. After Cycle 7: Cycle 8 = split-pane workspace (documents/split-pane-workspace.md).
+
+---
+
 ## Leap 52 — feat(keymap) persist user overrides (WorkspaceState v3→v4) — 2026-07-19
 
 **Phase**: time-leap-development (Expansion 7)
