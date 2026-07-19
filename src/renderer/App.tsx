@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSessionStore, nextTheme, type Tab, type SpawnFailure } from './store/session-store'
 import { useViewerStore } from './store/viewer-store'
+import { useTerminalStore } from './store/terminal-store'
 import { buildWorkspaceState, restoreWorkspace } from './store/workspace-sync'
 import { TerminalPane } from './components/TerminalPane'
 import { Explorer } from './components/Explorer'
@@ -347,9 +348,11 @@ export function App(): React.ReactElement {
         useViewerStore.getState().close()
         break
       case 'general.terminalSearch':
-        // Focus the terminal; the in-terminal search opens on Ctrl+Shift+F
-        // there (search state is TerminalPane-local).
+        // Focus the terminal and open its in-terminal search bar. The chord
+        // (Ctrl+Shift+F) still opens it directly inside TerminalPane; this makes
+        // the palette command do the same via the terminal-store signal.
         focusRegion('terminal')
+        useTerminalStore.getState().requestSearch()
         break
       // (tab.rename is a local F2 key on the focused tab, not a dispatch entry.)
       default:

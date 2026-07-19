@@ -3,6 +3,7 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { SearchAddon } from '@xterm/addon-search'
 import { routeKey } from '@core/keybindings/keybinding-router'
+import { useTerminalStore } from '../store/terminal-store'
 import '@xterm/xterm/css/xterm.css'
 
 interface Props {
@@ -27,6 +28,18 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
   const searchRef = useRef<SearchAddon | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState('')
+
+  // Open the search bar when the command layer requests it (palette / a remapped
+  // chord). A ref-guard ignores the mount-time value and tab-switch remounts, so
+  // search only opens on a genuine new request.
+  const searchTick = useTerminalStore((s) => s.searchTick)
+  const lastSearchTick = useRef(searchTick)
+  useEffect(() => {
+    if (searchTick !== lastSearchTick.current) {
+      lastSearchTick.current = searchTick
+      setSearchOpen(true)
+    }
+  }, [searchTick])
 
   useEffect(() => {
     const host = hostRef.current
