@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 54 — fix(crit6) "Search in Terminal" palette command opens the search bar — 2026-07-19
+
+**Phase**: time-leap-development (Expansion 7)
+**Changed**: Deferred Cycle-6 fix. The "Search in Terminal" palette command only focused the terminal — the search bar opened solely from the Ctrl+Shift+F chord (handled inside TerminalPane). Added a small `terminal-store` signal (`searchTick`, mirroring `viewer-store.saveTick`); `runCommand('general.terminalSearch')` now focuses the terminal **and** bumps the tick, and the mounted TerminalPane opens its search bar on a genuine increment (a ref-guard ignores the mount-time value and tab-switch remounts so it never opens spuriously). The chord path is unchanged. **Criterion 6 checked off.**
+**SERN interference**: none
+**Divergence meter**: 98.44% stmts / 96.31% branches / 97.43% funcs — full suite green.
+**Next target**: criterion 7 — the "Rename Tab" palette command triggers inline rename of the active tab (F2 already works locally; needs an active-tab rename signal, same store-tick pattern). Then criterion 8 (fold Explorer expandPath/collapsePath into one toggle), the E2E remap journey, and Cycle-7 review/convergence.
+
+---
+
 ## Leap 53 — feat(keybindings) editor UI — remapping is real (crit 2 + 5) — 2026-07-19
 
 **Phase**: time-leap-development (Expansion 7)

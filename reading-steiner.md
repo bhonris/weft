@@ -1,8 +1,8 @@
 phase: time-leap-development
-leap_count: 53
+leap_count: 54
 expansion_cycle: 7
-session_id: 2026-07-19T21:55:00Z
-prev_head: 2a47692237606dc3738ae8d009cc5fa50fe18768
+session_id: 2026-07-19T22:02:00Z
+prev_head: 513ef0f5db8713a9f1bc279755c75520f5e1536a
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md. CYCLE 6 END GOAL (operator): fully mouseless, keyboard-only navigation across all of Weft; macOS/Linux platform work OUT OF SCOPE this cycle."
 project_name: "weft"
 project_type: web
@@ -15,7 +15,7 @@ current_focus: "Expansion 7 deferred fixes (criteria 6-8), then review/convergen
 blocked_on: null
 last_test_run: "375 pass, 1 env-only fail (hook-forwarder integration leaks CLAUDE_IDE_TAB inside a live Weft session; passes with it unset); coverage 98.61/96.52/97.35; typecheck clean"
 closed_worldlines: []
-next_action: "Expansion 7 deferred fix — criterion 6: make runCommand('general.terminalSearch') actually OPEN the in-terminal search bar. Add a small signal store (like viewer-store's save request) that TerminalPane subscribes to; have the command bump it instead of only focusing the terminal. Then crit 7 (Rename Tab palette → inline rename of active tab via an active-tab rename signal) and crit 8 (fold Explorer expandPath/collapsePath into one toggle helper). Then the E2E remap journey + Phase 4 review. spec ## Expansion 7."
+next_action: "Expansion 7 criterion 7: make the 'Rename Tab' palette command trigger inline rename of the ACTIVE tab. F2 on a focused tab already works locally; add an active-tab rename signal (a store tick like terminal-store.searchTick / viewer saveTick) that the TabButton for the active tab subscribes to and enters its inline rename input. runCommand('tab.rename') bumps it. Then crit 8 (fold Explorer expandPath/collapsePath into one pure toggle helper), the E2E remap journey, and Phase 4 review. spec ## Expansion 7."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:
