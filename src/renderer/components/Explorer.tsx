@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { DirEntry } from '@shared/ipc/api-contract'
 import { useViewerStore } from '../store/viewer-store'
-import { treeNav, type NavNode } from '@core/explorer/tree-nav'
+import { treeNav, nextExpanded, type NavNode } from '@core/explorer/tree-nav'
 
 /** A flattened, currently-visible tree row. */
 interface VisibleNode {
@@ -127,26 +127,12 @@ export function Explorer({ root }: { root: string | null }): React.ReactElement 
     el?.focus()
   }
 
-  const expandPath = (path: string): void =>
-    setExpanded((s) => {
-      if (s.has(path)) return s
-      const next = new Set(s)
-      next.add(path)
-      return next
-    })
-
-  const collapsePath = (path: string): void =>
-    setExpanded((s) => {
-      if (!s.has(path)) return s
-      const next = new Set(s)
-      next.delete(path)
-      return next
-    })
+  const setPathExpanded = (path: string, expanded: boolean): void =>
+    setExpanded((s) => nextExpanded(s, path, expanded) as Set<string>)
 
   const activate = (n: VisibleNode): void => {
     if (n.isDir) {
-      if (n.expanded) collapsePath(n.entry.path)
-      else expandPath(n.entry.path)
+      setPathExpanded(n.entry.path, !n.expanded)
     } else {
       openInViewer(n.entry.path, n.entry.name)
     }
@@ -169,10 +155,10 @@ export function Explorer({ root }: { root: string | null }): React.ReactElement 
         focusIdx(intent.index)
         break
       case 'expand':
-        if (cur?.isDir) expandPath(cur.entry.path)
+        if (cur?.isDir) setPathExpanded(cur.entry.path, true)
         break
       case 'collapse':
-        if (cur?.isDir) collapsePath(cur.entry.path)
+        if (cur?.isDir) setPathExpanded(cur.entry.path, false)
         break
       case 'activate':
         if (cur) activate(cur)

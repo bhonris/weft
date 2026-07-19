@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { treeNav, type NavNode } from './tree-nav'
+import { treeNav, nextExpanded, type NavNode } from './tree-nav'
 
 // A fixture tree:
 //  0 src            (dir, expanded)
@@ -60,5 +60,23 @@ describe('treeNav', () => {
     expect(treeNav(NODES, 0, 'x')).toEqual({ type: 'none' })
     expect(treeNav([], 0, 'ArrowDown')).toEqual({ type: 'none' })
     expect(treeNav(NODES, 99, 'ArrowDown')).toEqual({ type: 'none' })
+  })
+})
+
+describe('nextExpanded', () => {
+  it('adds a path when expanding', () => {
+    const out = nextExpanded(new Set(['a']), 'b', true)
+    expect([...out].sort()).toEqual(['a', 'b'])
+  })
+
+  it('removes a path when collapsing', () => {
+    const out = nextExpanded(new Set(['a', 'b']), 'b', false)
+    expect([...out]).toEqual(['a'])
+  })
+
+  it('returns the SAME set reference when already in the target state (no re-render)', () => {
+    const set = new Set(['a'])
+    expect(nextExpanded(set, 'a', true)).toBe(set) // already expanded
+    expect(nextExpanded(set, 'z', false)).toBe(set) // already collapsed/absent
   })
 })

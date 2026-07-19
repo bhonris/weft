@@ -13,6 +13,25 @@ export interface NavNode {
   expanded: boolean
 }
 
+/**
+ * Pure updater for the set of expanded directory paths. Returns the SAME set
+ * reference when there is nothing to change (so React can skip a re-render),
+ * otherwise a new Set. One helper for both expand (`expanded: true`) and
+ * collapse (`expanded: false`) — the Explorer folds its old expandPath/
+ * collapsePath pair onto this.
+ */
+export function nextExpanded(
+  current: ReadonlySet<string>,
+  path: string,
+  expanded: boolean
+): ReadonlySet<string> {
+  if (expanded === current.has(path)) return current // already in the target state
+  const next = new Set(current)
+  if (expanded) next.add(path)
+  else next.delete(path)
+  return next
+}
+
 export type NavIntent =
   | { type: 'move'; index: number }
   | { type: 'expand' }
