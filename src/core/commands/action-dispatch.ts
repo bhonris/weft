@@ -46,3 +46,46 @@ export function commandIdForAction(action: KeyAction): CommandId | null {
       return null
   }
 }
+
+/**
+ * Inverse of {@link commandIdForAction}: the {@link KeyAction} a command chord
+ * should produce, or `null` for commands that have no chord form (palette-only
+ * or region-local actions like `general.cycleTheme` or `tab.rename`). Used to
+ * turn a persisted `chord → commandId` override back into a routable action.
+ *
+ * Accepts a plain string (persisted overrides aren't statically typed) and
+ * returns `null` for anything unrecognized, so a stale or hand-edited override
+ * can never crash keymap resolution.
+ */
+export function actionForCommand(id: string): KeyAction | null {
+  switch (id) {
+    case 'tab.new':
+      return { kind: 'new-tab' }
+    case 'tab.close':
+      return { kind: 'close-tab' }
+    case 'tab.next':
+      return { kind: 'next-tab' }
+    case 'tab.prev':
+      return { kind: 'prev-tab' }
+    case 'tab.moveLeft':
+      return { kind: 'move-tab', dir: -1 }
+    case 'tab.moveRight':
+      return { kind: 'move-tab', dir: 1 }
+    case 'focus.terminal':
+      return { kind: 'focus-region', region: 'terminal' }
+    case 'focus.explorer':
+      return { kind: 'focus-region', region: 'explorer' }
+    case 'focus.cycleNext':
+      return { kind: 'focus-cycle', dir: 1 }
+    case 'focus.cyclePrev':
+      return { kind: 'focus-cycle', dir: -1 }
+    case 'general.commandPalette':
+      return { kind: 'command-palette' }
+    case 'general.keyboardHelp':
+      return { kind: 'help-overlay' }
+    case 'general.terminalSearch':
+      return { kind: 'terminal-search' }
+    default:
+      return null
+  }
+}

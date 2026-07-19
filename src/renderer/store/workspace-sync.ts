@@ -18,7 +18,8 @@ export function buildWorkspaceState(
   tabs: readonly Tab[],
   theme: WorkspaceState['theme'] = 'cyberpunk',
   resumeEnabled = false,
-  notificationsEnabled = true
+  notificationsEnabled = true,
+  keymapOverrides: Record<string, string> = {}
 ): WorkspaceState {
   return {
     version: WORKSPACE_VERSION,
@@ -36,7 +37,8 @@ export function buildWorkspaceState(
     explorerRoots: [],
     theme,
     resumeEnabled,
-    notificationsEnabled
+    notificationsEnabled,
+    keymapOverrides
   }
 }
 

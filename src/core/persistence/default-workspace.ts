@@ -12,6 +12,8 @@ export function defaultWorkspace(): WorkspaceState {
     theme: 'cyberpunk',
     resumeEnabled: false,
     // OS notifications are on out of the box (the "which session needs me?" signal).
-    notificationsEnabled: true
+    notificationsEnabled: true,
+    // No custom keybindings by default — the built-in chords apply.
+    keymapOverrides: {}
   }
 }

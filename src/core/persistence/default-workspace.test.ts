@@ -12,6 +12,8 @@ describe('defaultWorkspace', () => {
     expect(ws.resumeEnabled).toBe(false)
     // Notifications ship on by default (the "which session needs me?" signal).
     expect(ws.notificationsEnabled).toBe(true)
+    // No custom keybindings out of the box.
+    expect(ws.keymapOverrides).toEqual({})
   })
 
   // Regression guard: cyberpunk is the out-of-the-box default theme. A fresh

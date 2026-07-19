@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { commandIdForAction } from './action-dispatch'
+import { commandIdForAction, actionForCommand } from './action-dispatch'
 import { COMMANDS } from './registry'
 import type { KeyAction } from '../keybindings/keybinding-router'
 import type { CommandId } from './registry'
@@ -73,5 +73,49 @@ describe('commandIdForAction', () => {
         true
       )
     }
+  })
+})
+
+describe('actionForCommand (inverse — for rebinding)', () => {
+  // Commands that dispatch through runCommand round-trip both ways. terminal-search
+  // is excluded: it has a chord action but that action is passthrough (handled by
+  // TerminalPane), so commandIdForAction deliberately maps it back to null.
+  const ROUND_TRIP: CommandId[] = [
+    'tab.new',
+    'tab.close',
+    'tab.next',
+    'tab.prev',
+    'tab.moveLeft',
+    'tab.moveRight',
+    'focus.terminal',
+    'focus.explorer',
+    'focus.cycleNext',
+    'focus.cyclePrev',
+    'general.commandPalette',
+    'general.keyboardHelp'
+  ]
+
+  it('round-trips with commandIdForAction for every dispatched command', () => {
+    for (const id of ROUND_TRIP) {
+      const action = actionForCommand(id)
+      expect(action, `${id} should have a chord action`).not.toBeNull()
+      expect(commandIdForAction(action!)).toBe(id)
+    }
+  })
+
+  it('gives terminal-search a chord action even though it is passthrough (asymmetric)', () => {
+    expect(actionForCommand('general.terminalSearch')).toEqual({ kind: 'terminal-search' })
+    // commandIdForAction maps it back to null — the intentional passthrough case.
+    expect(commandIdForAction({ kind: 'terminal-search' })).toBeNull()
+  })
+
+  it('returns null for palette-only / region-local commands (no chord form)', () => {
+    for (const id of ['general.cycleTheme', 'general.toggleResume', 'tab.rename', 'viewer.save']) {
+      expect(actionForCommand(id)).toBeNull()
+    }
+  })
+
+  it('returns null for an unknown id (defensive against stale overrides)', () => {
+    expect(actionForCommand('nope.not.a.command')).toBeNull()
   })
 })

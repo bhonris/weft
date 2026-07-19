@@ -25,7 +25,8 @@ const emptyWorkspace: WorkspaceState = {
   explorerRoots: [],
   theme: 'system',
   resumeEnabled: false,
-  notificationsEnabled: true
+  notificationsEnabled: true,
+  keymapOverrides: {}
 }
 
 const noop = (): void => {}

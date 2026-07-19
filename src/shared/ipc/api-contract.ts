@@ -34,6 +34,8 @@ export interface WorkspaceState {
   resumeEnabled: boolean
   /** v3: raise OS toasts for unfocused waiting/done sessions (default true). */
   notificationsEnabled: boolean
+  /** v4: user keybinding overrides, `chord → command id` (default {}). */
+  keymapOverrides: Record<string, string>
   windowBounds?: { x: number; y: number; width: number; height: number }
 }
 

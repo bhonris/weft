@@ -2,18 +2,20 @@ import { describe, it, expect } from 'vitest'
 import { migrate, migrations } from './index'
 import { v0ToV1 } from './v0-to-v1'
 import { v2ToV3 } from './v2-to-v3'
+import { v3ToV4 } from './v3-to-v4'
 
 describe('migrate', () => {
   it('returns the same blob when already current', () => {
-    const blob = { version: 3, tabs: [] }
-    expect(migrate(blob, 3)).toBe(blob)
+    const blob = { version: 4, tabs: [] }
+    expect(migrate(blob, 4)).toBe(blob)
   })
 
   it('runs the full chain for a legacy blob', () => {
     const out = migrate({ theme: 'dark' }, 0)
-    expect(out['version']).toBe(3) // full chain: v0 -> v1 -> v2 -> v3
+    expect(out['version']).toBe(4) // full chain: v0 -> v1 -> v2 -> v3 -> v4
     expect(out['resumeEnabled']).toBe(false)
     expect(out['notificationsEnabled']).toBe(true)
+    expect(out['keymapOverrides']).toEqual({})
   })
 
   it('throws when a migration step is missing', () => {
@@ -89,6 +91,17 @@ describe('v2ToV3', () => {
       resumeEnabled: true,
       theme: 'dark',
       notificationsEnabled: true
+    })
+  })
+})
+
+describe('v3ToV4', () => {
+  it('adds empty keymapOverrides and bumps the version, preserving other fields', () => {
+    expect(v3ToV4({ version: 3, notificationsEnabled: true, theme: 'dark' })).toEqual({
+      version: 4,
+      notificationsEnabled: true,
+      theme: 'dark',
+      keymapOverrides: {}
     })
   })
 })

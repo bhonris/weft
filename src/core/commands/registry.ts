@@ -40,6 +40,7 @@ export type CommandId =
   | 'general.cycleTheme'
   | 'general.toggleResume'
   | 'general.toggleNotifications'
+  | 'general.resetKeybindings'
 
 export interface Command {
   id: CommandId
@@ -155,7 +156,8 @@ export const COMMANDS: readonly Command[] = [
   },
   { id: 'general.cycleTheme', title: 'Cycle Theme', category: 'General' },
   { id: 'general.toggleResume', title: 'Toggle Resume on Restore', category: 'General' },
-  { id: 'general.toggleNotifications', title: 'Toggle Notifications', category: 'General' }
+  { id: 'general.toggleNotifications', title: 'Toggle Notifications', category: 'General' },
+  { id: 'general.resetKeybindings', title: 'Reset Keybindings to Defaults', category: 'General' }
 ]
 
 /** Categories in display order for the help overlay grouping. */

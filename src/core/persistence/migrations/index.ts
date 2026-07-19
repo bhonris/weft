@@ -2,6 +2,7 @@ import { WORKSPACE_VERSION } from '../schema'
 import { v0ToV1 } from './v0-to-v1'
 import { v1ToV2 } from './v1-to-v2'
 import { v2ToV3 } from './v2-to-v3'
+import { v3ToV4 } from './v3-to-v4'
 
 export type Migration = (blob: Record<string, unknown>) => Record<string, unknown>
 
@@ -9,7 +10,8 @@ export type Migration = (blob: Record<string, unknown>) => Record<string, unknow
 export const migrations: Record<number, Migration> = {
   0: v0ToV1,
   1: v1ToV2,
-  2: v2ToV3
+  2: v2ToV3,
+  3: v3ToV4
 }
 
 /**

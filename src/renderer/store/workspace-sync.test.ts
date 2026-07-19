@@ -15,7 +15,7 @@ const tab = (id: string, over: Partial<Tab> = {}): Tab => ({
 describe('buildWorkspaceState', () => {
   it('serializes tabs, order, and defaults at the current version', () => {
     const ws = buildWorkspaceState([tab('a'), tab('b', { command: 'shell' })])
-    expect(ws.version).toBe(3)
+    expect(ws.version).toBe(4)
     expect(ws.tabs).toEqual([
       {
         tabId: 'a',
@@ -39,6 +39,8 @@ describe('buildWorkspaceState', () => {
     expect(ws.resumeEnabled).toBe(false)
     // Notifications default on when the caller doesn't specify.
     expect(ws.notificationsEnabled).toBe(true)
+    // No keybinding overrides by default.
+    expect(ws.keymapOverrides).toEqual({})
   })
 
   it('persists an explicit theme override', () => {
@@ -49,6 +51,13 @@ describe('buildWorkspaceState', () => {
   it('persists an explicit notifications-off choice', () => {
     expect(buildWorkspaceState([], 'cyberpunk', false, false).notificationsEnabled).toBe(false)
     expect(buildWorkspaceState([], 'cyberpunk', false, true).notificationsEnabled).toBe(true)
+  })
+
+  it('serializes keymap overrides', () => {
+    const overrides = { 'ctrl+shift+g': 'general.commandPalette' }
+    expect(buildWorkspaceState([], 'cyberpunk', false, true, overrides).keymapOverrides).toEqual(
+      overrides
+    )
   })
 })
 

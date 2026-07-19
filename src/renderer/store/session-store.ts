@@ -44,6 +44,9 @@ export interface SessionState {
   /** Raise OS toasts for unfocused waiting/done sessions (on by default). */
   notificationsEnabled: boolean
   setNotificationsEnabled: (enabled: boolean) => void
+  /** User keybinding overrides, `chord → command id` (empty = built-in chords). */
+  keymapOverrides: Record<string, string>
+  setKeymapOverrides: (overrides: Record<string, string>) => void
   addTab: (
     tab: Omit<Tab, 'status' | 'command' | 'sessionId'> & {
       status?: SessionStatus
@@ -75,6 +78,8 @@ export const useSessionStore = create<SessionState>((set) => ({
   setResumeEnabled: (resumeEnabled) => set({ resumeEnabled }),
   notificationsEnabled: true,
   setNotificationsEnabled: (notificationsEnabled) => set({ notificationsEnabled }),
+  keymapOverrides: {},
+  setKeymapOverrides: (keymapOverrides) => set({ keymapOverrides }),
 
   addTab: (tab) =>
     set((s) => {

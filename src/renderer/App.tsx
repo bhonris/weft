@@ -10,6 +10,7 @@ import { CommandPalette } from './components/CommandPalette'
 import { KeyboardHelp } from './components/KeyboardHelp'
 import { routeKey } from '@core/keybindings/keybinding-router'
 import { commandIdForAction } from '@core/commands/action-dispatch'
+import { buildKeymap } from '@core/keybindings/effective-keymap'
 import { nextRegion, type RegionId } from '@core/focus/region-cycle'
 import type { CommandId } from '@core/commands/registry'
 import type { SessionStatus } from '@shared/status/hook-events'
@@ -186,12 +187,19 @@ export function App(): React.ReactElement {
   const setResumeEnabled = useSessionStore((s) => s.setResumeEnabled)
   const notificationsEnabled = useSessionStore((s) => s.notificationsEnabled)
   const setNotificationsEnabled = useSessionStore((s) => s.setNotificationsEnabled)
+  const keymapOverrides = useSessionStore((s) => s.keymapOverrides)
   const [overlay, setOverlay] = useState<'none' | 'palette' | 'help'>('none')
   // Read inside the stable window keydown listener without re-subscribing it.
   const overlayOpenRef = useRef(false)
   useEffect(() => {
     overlayOpenRef.current = overlay !== 'none'
   }, [overlay])
+  // Effective keymap (defaults + user overrides), read live by the key listener
+  // so a rebind takes effect without re-subscribing.
+  const keymapRef = useRef(buildKeymap({}))
+  useEffect(() => {
+    keymapRef.current = buildKeymap(keymapOverrides)
+  }, [keymapOverrides])
 
   // ── Region focus (keyboard-only navigation between UI regions) ──
   const tabStripRef = useRef<HTMLElement>(null)
@@ -295,6 +303,9 @@ export function App(): React.ReactElement {
       case 'general.toggleNotifications':
         s.setNotificationsEnabled(!s.notificationsEnabled)
         break
+      case 'general.resetKeybindings':
+        s.setKeymapOverrides({})
+        break
       case 'viewer.save':
         useViewerStore.getState().requestSave()
         break
@@ -390,7 +401,7 @@ export function App(): React.ReactElement {
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (overlayOpenRef.current) return
-      const action = routeKey(e)
+      const action = routeKey(e, keymapRef.current)
       if (action.kind === 'jump-tab') {
         // Parameterized by number (Ctrl+1..9); no registry command. We still
         // intercept the chord even when no tab occupies that slot.
@@ -418,6 +429,7 @@ export function App(): React.ReactElement {
         useSessionStore.getState().setTheme(saved.theme)
         useSessionStore.getState().setResumeEnabled(saved.resumeEnabled)
         useSessionStore.getState().setNotificationsEnabled(saved.notificationsEnabled)
+        useSessionStore.getState().setKeymapOverrides(saved.keymapOverrides)
         const restored = await restoreWorkspace(window.api, saved)
         if (disposed) return
         const add = useSessionStore.getState().addTab
@@ -429,14 +441,16 @@ export function App(): React.ReactElement {
         state.tabs !== prev.tabs ||
         state.theme !== prev.theme ||
         state.resumeEnabled !== prev.resumeEnabled ||
-        state.notificationsEnabled !== prev.notificationsEnabled
+        state.notificationsEnabled !== prev.notificationsEnabled ||
+        state.keymapOverrides !== prev.keymapOverrides
       ) {
         void window.api.saveWorkspace(
           buildWorkspaceState(
             state.tabs,
             state.theme,
             state.resumeEnabled,
-            state.notificationsEnabled
+            state.notificationsEnabled,
+            state.keymapOverrides
           )
         )
       }
