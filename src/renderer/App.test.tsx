@@ -327,6 +327,24 @@ describe('App status commands', () => {
     fireEvent.click(btn)
     await waitFor(() => expect(useSessionStore.getState().notificationsEnabled).toBe(false))
   })
+
+  it('renames the active tab from the palette (criterion 7)', async () => {
+    act(() =>
+      useSessionStore.setState({
+        tabs: [{ tabId: 't1', title: 'proj', cwd: 'C:/p', command: 'claude', status: 'unknown' }],
+        activeTabId: 't1',
+        renameTick: 0
+      })
+    )
+    render(<App />)
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'P', ctrlKey: true, shiftKey: true }))
+    })
+    fireEvent.change(await screen.findByRole('combobox'), { target: { value: 'rename tab' } })
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' })
+    // The active tab's inline rename input appears.
+    expect(await screen.findByLabelText('rename tab')).toBeTruthy()
+  })
 })
 
 describe('App theme toggle', () => {

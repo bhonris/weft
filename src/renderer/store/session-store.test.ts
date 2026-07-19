@@ -6,6 +6,12 @@ beforeEach(() => {
 })
 
 describe('useSessionStore', () => {
+  it('requestRename bumps renameTick (so the active tab enters inline rename)', () => {
+    useSessionStore.setState({ renameTick: 0 })
+    useSessionStore.getState().requestRename()
+    expect(useSessionStore.getState().renameTick).toBe(1)
+  })
+
   it('adds a tab and makes it active with a default status', () => {
     useSessionStore.getState().addTab({ tabId: 't1', title: 'proj', cwd: 'C:/a' })
     const s = useSessionStore.getState()

@@ -92,6 +92,21 @@ function TabButton({ tab, active }: { tab: Tab; active: boolean }): React.ReactE
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(tab.title)
 
+  // The "Rename Tab" command bumps renameTick; the ACTIVE tab enters inline
+  // rename (keyboard/palette parity with F2). A ref-guard ignores the mount-time
+  // value so it never fires spuriously.
+  const renameTick = useSessionStore((s) => s.renameTick)
+  const lastRenameTick = useRef(renameTick)
+  useEffect(() => {
+    if (renameTick !== lastRenameTick.current) {
+      lastRenameTick.current = renameTick
+      if (active) {
+        setDraft(tab.title)
+        setEditing(true)
+      }
+    }
+  }, [renameTick, active, tab.title])
+
   const commit = (): void => {
     const title = draft.trim()
     if (title.length > 0) rename(tab.tabId, title)
@@ -354,7 +369,10 @@ export function App(): React.ReactElement {
         focusRegion('terminal')
         useTerminalStore.getState().requestSearch()
         break
-      // (tab.rename is a local F2 key on the focused tab, not a dispatch entry.)
+      case 'tab.rename':
+        // Inline-rename the active tab (palette parity with the local F2 key).
+        if (s.activeTabId) s.requestRename()
+        break
       default:
         break
     }

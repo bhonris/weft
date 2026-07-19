@@ -47,6 +47,9 @@ export interface SessionState {
   /** User keybinding overrides, `chord → command id` (empty = built-in chords). */
   keymapOverrides: Record<string, string>
   setKeymapOverrides: (overrides: Record<string, string>) => void
+  /** Bumped by requestRename(); the ACTIVE tab enters inline rename (palette parity with F2). */
+  renameTick: number
+  requestRename: () => void
   addTab: (
     tab: Omit<Tab, 'status' | 'command' | 'sessionId'> & {
       status?: SessionStatus
@@ -80,6 +83,8 @@ export const useSessionStore = create<SessionState>((set) => ({
   setNotificationsEnabled: (notificationsEnabled) => set({ notificationsEnabled }),
   keymapOverrides: {},
   setKeymapOverrides: (keymapOverrides) => set({ keymapOverrides }),
+  renameTick: 0,
+  requestRename: () => set((s) => ({ renameTick: s.renameTick + 1 })),
 
   addTab: (tab) =>
     set((s) => {
