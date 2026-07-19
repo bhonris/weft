@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **In-project split workspace.** Open multiple files as editor tabs, with the
+  Claude CLI now always visible in a dock pane beside them (it no longer gets
+  hidden when you open a file). The dock is moveable (bottom / right / left via
+  the **Move CLI Dock** command), resizable (drag the divider or arrow-key it),
+  and its placement persists across restarts (workspace schema v4 → v5). With no
+  file open the CLI fills the whole area, as before.
 - **Remappable keybindings.** Open the command palette → **Edit Keybindings…** to
   rebind any shortcut: press a new key combo, and it applies live and persists
   across restarts (workspace schema v3 → v4). Reserved terminal keys (`Ctrl+C`,

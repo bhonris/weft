@@ -2,6 +2,37 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Worldline 8 Stabilised — In-project split-pane workspace — 2026-07-19
+
+**Cycle 8 sealed.** The in-project area is now a real workspace: multiple **file
+tabs** + an **always-present, moveable/resizable CLI dock** (the terminal is no
+longer hidden behind the viewer). Full-width CLI when no file is open; dock edge
++ size persist. All 8 Expansion-8 criteria checked.
+
+Journey (leaps 59–65): pure core (open-files + dock reducers) → viewer-store grows
+into the tabs model + editor-tab strip → overlay viewer replaced by a real flex
+split → dock persistence (schema v4→v5) + Move-CLI-Dock command → drag/keyboard
+resize divider → E2E workspace journey → Phase-4 review + convergence.
+
+**Divergence meter:** ~430 unit + 32 Playwright-Electron E2E, all green · 98.61%
+statements. Review (Future Okabe ×3) found two must-fixes — unclamped dock size on
+load, and re-selecting the active tab discarding unsaved edits — both fixed in
+convergence (leap 65).
+
+**Next worldline:** open questions / candidates — persist which files are open per
+project; per-tab editor state (unsaved buffers survive tab switches); side-by-side
+split editors; then the long-deferred macOS/Linux + LSP.
+
+## Leaps 60–65 — Cycle 8 build (condensed) — 2026-07-19
+
+**Phase**: time-leap-development → convergence (Expansion 8)
+**Changed**: 60 editor tabs (viewer-store → open-files model + tab strip); 61 split layout (flex editor + CLI dock, full-width when empty, replacing the absolute overlay) + dock-store; 62 dock persistence (WorkspaceState v4→v5) + Move-CLI-Dock command; 63 drag + keyboard resize divider with dock-aware DOM ordering; 64 E2E workspace journey; 65 convergence (clamp dock on load, preserve edits on active-tab re-select, dead-CSS removal + test gaps).
+**SERN interference**: two review must-fixes, both fixed in leap 65.
+**Divergence meter**: 98.61% stmts / 96.4% branches / 97.59% funcs — full unit suite + 32 E2E green.
+**Next target**: Cycle 8 sealed; re-invoke /dmail for Cycle 9 (candidates above).
+
+---
+
 ## Leap 59 — feat(cycle8) pure core foundation — open-file tabs + dock state — 2026-07-19
 
 **Phase**: time-leap-development (Expansion 8 — split-pane workspace)

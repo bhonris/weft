@@ -114,6 +114,22 @@ run **Edit Keybindings…**:
 - Your keymap **persists across restarts** and applies live. The **Reset Keybindings
   to Defaults** command also clears everything at once.
 
+### In-project workspace: file tabs + the CLI dock
+
+Each project is a workspace where the Claude CLI and your files share the screen:
+
+- **File tabs** — open several files at once; each becomes an editor tab. Click a
+  tab to switch, `×` to close, and re-clicking a file re-activates its tab (no
+  duplicates). Opening a file no longer hides the terminal.
+- **Always-present CLI dock** — the Claude terminal stays visible beside the
+  editor. With no file open it fills the whole area; open a file and it splits.
+- **Move the dock** — the **Move CLI Dock** command (palette) cycles the terminal
+  between the **bottom** (default), **right**, and **left** edges.
+- **Resize** — drag the divider between the editor and the CLI, or focus it and
+  use the arrow keys. The dock's edge and size **persist across restarts**.
+- **Jump to the CLI** — `Ctrl+`` (or the **Focus Terminal** command) always moves
+  focus to the terminal, wherever it's docked.
+
 ### Terminal sessions & reload-safe recovery
 
 The main process owns every PTY; the renderer is a **detachable view**:
