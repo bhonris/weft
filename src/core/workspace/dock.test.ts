@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { DEFAULT_DOCK, clampDockSize, setDockPosition, setDockSize } from './dock'
+import {
+  DEFAULT_DOCK,
+  clampDockSize,
+  setDockPosition,
+  setDockSize,
+  nextDockPosition
+} from './dock'
 
 describe('dock state', () => {
   it('defaults to a bottom dock at 0.4', () => {
@@ -25,5 +31,11 @@ describe('dock state', () => {
   it('setDockSize clamps as it sets', () => {
     expect(setDockSize(DEFAULT_DOCK, 0.6).size).toBe(0.6)
     expect(setDockSize(DEFAULT_DOCK, 2).size).toBe(0.85)
+  })
+
+  it('cycles the dock edge bottom → right → left → bottom', () => {
+    expect(nextDockPosition('bottom')).toBe('right')
+    expect(nextDockPosition('right')).toBe('left')
+    expect(nextDockPosition('left')).toBe('bottom')
   })
 })

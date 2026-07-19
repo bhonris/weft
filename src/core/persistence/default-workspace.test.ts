@@ -14,6 +14,8 @@ describe('defaultWorkspace', () => {
     expect(ws.notificationsEnabled).toBe(true)
     // No custom keybindings out of the box.
     expect(ws.keymapOverrides).toEqual({})
+    // CLI dock defaults to the bottom edge.
+    expect(ws.dock).toEqual({ position: 'bottom', size: 0.4 })
   })
 
   // Regression guard: cyberpunk is the out-of-the-box default theme. A fresh

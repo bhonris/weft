@@ -15,7 +15,7 @@ const tab = (id: string, over: Partial<Tab> = {}): Tab => ({
 describe('buildWorkspaceState', () => {
   it('serializes tabs, order, and defaults at the current version', () => {
     const ws = buildWorkspaceState([tab('a'), tab('b', { command: 'shell' })])
-    expect(ws.version).toBe(4)
+    expect(ws.version).toBe(5)
     expect(ws.tabs).toEqual([
       {
         tabId: 'a',
@@ -41,6 +41,8 @@ describe('buildWorkspaceState', () => {
     expect(ws.notificationsEnabled).toBe(true)
     // No keybinding overrides by default.
     expect(ws.keymapOverrides).toEqual({})
+    // Dock defaults to the bottom edge.
+    expect(ws.dock).toEqual({ position: 'bottom', size: 0.4 })
   })
 
   it('persists an explicit theme override', () => {

@@ -14,6 +14,7 @@ import { App } from './App'
 import { useSessionStore } from './store/session-store'
 import { useViewerStore } from './store/viewer-store'
 import { emptyOpenFiles } from '@core/workspace/open-files'
+import { useDockStore } from './store/dock-store'
 
 type StatusEvent = { tabId: string; status: SessionStatus; message?: string }
 
@@ -27,7 +28,8 @@ const emptyWorkspace: WorkspaceState = {
   theme: 'system',
   resumeEnabled: false,
   notificationsEnabled: true,
-  keymapOverrides: {}
+  keymapOverrides: {},
+  dock: { position: 'bottom', size: 0.4 }
 }
 
 const noop = (): void => {}
@@ -335,6 +337,17 @@ describe('App status commands', () => {
     const btn = await screen.findByLabelText('notifications: on')
     fireEvent.click(btn)
     await waitFor(() => expect(useSessionStore.getState().notificationsEnabled).toBe(false))
+  })
+
+  it('cycles the CLI dock position from the palette', async () => {
+    act(() => useDockStore.setState({ position: 'bottom', size: 0.4 }))
+    render(<App />)
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'P', ctrlKey: true, shiftKey: true }))
+    })
+    fireEvent.change(await screen.findByRole('combobox'), { target: { value: 'move cli dock' } })
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' })
+    await waitFor(() => expect(useDockStore.getState().position).toBe('right'))
   })
 
   it('renames the active tab from the palette (criterion 7)', async () => {

@@ -3,19 +3,21 @@ import { migrate, migrations } from './index'
 import { v0ToV1 } from './v0-to-v1'
 import { v2ToV3 } from './v2-to-v3'
 import { v3ToV4 } from './v3-to-v4'
+import { v4ToV5 } from './v4-to-v5'
 
 describe('migrate', () => {
   it('returns the same blob when already current', () => {
-    const blob = { version: 4, tabs: [] }
-    expect(migrate(blob, 4)).toBe(blob)
+    const blob = { version: 5, tabs: [] }
+    expect(migrate(blob, 5)).toBe(blob)
   })
 
   it('runs the full chain for a legacy blob', () => {
     const out = migrate({ theme: 'dark' }, 0)
-    expect(out['version']).toBe(4) // full chain: v0 -> v1 -> v2 -> v3 -> v4
+    expect(out['version']).toBe(5) // full chain: v0 -> ... -> v5
     expect(out['resumeEnabled']).toBe(false)
     expect(out['notificationsEnabled']).toBe(true)
     expect(out['keymapOverrides']).toEqual({})
+    expect(out['dock']).toEqual({ position: 'bottom', size: 0.4 })
   })
 
   it('throws when a migration step is missing', () => {
@@ -102,6 +104,17 @@ describe('v3ToV4', () => {
       notificationsEnabled: true,
       theme: 'dark',
       keymapOverrides: {}
+    })
+  })
+})
+
+describe('v4ToV5', () => {
+  it('adds the default dock and bumps the version, preserving other fields', () => {
+    expect(v4ToV5({ version: 4, keymapOverrides: {}, theme: 'dark' })).toEqual({
+      version: 5,
+      keymapOverrides: {},
+      theme: 'dark',
+      dock: { position: 'bottom', size: 0.4 }
     })
   })
 })

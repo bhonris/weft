@@ -2,7 +2,7 @@ import { z } from 'zod'
 import type { WorkspaceState } from '@shared/ipc/api-contract'
 
 /** Current persisted schema version. Bump when the shape changes. */
-export const WORKSPACE_VERSION = 4
+export const WORKSPACE_VERSION = 5
 
 export const tabStateSchema = z.object({
   tabId: z.string(),
@@ -31,6 +31,10 @@ export const workspaceStateSchema = z.object({
   resumeEnabled: z.boolean(),
   notificationsEnabled: z.boolean(),
   keymapOverrides: z.record(z.string(), z.string()),
+  dock: z.object({
+    position: z.enum(['bottom', 'right', 'left']),
+    size: z.number()
+  }),
   windowBounds: windowBoundsSchema.optional()
 })
 

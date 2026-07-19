@@ -3,6 +3,7 @@ import { useSessionStore, nextTheme, type Tab, type SpawnFailure } from './store
 import { useViewerStore } from './store/viewer-store'
 import { useTerminalStore } from './store/terminal-store'
 import { useDockStore } from './store/dock-store'
+import { nextDockPosition } from '@core/workspace/dock'
 import { buildWorkspaceState, restoreWorkspace } from './store/workspace-sync'
 import { TerminalPane } from './components/TerminalPane'
 import { Explorer } from './components/Explorer'
@@ -379,6 +380,11 @@ export function App(): React.ReactElement {
         // Inline-rename the active tab (palette parity with the local F2 key).
         if (s.activeTabId) s.requestRename()
         break
+      case 'view.cycleDock': {
+        const dock = useDockStore.getState()
+        dock.setPosition(nextDockPosition(dock.position))
+        break
+      }
       default:
         break
     }
@@ -462,13 +468,26 @@ export function App(): React.ReactElement {
         useSessionStore.getState().setResumeEnabled(saved.resumeEnabled)
         useSessionStore.getState().setNotificationsEnabled(saved.notificationsEnabled)
         useSessionStore.getState().setKeymapOverrides(saved.keymapOverrides)
+        useDockStore.getState().restore(saved.dock)
         const restored = await restoreWorkspace(window.api, saved)
         if (disposed) return
         const add = useSessionStore.getState().addTab
         for (const tab of restored) add(tab)
       })
     }
-    const unsub = useSessionStore.subscribe((state, prev) => {
+    // Persist from both stores (tabs/prefs live in session-store; the CLI dock
+    // in dock-store) whenever a persisted field changes.
+    const persist = (): void => {
+      const s = useSessionStore.getState()
+      const dock = useDockStore.getState()
+      void window.api.saveWorkspace(
+        buildWorkspaceState(s.tabs, s.theme, s.resumeEnabled, s.notificationsEnabled, s.keymapOverrides, {
+          position: dock.position,
+          size: dock.size
+        })
+      )
+    }
+    const unsubSession = useSessionStore.subscribe((state, prev) => {
       if (
         state.tabs !== prev.tabs ||
         state.theme !== prev.theme ||
@@ -476,20 +495,16 @@ export function App(): React.ReactElement {
         state.notificationsEnabled !== prev.notificationsEnabled ||
         state.keymapOverrides !== prev.keymapOverrides
       ) {
-        void window.api.saveWorkspace(
-          buildWorkspaceState(
-            state.tabs,
-            state.theme,
-            state.resumeEnabled,
-            state.notificationsEnabled,
-            state.keymapOverrides
-          )
-        )
+        persist()
       }
+    })
+    const unsubDock = useDockStore.subscribe((state, prev) => {
+      if (state.position !== prev.position || state.size !== prev.size) persist()
     })
     return () => {
       disposed = true
-      unsub()
+      unsubSession()
+      unsubDock()
     }
   }, [])
 

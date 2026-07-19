@@ -42,6 +42,7 @@ export type CommandId =
   | 'general.toggleNotifications'
   | 'general.keybindings'
   | 'general.resetKeybindings'
+  | 'view.cycleDock'
 
 export interface Command {
   id: CommandId
@@ -159,7 +160,8 @@ export const COMMANDS: readonly Command[] = [
   { id: 'general.toggleResume', title: 'Toggle Resume on Restore', category: 'General' },
   { id: 'general.toggleNotifications', title: 'Toggle Notifications', category: 'General' },
   { id: 'general.keybindings', title: 'Edit Keybindings…', category: 'General' },
-  { id: 'general.resetKeybindings', title: 'Reset Keybindings to Defaults', category: 'General' }
+  { id: 'general.resetKeybindings', title: 'Reset Keybindings to Defaults', category: 'General' },
+  { id: 'view.cycleDock', title: 'Move CLI Dock (bottom → right → left)', category: 'Viewer' }
 ]
 
 /** Categories in display order for the help overlay grouping. */

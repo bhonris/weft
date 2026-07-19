@@ -37,7 +37,7 @@ describe('WorkspaceStore', () => {
     const loaded = ws.load()
 
     expect(backup).toHaveBeenCalledWith(legacy)
-    expect(loaded.version).toBe(4)
+    expect(loaded.version).toBe(5)
     // The store now holds the upgraded shape, so a second load needs no migration.
     backup.mockClear()
     ws.load()
@@ -48,7 +48,7 @@ describe('WorkspaceStore', () => {
     const store = new FakeStore()
     store.set('workspace', { theme: 'dark', tabs: [] })
     const ws = new WorkspaceStore({ store })
-    expect(ws.load().version).toBe(4)
+    expect(ws.load().version).toBe(5)
   })
 
   it('falls back to defaults when a corrupt blob has no onWarn fn', () => {

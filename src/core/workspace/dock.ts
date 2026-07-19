@@ -29,3 +29,10 @@ export function setDockPosition(state: DockState, position: DockPosition): DockS
 export function setDockSize(state: DockState, size: number): DockState {
   return { ...state, size: clampDockSize(size) }
 }
+
+/** Cycle the dock edge: bottom → right → left → bottom. */
+const DOCK_ORDER: DockPosition[] = ['bottom', 'right', 'left']
+export function nextDockPosition(position: DockPosition): DockPosition {
+  const i = DOCK_ORDER.indexOf(position)
+  return DOCK_ORDER[(i + 1) % DOCK_ORDER.length]!
+}

@@ -1,5 +1,6 @@
 import type { WorkspaceState } from '@shared/ipc/api-contract'
 import { WORKSPACE_VERSION } from './schema'
+import { DEFAULT_DOCK } from '@core/workspace/dock'
 
 /** A fresh, empty workspace — used on first launch and as a corruption fallback. */
 export function defaultWorkspace(): WorkspaceState {
@@ -14,6 +15,8 @@ export function defaultWorkspace(): WorkspaceState {
     // OS notifications are on out of the box (the "which session needs me?" signal).
     notificationsEnabled: true,
     // No custom keybindings by default — the built-in chords apply.
-    keymapOverrides: {}
+    keymapOverrides: {},
+    // CLI dock defaults to the bottom edge (see core/workspace/dock).
+    dock: { ...DEFAULT_DOCK }
   }
 }

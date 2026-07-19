@@ -3,6 +3,7 @@ import { v0ToV1 } from './v0-to-v1'
 import { v1ToV2 } from './v1-to-v2'
 import { v2ToV3 } from './v2-to-v3'
 import { v3ToV4 } from './v3-to-v4'
+import { v4ToV5 } from './v4-to-v5'
 
 export type Migration = (blob: Record<string, unknown>) => Record<string, unknown>
 
@@ -11,7 +12,8 @@ export const migrations: Record<number, Migration> = {
   0: v0ToV1,
   1: v1ToV2,
   2: v2ToV3,
-  3: v3ToV4
+  3: v3ToV4,
+  4: v4ToV5
 }
 
 /**

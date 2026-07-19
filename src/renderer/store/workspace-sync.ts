@@ -19,7 +19,8 @@ export function buildWorkspaceState(
   theme: WorkspaceState['theme'] = 'cyberpunk',
   resumeEnabled = false,
   notificationsEnabled = true,
-  keymapOverrides: Record<string, string> = {}
+  keymapOverrides: Record<string, string> = {},
+  dock: WorkspaceState['dock'] = { position: 'bottom', size: 0.4 }
 ): WorkspaceState {
   return {
     version: WORKSPACE_VERSION,
@@ -38,7 +39,8 @@ export function buildWorkspaceState(
     theme,
     resumeEnabled,
     notificationsEnabled,
-    keymapOverrides
+    keymapOverrides,
+    dock
   }
 }
 

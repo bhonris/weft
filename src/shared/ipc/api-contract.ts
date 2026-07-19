@@ -36,6 +36,8 @@ export interface WorkspaceState {
   notificationsEnabled: boolean
   /** v4: user keybinding overrides, `chord → command id` (default {}). */
   keymapOverrides: Record<string, string>
+  /** v5: CLI dock placement for the in-project split. */
+  dock: { position: 'bottom' | 'right' | 'left'; size: number }
   windowBounds?: { x: number; y: number; width: number; height: number }
 }
 
