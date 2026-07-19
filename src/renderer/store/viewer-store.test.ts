@@ -1,8 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useViewerStore } from './viewer-store'
+import { emptyOpenFiles } from '@core/workspace/open-files'
 
 beforeEach(() => {
-  useViewerStore.setState({ file: null, mode: 'view', editing: false, saveTick: 0 })
+  useViewerStore.setState({
+    openFiles: emptyOpenFiles,
+    file: null,
+    mode: 'view',
+    editing: false,
+    saveTick: 0
+  })
 })
 
 describe('useViewerStore', () => {
@@ -56,5 +63,37 @@ describe('useViewerStore', () => {
     useViewerStore.getState().requestSave()
     useViewerStore.getState().requestSave()
     expect(useViewerStore.getState().saveTick).toBe(before + 2)
+  })
+
+  it('opens multiple files as tabs and switches between them', () => {
+    const s = useViewerStore.getState()
+    s.openFile('/p/a.txt', 'a.txt')
+    s.openFile('/p/b.txt', 'b.txt')
+    expect(useViewerStore.getState().openFiles.files.map((f) => f.path)).toEqual([
+      '/p/a.txt',
+      '/p/b.txt'
+    ])
+    expect(useViewerStore.getState().file?.path).toBe('/p/b.txt') // newest active
+    useViewerStore.getState().setActiveFile(0)
+    expect(useViewerStore.getState().file?.path).toBe('/p/a.txt')
+  })
+
+  it('re-opening an already-open file re-activates its tab (no duplicate)', () => {
+    const s = useViewerStore.getState()
+    s.openFile('/p/a.txt', 'a.txt')
+    s.openFile('/p/b.txt', 'b.txt')
+    useViewerStore.getState().openFile('/p/a.txt', 'a.txt')
+    expect(useViewerStore.getState().openFiles.files).toHaveLength(2)
+    expect(useViewerStore.getState().file?.path).toBe('/p/a.txt')
+  })
+
+  it('closeFile drops a tab and activates the neighbour; last close clears', () => {
+    const s = useViewerStore.getState()
+    s.openFile('/p/a.txt', 'a.txt')
+    s.openFile('/p/b.txt', 'b.txt')
+    useViewerStore.getState().closeFile('/p/b.txt')
+    expect(useViewerStore.getState().file?.path).toBe('/p/a.txt')
+    useViewerStore.getState().closeFile('/p/a.txt')
+    expect(useViewerStore.getState().file).toBeNull()
   })
 })

@@ -11,6 +11,9 @@ type Editor = ReturnType<typeof MonacoNs.editor.create>
  */
 export function ViewerPane(): React.ReactElement | null {
   const file = useViewerStore((s) => s.file)
+  const openFiles = useViewerStore((s) => s.openFiles)
+  const setActiveFileIdx = useViewerStore((s) => s.setActiveFile)
+  const closeFileTab = useViewerStore((s) => s.closeFile)
   const mode = useViewerStore((s) => s.mode)
   const editing = useViewerStore((s) => s.editing)
   const saveTick = useViewerStore((s) => s.saveTick)
@@ -118,15 +121,42 @@ export function ViewerPane(): React.ReactElement | null {
 
   return (
     <section className="viewer" data-testid="viewer-pane">
+      <div className="viewer__tabs" role="tablist" aria-label="Open files" data-testid="viewer-tabs">
+        {openFiles.files.map((of, i) => {
+          const isActive = i === openFiles.activeIndex
+          return (
+            <div
+              key={of.path}
+              className={`viewer__tab${isActive ? ' viewer__tab--active' : ''}`}
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className="viewer__tab-label"
+                title={of.path}
+                onClick={() => setActiveFileIdx(i)}
+              >
+                {isActive && dirty && (
+                  <span className="viewer__dirty" data-testid="viewer-dirty" title="unsaved changes">
+                    ●{' '}
+                  </span>
+                )}
+                {of.name}
+              </button>
+              <button
+                type="button"
+                className="viewer__tab-close"
+                aria-label={`close ${of.name}`}
+                onClick={() => closeFileTab(of.path)}
+              >
+                ×
+              </button>
+            </div>
+          )
+        })}
+      </div>
       <header className="viewer__bar">
-        <span className="viewer__name" title={file.path}>
-          {dirty && (
-            <span className="viewer__dirty" data-testid="viewer-dirty" title="unsaved changes">
-              ●{' '}
-            </span>
-          )}
-          {file.name}
-        </span>
         <div className="viewer__actions">
           <button
             type="button"

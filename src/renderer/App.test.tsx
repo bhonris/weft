@@ -13,6 +13,7 @@ vi.mock('./components/TerminalPane', () => ({
 import { App } from './App'
 import { useSessionStore } from './store/session-store'
 import { useViewerStore } from './store/viewer-store'
+import { emptyOpenFiles } from '@core/workspace/open-files'
 
 type StatusEvent = { tabId: string; status: SessionStatus; message?: string }
 
@@ -190,7 +191,7 @@ describe('App region focus (keyboard-only navigation)', () => {
   })
 
   it('Ctrl+F6 skips absent regions (no tab, no viewer → explorer to status)', async () => {
-    useViewerStore.setState({ file: null })
+    useViewerStore.setState({ openFiles: emptyOpenFiles, file: null })
     render(<App />)
     // No tabs (terminal absent) and no viewer file → present = [tabs, explorer, status].
     dispatch({ key: 'E', ctrlKey: true, shiftKey: true })
@@ -245,7 +246,7 @@ describe('App keyboard tab management', () => {
 
 describe('App viewer commands', () => {
   it('runs viewer.diff from the palette (no file needed to set the mode)', async () => {
-    useViewerStore.setState({ file: null, mode: 'view', editing: false, saveTick: 0 })
+    useViewerStore.setState({ openFiles: emptyOpenFiles, file: null, mode: 'view', editing: false, saveTick: 0 })
     render(<App />)
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'P', ctrlKey: true, shiftKey: true }))
@@ -256,7 +257,7 @@ describe('App viewer commands', () => {
   })
 
   it('runs viewer.save from the palette (requests a save)', async () => {
-    useViewerStore.setState({ file: null, mode: 'view', editing: false, saveTick: 0 })
+    useViewerStore.setState({ openFiles: emptyOpenFiles, file: null, mode: 'view', editing: false, saveTick: 0 })
     render(<App />)
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'P', ctrlKey: true, shiftKey: true }))
@@ -267,7 +268,7 @@ describe('App viewer commands', () => {
   })
 
   it('app-level Ctrl+S in the viewer region requests a save; Ctrl+Alt+S does not', async () => {
-    useViewerStore.setState({ file: null, mode: 'view', editing: false, saveTick: 0 })
+    useViewerStore.setState({ openFiles: emptyOpenFiles, file: null, mode: 'view', editing: false, saveTick: 0 })
     render(<App />)
     const region = screen.getByTestId('viewer-region')
     fireEvent.keyDown(region, { key: 's', ctrlKey: true })

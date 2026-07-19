@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react'
 import { Explorer } from './Explorer'
 import { useViewerStore } from '../store/viewer-store'
+import { emptyOpenFiles } from '@core/workspace/open-files'
 import type { DirEntry } from '@shared/ipc/api-contract'
 
 const listDir = vi.fn<(path: string) => Promise<DirEntry[]>>()
@@ -24,7 +25,7 @@ beforeEach(() => {
   unwatchDir.mockClear()
   onFsChange.mockClear()
   fsChangeCb = null
-  useViewerStore.setState({ file: null, mode: 'view' })
+  useViewerStore.setState({ openFiles: emptyOpenFiles, file: null, mode: 'view' })
   Object.defineProperty(window, 'api', {
     value: { listDir, openWithDefault, watchDir, unwatchDir, onFsChange },
     configurable: true

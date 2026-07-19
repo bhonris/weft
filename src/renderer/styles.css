@@ -419,12 +419,56 @@ body,
 .viewer__bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   height: 32px;
   padding: 0 8px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   font-size: 12px;
+}
+
+/* --- Editor tab strip (Expansion 8) --------------------------------------- */
+.viewer__tabs {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.viewer__tab {
+  display: flex;
+  align-items: center;
+  border-right: 1px solid var(--border);
+  font-size: 12px;
+  max-width: 200px;
+}
+.viewer__tab--active {
+  background: var(--bg);
+}
+.viewer__tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 5px 6px 5px 10px;
+  background: transparent;
+  border: 0;
+  color: var(--fg);
+  cursor: pointer;
+}
+.viewer__tab--active .viewer__tab-label {
+  border-top: 2px solid var(--accent);
+  padding-top: 3px;
+}
+.viewer__tab-close {
+  padding: 0 8px 0 4px;
+  background: transparent;
+  border: 0;
+  color: var(--fg);
+  opacity: 0.6;
+  cursor: pointer;
+}
+.viewer__tab-close:hover {
+  opacity: 1;
 }
 
 .viewer__name {
