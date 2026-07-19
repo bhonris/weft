@@ -231,6 +231,7 @@ export function App(): React.ReactElement {
   const explorerRef = useRef<HTMLElement>(null)
   const terminalRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<HTMLDivElement>(null)
+  const terminalHostRef = useRef<HTMLElement>(null)
   const statusRef = useRef<HTMLElement>(null)
   const activeRegionRef = useRef<RegionId | null>(null)
 
@@ -284,6 +285,31 @@ export function App(): React.ReactElement {
   const cycleRegion = (dir: 1 | -1): void => {
     const target = nextRegion(presentRegions(), activeRegionRef.current, dir)
     if (target) focusRegion(target)
+  }
+
+  // Drag the divider to resize the CLI dock. The new size is the CLI pane's
+  // fraction of the host along the dock axis (setSize clamps it).
+  const startDockDrag = (e: React.MouseEvent): void => {
+    e.preventDefault()
+    const host = terminalHostRef.current
+    if (!host) return
+    const pos = useDockStore.getState().position
+    const onMove = (ev: MouseEvent): void => {
+      const r = host.getBoundingClientRect()
+      const size =
+        pos === 'bottom'
+          ? (r.bottom - ev.clientY) / r.height
+          : pos === 'right'
+            ? (r.right - ev.clientX) / r.width
+            : (ev.clientX - r.left) / r.width
+      useDockStore.getState().setSize(size)
+    }
+    const onUp = (): void => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
   }
 
   // Renderer-owned command dispatch: maps a CommandId to its side effect.
@@ -508,6 +534,66 @@ export function App(): React.ReactElement {
     }
   }, [])
 
+  // The in-project split regions. Order depends on the dock edge: a left dock
+  // renders the CLI first (so it sits on the left of the editor).
+  const editorRegion = hasViewerFile && (
+    <div
+      className="viewer-region"
+      data-testid="viewer-region"
+      ref={viewerRef}
+      style={{ flex: '1 1 0' }}
+      onKeyDown={(e) => {
+        // App-level Ctrl+S: save whenever focus is anywhere in the viewer region.
+        if (e.ctrlKey && !e.altKey && !e.metaKey && (e.key === 's' || e.key === 'S')) {
+          e.preventDefault()
+          useViewerStore.getState().requestSave()
+        }
+      }}
+    >
+      <ViewerPane />
+    </div>
+  )
+  const dockDivider = hasViewerFile && (
+    <div
+      className="dock-divider"
+      data-testid="dock-divider"
+      role="separator"
+      aria-orientation={dockPosition === 'bottom' ? 'horizontal' : 'vertical'}
+      aria-label="Resize CLI dock"
+      aria-valuenow={Math.round(dockSize * 100)}
+      aria-valuemin={15}
+      aria-valuemax={85}
+      tabIndex={0}
+      onMouseDown={startDockDrag}
+      onKeyDown={(e) => {
+        const cur = useDockStore.getState().size
+        if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+          e.preventDefault()
+          useDockStore.getState().setSize(cur - 0.02)
+        } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+          e.preventDefault()
+          useDockStore.getState().setSize(cur + 0.02)
+        }
+      }}
+    />
+  )
+  const cliRegion = (
+    <div
+      className="terminal-region"
+      data-testid="terminal-region"
+      ref={terminalRef}
+      tabIndex={-1}
+      aria-label="Terminal"
+      style={hasViewerFile ? { flex: `0 0 ${Math.round(dockSize * 100)}%` } : { flex: '1 1 auto' }}
+    >
+      {activeTabId ? (
+        <TerminalPane key={activeTabId} tabId={activeTabId} />
+      ) : (
+        <div className="terminal-host__placeholder">No active session</div>
+      )}
+    </div>
+  )
+
   return (
     <WorkbenchErrorBoundary>
       <div className="weft-shell">
@@ -562,39 +648,21 @@ export function App(): React.ReactElement {
             data-testid="terminal-host"
             data-dock={dockPosition}
             data-split={hasViewerFile ? 'on' : 'off'}
+            ref={terminalHostRef}
           >
-            {hasViewerFile && (
-              <div
-                className="viewer-region"
-                data-testid="viewer-region"
-                ref={viewerRef}
-                style={{ flex: '1 1 0' }}
-                onKeyDown={(e) => {
-                  // App-level Ctrl+S: save whenever focus is anywhere in the
-                  // viewer region (not only when Monaco itself holds focus).
-                  if (e.ctrlKey && !e.altKey && !e.metaKey && (e.key === 's' || e.key === 'S')) {
-                    e.preventDefault()
-                    useViewerStore.getState().requestSave()
-                  }
-                }}
-              >
-                <ViewerPane />
-              </div>
+            {dockPosition === 'left' ? (
+              <>
+                {cliRegion}
+                {dockDivider}
+                {editorRegion}
+              </>
+            ) : (
+              <>
+                {editorRegion}
+                {dockDivider}
+                {cliRegion}
+              </>
             )}
-            <div
-              className="terminal-region"
-              data-testid="terminal-region"
-              ref={terminalRef}
-              tabIndex={-1}
-              aria-label="Terminal"
-              style={hasViewerFile ? { flex: `0 0 ${Math.round(dockSize * 100)}%` } : { flex: '1 1 auto' }}
-            >
-              {activeTabId ? (
-                <TerminalPane key={activeTabId} tabId={activeTabId} />
-              ) : (
-                <div className="terminal-host__placeholder">No active session</div>
-              )}
-            </div>
           </section>
         </main>
         <footer className="status-bar" data-testid="status-bar" ref={statusRef}>

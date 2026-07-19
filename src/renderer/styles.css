@@ -404,9 +404,23 @@ body,
 .terminal-host[data-dock='left'] {
   flex-direction: row;
 }
-/* Left dock: the CLI sits before the editor area. */
-.terminal-host[data-dock='left'] .terminal-region {
-  order: -1;
+/* The draggable divider between the editor area and the CLI dock. */
+.dock-divider {
+  flex: 0 0 4px;
+  background: var(--border);
+  z-index: 6;
+}
+.terminal-host[data-dock='bottom'] .dock-divider {
+  cursor: row-resize;
+}
+.terminal-host[data-dock='right'] .dock-divider,
+.terminal-host[data-dock='left'] .dock-divider {
+  cursor: col-resize;
+}
+.dock-divider:hover,
+.dock-divider:focus-visible {
+  background: var(--accent);
+  outline: none;
 }
 
 .terminal-region {
