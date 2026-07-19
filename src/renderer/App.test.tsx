@@ -268,7 +268,15 @@ describe('App viewer commands', () => {
   })
 
   it('app-level Ctrl+S in the viewer region requests a save; Ctrl+Alt+S does not', async () => {
-    useViewerStore.setState({ openFiles: emptyOpenFiles, file: null, mode: 'view', editing: false, saveTick: 0 })
+    // The viewer region only exists when a file is open (Expansion 8 split).
+    const f = { path: '/p/x.ts', name: 'x.ts' }
+    useViewerStore.setState({
+      openFiles: { files: [f], activeIndex: 0 },
+      file: f,
+      mode: 'view',
+      editing: false,
+      saveTick: 0
+    })
     render(<App />)
     const region = screen.getByTestId('viewer-region')
     fireEvent.keyDown(region, { key: 's', ctrlKey: true })

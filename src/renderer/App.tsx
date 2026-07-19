@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useSessionStore, nextTheme, type Tab, type SpawnFailure } from './store/session-store'
 import { useViewerStore } from './store/viewer-store'
 import { useTerminalStore } from './store/terminal-store'
+import { useDockStore } from './store/dock-store'
 import { buildWorkspaceState, restoreWorkspace } from './store/workspace-sync'
 import { TerminalPane } from './components/TerminalPane'
 import { Explorer } from './components/Explorer'
@@ -206,6 +207,11 @@ export function App(): React.ReactElement {
   const setNotificationsEnabled = useSessionStore((s) => s.setNotificationsEnabled)
   const keymapOverrides = useSessionStore((s) => s.keymapOverrides)
   const setKeymapOverrides = useSessionStore((s) => s.setKeymapOverrides)
+  // In-project split: the editor area shows only when a file is open; otherwise
+  // the CLI dock fills the whole area. Dock position/size come from the dock store.
+  const hasViewerFile = useViewerStore((s) => s.file !== null)
+  const dockPosition = useDockStore((s) => s.position)
+  const dockSize = useDockStore((s) => s.size)
   const [overlay, setOverlay] = useState<'none' | 'palette' | 'help' | 'keybindings'>('none')
   // Read inside the stable window keydown listener without re-subscribing it.
   const overlayOpenRef = useRef(false)
@@ -536,34 +542,43 @@ export function App(): React.ReactElement {
           >
             <Explorer root={activeTab?.cwd ?? null} />
           </aside>
-          <section className="terminal-host" data-testid="terminal-host">
+          <section
+            className="terminal-host"
+            data-testid="terminal-host"
+            data-dock={dockPosition}
+            data-split={hasViewerFile ? 'on' : 'off'}
+          >
+            {hasViewerFile && (
+              <div
+                className="viewer-region"
+                data-testid="viewer-region"
+                ref={viewerRef}
+                style={{ flex: '1 1 0' }}
+                onKeyDown={(e) => {
+                  // App-level Ctrl+S: save whenever focus is anywhere in the
+                  // viewer region (not only when Monaco itself holds focus).
+                  if (e.ctrlKey && !e.altKey && !e.metaKey && (e.key === 's' || e.key === 'S')) {
+                    e.preventDefault()
+                    useViewerStore.getState().requestSave()
+                  }
+                }}
+              >
+                <ViewerPane />
+              </div>
+            )}
             <div
               className="terminal-region"
               data-testid="terminal-region"
               ref={terminalRef}
               tabIndex={-1}
               aria-label="Terminal"
+              style={hasViewerFile ? { flex: `0 0 ${Math.round(dockSize * 100)}%` } : { flex: '1 1 auto' }}
             >
               {activeTabId ? (
                 <TerminalPane key={activeTabId} tabId={activeTabId} />
               ) : (
                 <div className="terminal-host__placeholder">No active session</div>
               )}
-            </div>
-            <div
-              className="viewer-region"
-              data-testid="viewer-region"
-              ref={viewerRef}
-              onKeyDown={(e) => {
-                // App-level Ctrl+S: save whenever focus is anywhere in the
-                // viewer region (not only when Monaco itself holds focus).
-                if (e.ctrlKey && !e.altKey && !e.metaKey && (e.key === 's' || e.key === 'S')) {
-                  e.preventDefault()
-                  useViewerStore.getState().requestSave()
-                }
-              }}
-            >
-              <ViewerPane />
             </div>
           </section>
         </main>

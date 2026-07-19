@@ -386,34 +386,65 @@ body,
   flex-shrink: 0;
 }
 
+/* In-project split (Expansion 8): editor area + always-present CLI dock. When no
+   file is open the CLI region fills the host; opening a file reveals the split.
+   The dock edge is chosen by data-dock; sizes come from inline flex on the
+   regions (driven by the dock store). */
 .terminal-host {
   flex: 1;
   min-width: 0;
   position: relative;
+  display: flex;
+  overflow: hidden;
+}
+.terminal-host[data-dock='bottom'] {
+  flex-direction: column;
+}
+.terminal-host[data-dock='right'],
+.terminal-host[data-dock='left'] {
+  flex-direction: row;
+}
+/* Left dock: the CLI sits before the editor area. */
+.terminal-host[data-dock='left'] .terminal-region {
+  order: -1;
 }
 
-/* Region wrappers for keyboard focus (Expansion 6). The terminal region fills
-   the host; the viewer region is layout-transparent so the viewer keeps
-   overlaying the terminal exactly as before. */
 .terminal-region {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 .terminal-region:focus {
   outline: none; /* the xterm textarea shows its own caret; ring is on regions below */
 }
+/* A thin divider along the docked edge when split. */
+.terminal-host[data-dock='bottom'][data-split='on'] .terminal-region {
+  border-top: 1px solid var(--border);
+}
+.terminal-host[data-dock='right'][data-split='on'] .terminal-region {
+  border-left: 1px solid var(--border);
+}
+.terminal-host[data-dock='left'][data-split='on'] .terminal-region {
+  border-right: 1px solid var(--border);
+}
+
 .viewer-region {
-  display: contents;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
 }
 
 .viewer {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: var(--bg);
-  border-left: 1px solid var(--border);
-  z-index: 5;
 }
 
 .viewer__bar {
