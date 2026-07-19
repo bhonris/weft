@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 55 — fix(crit7) "Rename Tab" palette command renames the active tab — 2026-07-19
+
+**Phase**: time-leap-development (Expansion 7)
+**Changed**: Deferred Cycle-6 fix. The "Rename Tab" palette entry was a no-op — only F2 on a focused tab renamed. Added a session-store `renameTick` + `requestRename()` signal (same tick pattern as terminal-store/viewer); `runCommand('tab.rename')` bumps it and the **active** tab's `TabButton` enters inline rename (ref-guard ignores the mount-time value so it never fires spuriously). Palette/keyboard parity with F2. App.test covers the palette path (open palette → "rename tab" → the active tab's rename input appears). **Criterion 7 checked off.**
+**SERN interference**: none
+**Divergence meter**: 98.44% stmts / 96.32% branches / 97.44% funcs — full suite green.
+**Next target**: criterion 8 — fold the Explorer's `expandPath`/`collapsePath` into one pure toggle helper (behavior unchanged, coverage retained). Then the E2E remap journey and Cycle-7 Phase 4 review/convergence.
+
+---
+
 ## Leap 54 — fix(crit6) "Search in Terminal" palette command opens the search bar — 2026-07-19
 
 **Phase**: time-leap-development (Expansion 7)
