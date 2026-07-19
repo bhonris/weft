@@ -98,6 +98,22 @@ toasts. The choice persists across restarts and defaults to on. Muting affects
 OS toasts only — the tab color/badge stays live, so you can still see which
 session needs you at a glance.
 
+### Customizing keybindings
+
+Weft's shortcuts are **remappable**. Open the command palette (`Ctrl+Shift+P`) and
+run **Edit Keybindings…**:
+
+- **↑ / ↓** move the highlight, **Enter** starts capture — then press the new key
+  combo. **Backspace** resets the highlighted command to its default; **Reset all**
+  clears every override; **Esc** closes (Esc mid-capture cancels just the capture).
+- Reserved terminal keys (`Ctrl+C`, `Ctrl+R`, arrows, function keys, …) are
+  **refused** — they always reach the shell. Only `Ctrl+Shift+*` combos and the few
+  chords Weft already owns are bindable.
+- Rebinding a command **moves** its shortcut (the old one is freed), and if the new
+  chord was already in use you get a reassignment warning.
+- Your keymap **persists across restarts** and applies live. The **Reset Keybindings
+  to Defaults** command also clears everything at once.
+
 ### Terminal sessions & reload-safe recovery
 
 The main process owns every PTY; the renderer is a **detachable view**:

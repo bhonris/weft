@@ -2,6 +2,34 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Worldline 7 Stabilised — Remappable keybindings — 2026-07-19
+
+**Cycle 7 sealed.** The operator's ask — make Weft's shortcuts user-remappable —
+is complete and verified end-to-end. All 12 Expansion-7 acceptance criteria
+checked. Journey across leaps 49–58: dispatch unified (no-drift) → data-driven
+`routeKey` over a keymap → protected-chord guard + conflict detection → persisted
+overrides (schema v3→v4) → keybindings editor UI → the three deferred palette/
+explorer fixes → E2E remap journey → Phase-4 review + convergence.
+
+**Divergence meter:** 401 unit + 30 Playwright-Electron E2E, all green ·
+98.54% statements. Phase-4 review (Future Okabe ×3) found one real must-fix —
+TerminalPane resolved chords against the DEFAULT keymap, breaking remapped
+terminal-search + freed-key passthrough in-terminal — fixed in convergence (leap
+58) with a dedicated E2E; plus dead-code removal and dedups.
+
+**Next worldline:** Cycle 8 = in-project **split-pane workspace** (file tabs +
+always-present moveable CLI dock). Brief: `documents/split-pane-workspace.md`.
+
+## Leap 58 — converge(cycle7) TerminalPane effective-keymap fix + review cleanups — 2026-07-19
+
+**Phase**: worldline-convergence (Expansion 7)
+**Changed**: Phase-4 review must-fix — TerminalPane's `attachCustomKeyEventHandler` used `routeKey(e)` with `DEFAULT_KEYMAP`, so it disagreed with the app-level listener once chords were remapped (remapped terminal-search never opened in-terminal; a freed plain-Ctrl key was dead-swallowed by xterm — a §7.4 regression). Now subscribes to `keymapOverrides` and routes via a live `buildKeymap` ref, mirroring App; a new E2E proves a remapped `Ctrl+Shift+K` opens the terminal search while the default `Ctrl+Shift+F` still works. Also removed the dead chord→action mutation API (`bindChord`/`resetChord`/`resetAll`) superseded by the overrides model, extracted `withoutCommand()` (dedup), made `rebindCommand` report terminal-search as displaced, and filled review-flagged test gaps.
+**SERN interference**: none
+**Divergence meter**: 98.54% stmts / 96.54% branches / 97.42% funcs — 401 unit + 30 E2E green.
+**Next target**: open Cycle 8 (split-pane workspace) per documents/split-pane-workspace.md.
+
+---
+
 ## Leap 55 — fix(crit7) "Rename Tab" palette command renames the active tab — 2026-07-19
 
 **Phase**: time-leap-development (Expansion 7)

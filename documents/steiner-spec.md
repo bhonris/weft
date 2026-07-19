@@ -541,6 +541,29 @@ loop should execute and check these off (append refinements under this heading).
 - [x] **Keybindings editor UI:** an accessible, fully keyboard-operable editor (opened via a command; palette-reachable) lists each command with its current chord, lets the user capture a new chord and reset one/all, traps focus while open, and restores focus on close (ARIA-correct, motion-safe, themed incl. cyberpunk). *(Leap 53: `KeybindingsEditor` overlay — listbox + `aria-activedescendant`, Enter-to-capture via `chordOf`, `bindChord`/protected/conflict from leap 51, Backspace reset + Reset all, live-region status.)*
 - [x] **`terminal-search-palette-noop` fixed:** the "Search in Terminal" palette command actually opens the in-terminal search bar (via a `TerminalPane` open-search signal, mirroring the viewer's save-tick pattern), not just focusing the terminal. *(Leap 54: `terminal-store.searchTick`; runCommand bumps it, TerminalPane opens search on a genuine increment.)*
 - [x] **`tab-rename-palette-noop` fixed:** the "Rename Tab" palette command triggers inline rename of the active tab (active-tab rename signal); `F2` on the focused tab keeps working. *(Leap 55: session-store `renameTick`/`requestRename`; the active TabButton enters inline rename on a genuine increment.)*
-- [ ] **`expand-collapse-dup` folded:** the Explorer's `expandPath`/`collapsePath` become one pure toggle helper with unchanged behavior and retained coverage.
-- [ ] **Purity + coverage:** keymap resolution, conflict checks, and the protected-set guard live in pure `core/` with injected fakes; overall statement coverage stays ≥ 95% (branches ≥ 90%).
-- [ ] **E2E remap journey (no `.click()` where avoidable):** open the editor, rebind a command to a new chord, invoke it via that chord and observe the effect, reset to defaults, and confirm a protected chord still reaches the PTY. The custom keymap survives an app restart.
+- [x] **`expand-collapse-dup` folded:** the Explorer's `expandPath`/`collapsePath` become one pure toggle helper with unchanged behavior and retained coverage. *(Leap 56: `core/explorer/tree-nav.nextExpanded`; Explorer uses `setPathExpanded`.)*
+- [x] **Purity + coverage:** keymap resolution, conflict checks, and the protected-set guard live in pure `core/` with injected fakes; overall statement coverage stays ≥ 95% (branches ≥ 90%). *(All keymap logic in `core/keybindings` + `core/commands`; coverage 98.44% stmts / 96.57% branches.)*
+- [x] **E2E remap journey:** open the editor, rebind a command to a new chord, invoke it via that chord and observe the effect, reset to defaults, and confirm a protected chord still reaches the PTY. The custom keymap survives an app restart. *(Leap 57: `e2e/keybindings.spec.ts` — rebind + invoke + reserved-chord refusal + persist-across-restart; full E2E 29/29.)*
+
+---
+
+## Expansion 8 — In-project workspace: file tabs + always-present CLI dock
+
+Operator end goal (Cycle 8): within a single project, open **multiple file tabs**
+and keep the **Claude CLI always on screen** as a moveable dock pane — instead of
+today's single-file Monaco viewer that *overlays and hides* the terminal. Full
+brief: `documents/split-pane-workspace.md`.
+
+**Out of scope:** multiple Claude sessions per project (one CLI per project);
+side-by-side split *editors*; macOS/Linux; LSP.
+
+### New acceptance criteria
+
+- [ ] **File tabs:** opening a file adds an editor tab; the active tab drives the Monaco viewer; tabs switch and close; opening an already-open file re-activates its tab (no duplicate). Backed by a pure reducer (open-file list + active id), unit-tested.
+- [ ] **CLI always visible:** when ≥1 file tab is open the in-project area is a split (editor area + CLI dock) — the terminal is never hidden behind the viewer (the old `position:absolute` overlay is gone).
+- [ ] **Moveable, resizable dock:** the CLI dock defaults to the **bottom**, can be re-docked to **right/left**, and is resizable via a divider. Dock position + size **persist** across restarts (WorkspaceState schema bump + migration).
+- [ ] **Empty ⇒ full-width CLI:** with no file tabs open the CLI fills the whole area (as today); opening the first file reveals the split; closing the last tab returns to full-width CLI.
+- [ ] **Focus the CLI:** a command (and the existing `Ctrl+`` chord) always moves focus to the terminal regardless of dock position; keyboard-reachable.
+- [ ] **Keyboard + a11y:** file tabs and dock controls are keyboard-operable with correct roles/aria (consistent with Cycle 6); the terminal-passthrough invariant is preserved.
+- [ ] **Purity + coverage:** open-files reducer, dock-state (position/size) reducer with clamping, and the empty-state rule live in pure `core/` with injected fakes; overall coverage stays ≥ 95% (branches ≥ 90%).
+- [ ] **E2E workspace journey:** open two files → both are tabs → switch between them → the CLI stays visible in the dock → close all tabs → CLI returns to full width → move/resize the dock and confirm it persists across a restart. Terminal passthrough still holds.

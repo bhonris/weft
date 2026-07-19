@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Remappable keybindings.** Open the command palette → **Edit Keybindings…** to
+  rebind any shortcut: press a new key combo, and it applies live and persists
+  across restarts (workspace schema v3 → v4). Reserved terminal keys (`Ctrl+C`,
+  arrows, function keys, …) can never be bound — they always reach the shell;
+  conflicts warn and reassign; **Reset all** / per-command reset restore defaults.
+  Under the hood the keyboard dispatch was unified (chords resolve to a single
+  command handler) and made data-driven over an editable keymap.
 - **Notifications on/off switch.** A status-bar toggle (`🔔 notify on` /
   `🔕 notify off`) and a **Toggle Notifications** command mute or restore Weft's
   OS toasts (the "session needs you / finished" popups). The choice persists
