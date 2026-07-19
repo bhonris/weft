@@ -8,6 +8,7 @@ import { ViewerPane } from './components/ViewerPane'
 import { WorkbenchErrorBoundary } from './components/WorkbenchErrorBoundary'
 import { CommandPalette } from './components/CommandPalette'
 import { KeyboardHelp } from './components/KeyboardHelp'
+import { KeybindingsEditor } from './components/KeybindingsEditor'
 import { routeKey } from '@core/keybindings/keybinding-router'
 import { commandIdForAction } from '@core/commands/action-dispatch'
 import { buildKeymap } from '@core/keybindings/effective-keymap'
@@ -188,7 +189,8 @@ export function App(): React.ReactElement {
   const notificationsEnabled = useSessionStore((s) => s.notificationsEnabled)
   const setNotificationsEnabled = useSessionStore((s) => s.setNotificationsEnabled)
   const keymapOverrides = useSessionStore((s) => s.keymapOverrides)
-  const [overlay, setOverlay] = useState<'none' | 'palette' | 'help'>('none')
+  const setKeymapOverrides = useSessionStore((s) => s.setKeymapOverrides)
+  const [overlay, setOverlay] = useState<'none' | 'palette' | 'help' | 'keybindings'>('none')
   // Read inside the stable window keydown listener without re-subscribing it.
   const overlayOpenRef = useRef(false)
   useEffect(() => {
@@ -302,6 +304,9 @@ export function App(): React.ReactElement {
         break
       case 'general.toggleNotifications':
         s.setNotificationsEnabled(!s.notificationsEnabled)
+        break
+      case 'general.keybindings':
+        setOverlay('keybindings')
         break
       case 'general.resetKeybindings':
         s.setKeymapOverrides({})
@@ -600,6 +605,12 @@ export function App(): React.ReactElement {
         <KeyboardHelp
           open={overlay === 'help'}
           onClose={() => setOverlay((o) => (o === 'help' ? 'none' : o))}
+        />
+        <KeybindingsEditor
+          open={overlay === 'keybindings'}
+          overrides={keymapOverrides}
+          onChange={setKeymapOverrides}
+          onClose={() => setOverlay((o) => (o === 'keybindings' ? 'none' : o))}
         />
       </div>
     </WorkbenchErrorBoundary>
