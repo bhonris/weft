@@ -3,6 +3,7 @@ import {
   DEFAULT_DOCK,
   setDockPosition,
   setDockSize,
+  clampDockSize,
   type DockState,
   type DockPosition
 } from '@core/workspace/dock'
@@ -18,5 +19,7 @@ export const useDockStore = create<DockUiState>((set) => ({
   ...DEFAULT_DOCK,
   setPosition: (position) => set((s) => setDockPosition(s, position)),
   setSize: (size) => set((s) => setDockSize(s, size)),
-  restore: ({ position, size }) => set({ position, size })
+  // Re-clamp the size so a corrupt/hand-edited persisted value can't break the
+  // layout (position is enum-validated by the persistence schema).
+  restore: ({ position, size }) => set({ position, size: clampDockSize(size) })
 }))

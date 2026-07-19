@@ -87,6 +87,28 @@ describe('useViewerStore', () => {
     expect(useViewerStore.getState().file?.path).toBe('/p/a.txt')
   })
 
+  it('re-opening the ACTIVE file keeps edit mode (does not reload/lose edits)', () => {
+    const s = useViewerStore.getState()
+    s.openFile('/p/a.txt', 'a.txt')
+    s.setEditing(true)
+    // Re-open the file that's already active — must NOT drop editing.
+    useViewerStore.getState().openFile('/p/a.txt', 'a.txt')
+    expect(useViewerStore.getState().editing).toBe(true)
+    // setActiveFile onto the same index is likewise a no-reset.
+    useViewerStore.getState().setActiveFile(0)
+    expect(useViewerStore.getState().editing).toBe(true)
+  })
+
+  it('switching to a DIFFERENT tab resets to view mode', () => {
+    const s = useViewerStore.getState()
+    s.openFile('/p/a.txt', 'a.txt')
+    s.openFile('/p/b.txt', 'b.txt')
+    s.setMode('diff')
+    s.setActiveFile(0) // switch to a.txt
+    expect(useViewerStore.getState().mode).toBe('view')
+    expect(useViewerStore.getState().editing).toBe(false)
+  })
+
   it('closeFile drops a tab and activates the neighbour; last close clears', () => {
     const s = useViewerStore.getState()
     s.openFile('/p/a.txt', 'a.txt')

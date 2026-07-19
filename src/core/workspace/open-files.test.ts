@@ -47,9 +47,11 @@ describe('open-files reducer', () => {
     expect(s.activeIndex).toBe(1) // still 'c'
   })
 
-  it('closing a tab after the active one leaves the active index alone', () => {
+  it('closing a tab after the active one leaves the active tab unchanged', () => {
     const s = closeFile(withFiles(['a', 'b', 'c'], 0), 'c')
+    expect(s.files.map((x) => x.path)).toEqual(['a', 'b']) // 'c' removed
     expect(s.activeIndex).toBe(0)
+    expect(activeFile(s)?.path).toBe('a')
   })
 
   it('closing the last tab returns to the empty state', () => {

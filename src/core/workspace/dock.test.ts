@@ -38,4 +38,10 @@ describe('dock state', () => {
     expect(nextDockPosition('right')).toBe('left')
     expect(nextDockPosition('left')).toBe('bottom')
   })
+
+  it('clamps exactly at the boundaries', () => {
+    expect(clampDockSize(0.15)).toBe(0.15)
+    expect(clampDockSize(0.85)).toBe(0.85)
+    expect(clampDockSize(-Infinity)).toBe(DEFAULT_DOCK.size) // non-finite
+  })
 })

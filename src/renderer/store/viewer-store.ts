@@ -45,17 +45,26 @@ export const useViewerStore = create<ViewerState>((set) => ({
   openFile: (path, name) =>
     set((s) => {
       const openFiles = coreOpenFile(s.openFiles, { path, name })
-      return { openFiles, file: activeFile(openFiles), mode: 'view', editing: false }
+      const file = activeFile(openFiles)
+      // Only reset mode/editing when the ACTIVE file actually changes — otherwise
+      // re-opening the file you're editing would tear down Monaco and lose edits.
+      return file?.path === s.file?.path
+        ? { openFiles }
+        : { openFiles, file, mode: 'view', editing: false }
     }),
   closeFile: (path) =>
     set((s) => {
       const openFiles = coreCloseFile(s.openFiles, path)
-      return { openFiles, file: activeFile(openFiles) }
+      const file = activeFile(openFiles)
+      return file?.path === s.file?.path ? { openFiles } : { openFiles, file, editing: false }
     }),
   setActiveFile: (index) =>
     set((s) => {
       const openFiles = coreSetActive(s.openFiles, index)
-      return { openFiles, file: activeFile(openFiles), mode: 'view', editing: false }
+      const file = activeFile(openFiles)
+      return file?.path === s.file?.path
+        ? { openFiles }
+        : { openFiles, file, mode: 'view', editing: false }
     }),
   // Diff is read-only, so switching to it drops edit mode.
   setMode: (mode) => set(mode === 'diff' ? { mode, editing: false } : { mode }),

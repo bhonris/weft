@@ -516,12 +516,6 @@ body,
   opacity: 1;
 }
 
-.viewer__name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .viewer__actions {
   display: flex;
   align-items: center;

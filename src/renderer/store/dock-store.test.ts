@@ -29,4 +29,17 @@ describe('useDockStore', () => {
     expect(s.position).toBe('left')
     expect(s.size).toBe(0.6)
   })
+
+  it('restore RE-CLAMPS a corrupt/out-of-range persisted size', () => {
+    useDockStore.getState().restore({ position: 'right', size: 999 })
+    expect(useDockStore.getState().size).toBe(0.85) // clamped, not 999
+    useDockStore.getState().restore({ position: 'right', size: -5 })
+    expect(useDockStore.getState().size).toBe(0.15)
+  })
+
+  it('setPosition preserves the current size', () => {
+    useDockStore.getState().setSize(0.7)
+    useDockStore.getState().setPosition('left')
+    expect(useDockStore.getState().size).toBe(0.7)
+  })
 })

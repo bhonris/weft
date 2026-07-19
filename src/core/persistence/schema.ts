@@ -33,7 +33,8 @@ export const workspaceStateSchema = z.object({
   keymapOverrides: z.record(z.string(), z.string()),
   dock: z.object({
     position: z.enum(['bottom', 'right', 'left']),
-    size: z.number()
+    // .finite() rejects NaN/Infinity; the store re-clamps the range on restore.
+    size: z.number().finite()
   }),
   windowBounds: windowBoundsSchema.optional()
 })
