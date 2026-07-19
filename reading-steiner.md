@@ -1,8 +1,8 @@
 phase: time-leap-development
 leap_count: 59
 expansion_cycle: 8
-session_id: 2026-07-19T22:30:00Z
-prev_head: d00776c
+session_id: 2026-07-19T22:33:00Z
+prev_head: c8aa9f9
 original_prompt: "Build Weft — a cross-platform (Windows-first) Electron desktop app with a VS Code-style interface built around browser-style tabs of Claude Code CLI sessions (one tab per project), an integrated file explorer, per-tab Claude session status awareness driven by Claude Code hooks, Monaco read-only+diff viewer, tear-off tabs into separate windows, workspace persistence, and app-owned OS notifications. React+TS+Vite renderer, node-pty terminals via xterm.js, electron-store persistence. Full design at documents/claude-terminal-ide.md. CYCLE 6 END GOAL (operator): fully mouseless, keyboard-only navigation across all of Weft; macOS/Linux platform work OUT OF SCOPE this cycle."
 project_name: "weft"
 project_type: web
@@ -15,7 +15,7 @@ current_focus: "CYCLE 8 — in-project split-pane workspace (spec ## Expansion 8
 blocked_on: null
 last_test_run: "401 unit + 30 Playwright-Electron E2E, all green; coverage 98.54/96.54/97.42; typecheck clean (the hook-forwarder integration test passes once CLAUDE_IDE_TAB is unset)"
 closed_worldlines: []
-next_action: "First Cycle-8 leap: build the pure core foundation for the split-pane workspace. (a) core/workspace/open-files.ts — a reducer over {files: {path,name}[], activeIndex}: openFile (add-or-reactivate, no dup), closeFile (drop + reselect neighbour), setActive; unit-tested. (b) core/workspace/dock.ts — dock state {position: 'bottom'|'right'|'left', size: ratio} with a clamp helper. Then subsequent leaps wire the renderer (editor-tab strip, split layout replacing the .viewer-pane overlay, moveable/resizable CLI dock, full-width-CLI-when-empty), persist dock+tabs (WorkspaceState v4→v5), focus-CLI command, and the E2E journey. spec ## Expansion 8; brief documents/split-pane-workspace.md."
+next_action: "Cycle-8 leap 60: RENDERER wiring. Grow viewer-store from a single {file} to the open-files model (core/workspace/open-files.ts) — openFile adds/reactivates a tab, add closeFile/setActive; keep mode/editing/saveTick. Render an editor-tab strip above the Monaco pane (accessible, keyboard-operable, closable). ViewerPane reads activeFile. Explorer's openInViewer already calls a store action — point it at openFile. Keep behaviour green (viewer/App tests may need updating for the tabs shape). NEXT leaps: 61 split layout — replace the .viewer-pane absolute overlay with a real split (editor area + CLI dock via core/workspace/dock.ts), full-width CLI when open-files is empty; 62 moveable/resizable dock (drag divider, re-dock bottom/right/left) + persist dock (WorkspaceState v4→v5 migration, mirror keymapOverrides threading); 63 focus-CLI command + keyboard/a11y; 64 E2E workspace journey + review/convergence. spec ## Expansion 8."
 sern_interference_count: 0
 mayuri_rework_count: 0
 decisions:

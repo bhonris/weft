@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 59 — feat(cycle8) pure core foundation — open-file tabs + dock state — 2026-07-19
+
+**Phase**: time-leap-development (Expansion 8 — split-pane workspace)
+**Changed**: Opened Cycle 8 and laid its pure foundation. `core/workspace/open-files.ts` — `{files, activeIndex}` reducer: `openFile` (add-or-reactivate, no dup), `closeFile` (drop + reselect neighbour, empty→-1), `setActiveFile`, `activeFile`. `core/workspace/dock.ts` — `DockState {position: bottom|right|left, size}` + `clampDockSize` [0.15,0.85] + setters. All DOM-free, 15 unit tests.
+**SERN interference**: none
+**Divergence meter**: 15 new tests green; typecheck clean.
+**Next target**: leap 60 — renderer wiring: grow viewer-store into the open-files model + an editor-tab strip. Then split layout (leap 61), moveable/persisted dock (62), focus-CLI + a11y (63), E2E journey (64).
+
+---
+
 ## Worldline 7 Stabilised — Remappable keybindings — 2026-07-19
 
 **Cycle 7 sealed.** The operator's ask — make Weft's shortcuts user-remappable —
