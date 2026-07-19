@@ -67,3 +67,11 @@ lessons_learned: ["cycle 6: mouseless keyboard nav — a SINGLE pure keybinding-
 # rename(F2)/type by keyboard; (42) viewer mode switches + app-level Ctrl+S; (43) status controls via
 # commands; (44) mouseless E2E journey + focus-ring/passthrough E2E; then Phase 4 review, convergence,
 # checkpoint. Spec: documents/steiner-spec.md ## Expansion 6. Design: documents/keyboard-navigation.md.
+
+# ── Cycle 8 candidate (operator-aligned 2026-07-19; NOT started — Cycle 7 finishes first) ──
+# In-project workspace: multiple FILE/editor tabs per project + the Claude CLI as an
+# always-present, MOVEABLE dock pane (default BOTTOM, resizable, re-dockable to right/left,
+# position persisted). CLI is FULL-WIDTH when no file is open; opening a file reveals the split;
+# closing the last file tab returns to full-width CLI. A shortcut/affordance always focuses the CLI.
+# One CLI per project (tabs are files, not extra terminals). Full brief: documents/split-pane-workspace.md
+# When Cycle 7 completes, Phase 7 should open Cycle 8 from that brief (formalize as ## Expansion 8).
