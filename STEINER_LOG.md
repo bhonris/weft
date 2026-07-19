@@ -2,6 +2,16 @@
 
 > Reading Steiner: the lab's memory across worldline shifts. Newest leap on top.
 
+## Leap 52 — feat(keymap) persist user overrides (WorkspaceState v3→v4) — 2026-07-19
+
+**Phase**: time-leap-development (Expansion 7)
+**Changed**: The plumbing that makes rebinds stick. Added `WorkspaceState.keymapOverrides` (chord → command id), schema **v3→v4** with a `v3ToV4` migration (default `{}`) and the full fixture sweep (schema/default-workspace/validate/workspace-store/workspace-sync/App). New pure `actionForCommand(id)` (inverse of leap 49's `commandIdForAction`) turns a persisted override back into a routable `KeyAction` — `null` for palette-only/unknown ids (defensive). New `buildKeymap(overrides)` merges `DEFAULT_KEYMAP` + overrides, **skipping protected chords and non-chord commands** so a bad override can never shadow a terminal key. App holds an effective-keymap ref (rebuilt when overrides change) and feeds it to `routeKey`, so a rebind applies live; overrides load on launch and persist via the save-on-change effect. Added `general.resetKeybindings`.
+**SERN interference**: one caught-in-test asymmetry — `actionForCommand('general.terminalSearch')` yields a `terminal-search` action but `commandIdForAction` maps that back to `null` (intentional passthrough), so it doesn't round-trip; excluded from the round-trip test with an explicit asymmetry test instead.
+**Divergence meter**: 98.61% stmts / 96.52% branches / 97.35% funcs — 375 pass.
+**Next target**: Expansion 7 criterion 5 — the keybindings **editor UI** (accessible, keyboard-operable): list commands + current chord, capture a new chord via `chordOf`, apply with `bindChord` (protected/conflict from leap 51), reset via `resetChord`/`general.resetKeybindings`, writing to `setKeymapOverrides`. Checking this off also completes criterion 2 (user-editable + persisted).
+
+---
+
 ## Leap 51 — feat(keymap) protected guard + rebind/reset API — 2026-07-18
 
 **Phase**: time-leap-development (Expansion 7)
