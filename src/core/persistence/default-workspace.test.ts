@@ -16,6 +16,10 @@ describe('defaultWorkspace', () => {
     expect(ws.keymapOverrides).toEqual({})
     // CLI dock defaults to the bottom edge.
     expect(ws.dock).toEqual({ position: 'bottom', size: 0.4 })
+    // Text sizing ships at the historical defaults.
+    expect(ws.terminalFontSize).toBe(15)
+    expect(ws.editorFontSize).toBe(14)
+    expect(ws.uiZoom).toBe(1)
   })
 
   // Regression guard: cyberpunk is the out-of-the-box default theme. A fresh

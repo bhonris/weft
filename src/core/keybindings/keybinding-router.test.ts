@@ -71,14 +71,34 @@ describe('routeKey', () => {
 
   // ── The passthrough invariant (spec §7.4). New chords must never regress it. ──
 
-  it('passes terminal-bound Ctrl letter/digit keys through', () => {
+  it('passes terminal-bound Ctrl letter keys through', () => {
     // Ctrl+C interrupt, Ctrl+R reverse-search, Ctrl+D EOF, Ctrl+Z suspend,
-    // Ctrl+L clear, Ctrl+A/E line start/end, Ctrl+S/Q flow control, Ctrl+0.
+    // Ctrl+L clear, Ctrl+A/E line start/end, Ctrl+S/Q flow control.
     // Plain Ctrl+F/Ctrl+P/Ctrl+N/Ctrl+B (readline motion) must NOT be swallowed
     // just because their SHIFT variants are app chords (search/palette).
-    for (const key of ['c', 'r', 'd', 'z', 'l', 'a', 'e', 's', 'q', 'k', 'u', 'f', 'p', 'n', 'b', 'g', 'h', '0']) {
+    for (const key of ['c', 'r', 'd', 'z', 'l', 'a', 'e', 's', 'q', 'k', 'u', 'f', 'p', 'n', 'b', 'g', 'h']) {
       expect(routeKey(k({ ctrlKey: true, key }))).toEqual({ kind: 'passthrough' })
     }
+  })
+
+  it('maps the terminal-font chords (Ctrl+= / Ctrl+- / Ctrl+0)', () => {
+    // Ctrl+0 resets the terminal font — it is not a readline binding, so
+    // claiming it does not regress §7.4. Ctrl+1..9 stay positional tab jumps.
+    expect(routeKey(k({ ctrlKey: true, key: '=' }))).toEqual({ kind: 'terminal-font', dir: 1 })
+    expect(routeKey(k({ ctrlKey: true, key: '-' }))).toEqual({ kind: 'terminal-font', dir: -1 })
+    expect(routeKey(k({ ctrlKey: true, key: '0' }))).toEqual({ kind: 'terminal-font', dir: 0 })
+    // Ctrl+Plus: '+' is Shift+= on most layouts (and numpad +). Both fold to the
+    // same font-increase so the user does not have to release Shift to reach '='.
+    expect(routeKey(k({ ctrlKey: true, shiftKey: true, key: '+' }))).toEqual({
+      kind: 'terminal-font',
+      dir: 1
+    })
+    expect(routeKey(k({ ctrlKey: true, shiftKey: true, key: '=' }))).toEqual({
+      kind: 'terminal-font',
+      dir: 1
+    })
+    // The digit jump range is untouched.
+    expect(routeKey(k({ ctrlKey: true, key: '1' }))).toEqual({ kind: 'jump-tab', index: 0 })
   })
 
   it('passes plain keys, Alt and Meta combos through', () => {

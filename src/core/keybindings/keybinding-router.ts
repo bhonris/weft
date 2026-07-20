@@ -40,6 +40,8 @@ export type KeyAction =
   | { kind: 'focus-cycle'; dir: 1 | -1 }
   | { kind: 'move-tab'; dir: 1 | -1 }
   | { kind: 'terminal-search' }
+  // Terminal font size: +1 = bigger, -1 = smaller, 0 = reset to default.
+  | { kind: 'terminal-font'; dir: 1 | -1 | 0 }
   | { kind: 'passthrough' }
 
 export function routeKey(e: KeyLike, keymap: Keymap = DEFAULT_KEYMAP): KeyAction {
