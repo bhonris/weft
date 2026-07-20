@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { TERMINAL_FONT_FAMILY } from './font-stack'
+import { TERMINAL_FONT_FAMILY, TERMINAL_LINE_HEIGHT } from './font-stack'
 
 /**
  * Regression guard for the Thai-tofu bug: the terminal font stack once listed
@@ -36,5 +36,11 @@ describe('TERMINAL_FONT_FAMILY', () => {
 
   it('ends with the generic monospace family', () => {
     expect(fonts.at(-1)).toBe('monospace')
+  })
+})
+
+describe('TERMINAL_LINE_HEIGHT', () => {
+  it('gives rows extra height so stacked Thai marks are not cropped', () => {
+    expect(TERMINAL_LINE_HEIGHT).toBeGreaterThan(1)
   })
 })

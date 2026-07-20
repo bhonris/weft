@@ -28,3 +28,12 @@
  */
 export const TERMINAL_FONT_FAMILY =
   'Consolas, "Cascadia Mono", "Courier New", "Leelawadee UI", "Tahoma", "Noto Sans Thai", "Chakra Petch", monospace'
+
+/**
+ * xterm row-height multiple. >1 gives Thai its stacked layers (lower vowel /
+ * base / upper vowel / tone mark) the vertical room they need so nothing is
+ * cropped, while staying tight enough that Latin-only output doesn't feel sparse.
+ * Pairs with the grapheme-cluster Unicode provider (see TerminalPane), which
+ * groups a base consonant + its marks into a single cell for the DOM renderer.
+ */
+export const TERMINAL_LINE_HEIGHT = 1.2
