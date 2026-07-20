@@ -24,10 +24,13 @@ import { watch as chokidarWatch } from 'chokidar'
 import { UsageService } from './services/usage-service'
 import { UsageHistoryService } from './services/usage-history-service'
 import { PlanLimitsService } from './services/plan-limits-service'
+import { GithubService, type GithubFetchLike } from './services/github-service'
+import { GithubAuthService } from './services/github-auth-service'
 import { registerSessionIpc } from './ipc/register'
 import { registerFsIpc } from './ipc/register-fs'
 import { registerWorkspaceIpc } from './ipc/register-workspace'
 import { registerUsageIpc } from './ipc/register-usage'
+import { registerGithubIpc } from './ipc/register-github'
 import { CH } from '@shared/ipc/channels'
 
 /**
@@ -196,6 +199,7 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
       }),
     (path, err) => console.warn(`[weft-watch] error watching ${path}:`, err)
   )
+  const gitService = new GitService((file, args, opts) => execFileAsync(file, args, opts))
   registerFsIpc({
     ipcMain,
     fsService: new FsService(fsPromises),
@@ -203,7 +207,7 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
     diffService: new DiffService(fsPromises, (file, args, opts) =>
       execFileAsync(file, args, opts)
     ),
-    gitService: new GitService((file, args, opts) => execFileAsync(file, args, opts)),
+    gitService,
     getWritableRoots: () => pty.tabRefs().map((r) => r.cwd),
     reveal: (path) => shell.showItemInFolder(path),
     open: async (path) => {
@@ -261,6 +265,49 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
         .tabRefs()
         .filter((r) => r.command === 'claude')
         .map((r) => ({ sessionId: r.sessionId, cwd: r.cwd }))
+  })
+
+  // GitHub Issues: detect the repo from the cwd's origin remote, fetch its
+  // issues, and run the OAuth device flow for sign-in. The token is resolved in
+  // main (gh CLI → GITHUB_TOKEN → stored) and never sent to the renderer.
+  const githubFetch: GithubFetchLike = (url, init) => fetch(url, init)
+  const githubAuthService = new GithubAuthService({
+    fetch: githubFetch,
+    exec: (file, args, opts) => execFileAsync(file, args, opts),
+    getEnv: (name) => process.env[name],
+    store: {
+      get: () => {
+        const v = electronStore.get('githubToken')
+        return typeof v === 'string' ? v : null
+      },
+      set: (token) => electronStore.set('githubToken', token),
+      delete: () => electronStore.delete('githubToken')
+    },
+    openExternal: (url) => shell.openExternal(url),
+    emit: (event) => {
+      for (const win of BrowserWindow.getAllWindows()) {
+        win.webContents.send(CH.githubAuth, event)
+      }
+    },
+    now: () => Date.now(),
+    sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    // A registered GitHub OAuth App client id enables in-app sign-in. Public by
+    // design (device flow uses no client secret). Until provided, sign-in reports
+    // "not configured" and the gh/env/unauthenticated paths still work.
+    clientId: process.env['WEFT_GITHUB_CLIENT_ID'] ?? null
+  })
+  const githubService = new GithubService({
+    fetch: githubFetch,
+    getRemoteUrl: (cwd) => gitService.remoteUrl(cwd),
+    getAuth: () => githubAuthService.resolveAuth(),
+    now: () => Date.now(),
+    cacheMs: 60 * 1000
+  })
+  registerGithubIpc({
+    ipcMain,
+    githubService,
+    authService: githubAuthService,
+    openExternal: (url) => shell.openExternal(url)
   })
 
   // Main-process introspection for the E2E suite (never exposed to the renderer).

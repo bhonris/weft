@@ -92,9 +92,11 @@ pnpm is the package manager (not npm).
   regression test for every bug; keep the suite green before committing.** For
   DOM/xterm-bound UI, prefer E2E over brittle unit tests (`TerminalPane` is
   deliberately E2E-only).
-- Known gotcha: `hook-forwarder.integration.test.ts` spreads `...process.env`,
-  so running the suite **inside a live weft/Claude Code session** leaks a real
-  `CLAUDE_IDE_TAB` and fails one case. Not a product bug.
+- `hook-forwarder.integration.test.ts` runs the real forwarder in a child
+  process; it now deletes `CLAUDE_IDE_TAB` from the child env before applying any
+  per-test override, so the suite is hermetic even when run **inside a live
+  weft/Claude Code session** (which used to leak a real `CLAUDE_IDE_TAB` and fail
+  the null-stdin case). Keep that delete when editing `runRelay`.
 
 ## Documents & the /dmail "Steiner" workflow
 

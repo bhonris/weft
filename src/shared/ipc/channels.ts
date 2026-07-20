@@ -44,7 +44,16 @@ export const CH = {
 
   // Claude Code usage (renderer -> main, invoke)
   getUsage: 'usage:get',
-  getUsagePanel: 'usage:panel'
+  getUsagePanel: 'usage:panel',
+
+  // GitHub Issues (renderer -> main, invoke)
+  getIssues: 'github:get',
+  githubSignIn: 'github:sign-in',
+  githubSignOut: 'github:sign-out',
+  // Device-flow progress + result (main -> renderer, event)
+  githubAuth: 'github:auth',
+  // Open an external http(s) URL in the default browser.
+  openExternal: 'app:open-external'
 } as const
 
 export type ChannelName = (typeof CH)[keyof typeof CH]
