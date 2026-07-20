@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { SearchAddon } from '@xterm/addon-search'
 import { routeKey } from '@core/keybindings/keybinding-router'
 import { buildKeymap } from '@core/keybindings/effective-keymap'
+import { TERMINAL_FONT_FAMILY } from '@core/terminal/font-stack'
 import { useTerminalStore } from '../store/terminal-store'
 import { useSessionStore } from '../store/session-store'
 import '@xterm/xterm/css/xterm.css'
@@ -58,7 +59,9 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
     if (!host) return
 
     const term = new Terminal({
-      fontFamily: 'Consolas, "Cascadia Mono", "Courier New", monospace',
+      // Thai (and other non-Latin) support depends on this fallback chain —
+      // the leading monospace fonts have no Thai glyphs. See font-stack.ts.
+      fontFamily: TERMINAL_FONT_FAMILY,
       fontSize: 13,
       cursorBlink: true,
       scrollback: 8000, // spec §4.3: cap live scrollback per tab
