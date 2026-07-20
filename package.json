@@ -30,6 +30,7 @@
     "preview": "electron-vite preview",
     "package": "electron-vite build && electron-builder",
     "package:dir": "electron-vite build && electron-builder --dir",
+    "package:app": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-app.ps1",
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
