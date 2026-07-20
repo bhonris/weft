@@ -43,6 +43,7 @@ export type CommandId =
   | 'general.keybindings'
   | 'general.resetKeybindings'
   | 'view.cycleDock'
+  | 'view.maximizeCli'
 
 export interface Command {
   id: CommandId
@@ -161,7 +162,12 @@ export const COMMANDS: readonly Command[] = [
   { id: 'general.toggleNotifications', title: 'Toggle Notifications', category: 'General' },
   { id: 'general.keybindings', title: 'Edit Keybindings…', category: 'General' },
   { id: 'general.resetKeybindings', title: 'Reset Keybindings to Defaults', category: 'General' },
-  { id: 'view.cycleDock', title: 'Move CLI Dock (bottom → right → left)', category: 'Viewer' }
+  { id: 'view.cycleDock', title: 'Move CLI Dock (bottom → right → left)', category: 'Viewer' },
+  {
+    id: 'view.maximizeCli',
+    title: 'Toggle Maximize CLI (double-tap Ctrl+`)',
+    category: 'Viewer'
+  }
 ]
 
 /** Categories in display order for the help overlay grouping. */

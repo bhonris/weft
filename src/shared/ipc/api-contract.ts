@@ -38,8 +38,13 @@ export interface WorkspaceState {
   keymapOverrides: Record<string, string>
   /** v5: CLI dock placement for the in-project split. */
   dock: { position: 'bottom' | 'right' | 'left'; size: number }
+  /** v6: which sidebar activity-bar panel is showing. */
+  activePanel: SidebarPanel
   windowBounds?: { x: number; y: number; width: number; height: number }
 }
+
+/** The sidebar panels selectable from the activity bar. */
+export type SidebarPanel = 'explorer' | 'usage'
 
 export interface CreateSessionOpts {
   cwd: string
@@ -60,6 +65,62 @@ export interface LiveSession {
   cwd: string
   command: SessionCommand
   exited: boolean
+}
+
+/** Aggregated Claude Code usage across the window's live claude sessions. */
+export interface UsageSummary {
+  /** Estimated USD cost, summed per model from bundled pricing. */
+  costUsd: number
+  /** All billed tokens (input + output + cache read + cache write). */
+  totalTokens: number
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+  /** Number of claude sessions that had a readable transcript. */
+  sessionCount: number
+}
+
+/** One plan-usage window (5-hour / weekly / weekly-Opus) from `/api/oauth/usage`. */
+export interface PlanWindow {
+  /** Percent of the window's limit consumed, 0–100. */
+  utilization: number
+  /** ISO timestamp the window resets, or null when unknown. */
+  resetsAt: string | null
+}
+
+/** Claude subscription plan limits — the data behind Claude Code's `/usage`. */
+export interface PlanLimits {
+  fiveHour: PlanWindow | null
+  sevenDay: PlanWindow | null
+  sevenDayOpus: PlanWindow | null
+  /** ISO time the figures were fetched. */
+  fetchedAt: string
+  /** True when served from the last-known cache after a fresh fetch failed. */
+  stale: boolean
+}
+
+/** One row in the Usage panel's recent-sessions list. */
+export interface SessionUsage {
+  sessionId: string
+  /** Project display name (the cwd's final path segment). */
+  project: string
+  /** Model that used the most tokens in the session. */
+  model: string
+  costUsd: number
+  totalTokens: number
+  /** ISO time of the session's most recent assistant turn ('' when unknown). */
+  lastActive: string
+}
+
+/** Everything the Usage sidebar panel renders. */
+export interface UsagePanelData {
+  /** Plan-limit meters, or null when unavailable (no token / endpoint down). */
+  planLimits: PlanLimits | null
+  /** Computed rolling-7-day cost + tokens across all projects. */
+  weekly: UsageSummary
+  /** Recent sessions across all projects, newest first. */
+  sessions: SessionUsage[]
 }
 
 export type OpenProjectResult =
@@ -128,6 +189,12 @@ export interface WeftApi {
   // Persistence
   loadWorkspace(): Promise<WorkspaceState>
   saveWorkspace(state: WorkspaceState): Promise<void>
+
+  // Claude Code usage
+  /** Aggregated cost + token usage across all live claude sessions. */
+  getUsage(): Promise<UsageSummary>
+  /** Full Usage-panel payload: plan limits + weekly totals + recent sessions. */
+  getUsagePanel(): Promise<UsagePanelData>
 }
 
 /**
@@ -163,5 +230,7 @@ export type WeftBridge = Pick<
   | 'getDiff'
   | 'getGitBranch'
   | 'saveFile'
+  | 'getUsage'
+  | 'getUsagePanel'
 >
 

@@ -5,6 +5,23 @@
   "author": "bunna",
   "license": "MIT",
   "private": true,
+  "homepage": "https://github.com/bhonris/weft#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bhonris/weft.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bhonris/weft/issues"
+  },
+  "keywords": [
+    "claude-code",
+    "electron",
+    "terminal",
+    "ide",
+    "xterm",
+    "node-pty",
+    "developer-tools"
+  ],
   "type": "module",
   "main": "./dist-electron/main/index.js",
   "scripts": {

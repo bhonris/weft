@@ -40,7 +40,11 @@ export const CH = {
 
   // Persistence
   loadWorkspace: 'workspace:load',
-  saveWorkspace: 'workspace:save'
+  saveWorkspace: 'workspace:save',
+
+  // Claude Code usage (renderer -> main, invoke)
+  getUsage: 'usage:get',
+  getUsagePanel: 'usage:panel'
 } as const
 
 export type ChannelName = (typeof CH)[keyof typeof CH]

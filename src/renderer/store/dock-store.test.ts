@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useDockStore } from './dock-store'
 import { DEFAULT_DOCK } from '@core/workspace/dock'
 
-beforeEach(() => useDockStore.setState({ ...DEFAULT_DOCK }))
+beforeEach(() => useDockStore.setState({ ...DEFAULT_DOCK, maximized: false }))
 
 describe('useDockStore', () => {
   it('defaults to a bottom dock at 0.4', () => {
@@ -41,5 +41,31 @@ describe('useDockStore', () => {
     useDockStore.getState().setSize(0.7)
     useDockStore.getState().setPosition('left')
     expect(useDockStore.getState().size).toBe(0.7)
+  })
+
+  it('defaults to not maximized', () => {
+    expect(useDockStore.getState().maximized).toBe(false)
+  })
+
+  it('toggleMaximized flips the CLI focus mode', () => {
+    useDockStore.getState().toggleMaximized()
+    expect(useDockStore.getState().maximized).toBe(true)
+    useDockStore.getState().toggleMaximized()
+    expect(useDockStore.getState().maximized).toBe(false)
+  })
+
+  it('setMaximized sets the flag explicitly', () => {
+    useDockStore.getState().setMaximized(true)
+    expect(useDockStore.getState().maximized).toBe(true)
+    useDockStore.getState().setMaximized(false)
+    expect(useDockStore.getState().maximized).toBe(false)
+  })
+
+  it('restore leaves the transient maximize flag untouched (session-only)', () => {
+    useDockStore.getState().setMaximized(true)
+    useDockStore.getState().restore({ position: 'left', size: 0.6 })
+    // Position/size come from the restore; maximize is not persisted, so it stays.
+    expect(useDockStore.getState().position).toBe('left')
+    expect(useDockStore.getState().maximized).toBe(true)
   })
 })

@@ -15,7 +15,7 @@ const tab = (id: string, over: Partial<Tab> = {}): Tab => ({
 describe('buildWorkspaceState', () => {
   it('serializes tabs, order, and defaults at the current version', () => {
     const ws = buildWorkspaceState([tab('a'), tab('b', { command: 'shell' })])
-    expect(ws.version).toBe(5)
+    expect(ws.version).toBe(6)
     expect(ws.tabs).toEqual([
       {
         tabId: 'a',
@@ -43,6 +43,8 @@ describe('buildWorkspaceState', () => {
     expect(ws.keymapOverrides).toEqual({})
     // Dock defaults to the bottom edge.
     expect(ws.dock).toEqual({ position: 'bottom', size: 0.4 })
+    // The explorer is the default active sidebar panel.
+    expect(ws.activePanel).toBe('explorer')
   })
 
   it('persists an explicit theme override', () => {

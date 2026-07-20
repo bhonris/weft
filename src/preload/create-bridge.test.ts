@@ -86,8 +86,12 @@ describe('createWeftApi', () => {
       theme: 'system'
     })
     await api.moveTabToWindow('t1', 'new', { title: 'x' })
+    await api.getUsage()
+    await api.getUsagePanel()
 
     expect(invoke).toHaveBeenCalledWith(CH.listDir, '/p')
+    expect(invoke).toHaveBeenCalledWith(CH.getUsage)
+    expect(invoke).toHaveBeenCalledWith(CH.getUsagePanel)
     expect(invoke).toHaveBeenCalledWith(CH.watchDir, '/p')
     expect(invoke).toHaveBeenCalledWith(CH.unwatchDir, 'w1')
     expect(invoke).toHaveBeenCalledWith(CH.revealInOs, '/p/a')

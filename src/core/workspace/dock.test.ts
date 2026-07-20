@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import {
   DEFAULT_DOCK,
+  DOCK_RESIZE_STEP,
   clampDockSize,
   setDockPosition,
   setDockSize,
-  nextDockPosition
+  nextDockPosition,
+  dockResizeDelta
 } from './dock'
 
 describe('dock state', () => {
@@ -43,5 +45,42 @@ describe('dock state', () => {
     expect(clampDockSize(0.15)).toBe(0.15)
     expect(clampDockSize(0.85)).toBe(0.85)
     expect(clampDockSize(-Infinity)).toBe(DEFAULT_DOCK.size) // non-finite
+  })
+})
+
+describe('dockResizeDelta — keyboard resize matches mouse drag per edge', () => {
+  // The GROW key must move the divider toward the editor (mouse-drag direction).
+  it('bottom dock: ArrowUp grows, ArrowDown shrinks', () => {
+    expect(dockResizeDelta('bottom', 'ArrowUp')).toBe(DOCK_RESIZE_STEP)
+    expect(dockResizeDelta('bottom', 'ArrowDown')).toBe(-DOCK_RESIZE_STEP)
+  })
+
+  it('right dock: ArrowLeft grows, ArrowRight shrinks', () => {
+    expect(dockResizeDelta('right', 'ArrowLeft')).toBe(DOCK_RESIZE_STEP)
+    expect(dockResizeDelta('right', 'ArrowRight')).toBe(-DOCK_RESIZE_STEP)
+  })
+
+  it('left dock: ArrowRight grows, ArrowLeft shrinks', () => {
+    expect(dockResizeDelta('left', 'ArrowRight')).toBe(DOCK_RESIZE_STEP)
+    expect(dockResizeDelta('left', 'ArrowLeft')).toBe(-DOCK_RESIZE_STEP)
+  })
+
+  it('regression: bottom/right were previously inverted — Up/Left ≠ shrink', () => {
+    // The old code shrank on Up/Left for every edge; grow must be positive now.
+    expect(dockResizeDelta('bottom', 'ArrowUp')).toBeGreaterThan(0)
+    expect(dockResizeDelta('right', 'ArrowLeft')).toBeGreaterThan(0)
+  })
+
+  it('ignores keys off the dock resize axis', () => {
+    expect(dockResizeDelta('bottom', 'ArrowLeft')).toBe(0)
+    expect(dockResizeDelta('bottom', 'ArrowRight')).toBe(0)
+    expect(dockResizeDelta('right', 'ArrowUp')).toBe(0)
+    expect(dockResizeDelta('left', 'ArrowDown')).toBe(0)
+    expect(dockResizeDelta('bottom', 'Enter')).toBe(0)
+  })
+
+  it('honours a custom step', () => {
+    expect(dockResizeDelta('bottom', 'ArrowUp', 0.05)).toBe(0.05)
+    expect(dockResizeDelta('left', 'ArrowLeft', 0.05)).toBe(-0.05)
   })
 })

@@ -17,6 +17,8 @@ export function defaultWorkspace(): WorkspaceState {
     // No custom keybindings by default — the built-in chords apply.
     keymapOverrides: {},
     // CLI dock defaults to the bottom edge (see core/workspace/dock).
-    dock: { ...DEFAULT_DOCK }
+    dock: { ...DEFAULT_DOCK },
+    // The file explorer is the default sidebar panel.
+    activePanel: 'explorer'
   }
 }

@@ -4,6 +4,8 @@ import { emptyOpenFiles } from '@core/workspace/open-files'
 
 beforeEach(() => {
   useViewerStore.setState({
+    byProject: {},
+    projectId: null,
     openFiles: emptyOpenFiles,
     file: null,
     mode: 'view',
@@ -33,6 +35,12 @@ describe('useViewerStore', () => {
     useViewerStore.getState().openFile('/p/a.txt', 'a.txt')
     useViewerStore.getState().close()
     expect(useViewerStore.getState().file).toBeNull()
+  })
+
+  it('close is a no-op when nothing is open', () => {
+    useViewerStore.getState().close()
+    expect(useViewerStore.getState().file).toBeNull()
+    expect(useViewerStore.getState().openFiles.files).toHaveLength(0)
   })
 
   it('setEditing(true) implies view mode; switching to diff drops editing', () => {
@@ -117,5 +125,67 @@ describe('useViewerStore', () => {
     expect(useViewerStore.getState().file?.path).toBe('/p/a.txt')
     useViewerStore.getState().closeFile('/p/a.txt')
     expect(useViewerStore.getState().file).toBeNull()
+  })
+
+  describe('per-project scoping (regression: files were global)', () => {
+    it('keeps a separate file set per project and swaps on setProject', () => {
+      const s = useViewerStore.getState()
+      s.setProject('t1')
+      s.openFile('/proj1/a.txt', 'a.txt')
+      expect(useViewerStore.getState().file?.path).toBe('/proj1/a.txt')
+
+      // Switch to another project: its (empty) set shows, NOT project 1's file.
+      useViewerStore.getState().setProject('t2')
+      expect(useViewerStore.getState().file).toBeNull()
+      expect(useViewerStore.getState().openFiles.files).toHaveLength(0)
+
+      useViewerStore.getState().openFile('/proj2/z.txt', 'z.txt')
+      expect(useViewerStore.getState().file?.path).toBe('/proj2/z.txt')
+
+      // Switching back restores project 1's file (still open, not lost).
+      useViewerStore.getState().setProject('t1')
+      expect(useViewerStore.getState().file?.path).toBe('/proj1/a.txt')
+    })
+
+    it('setProject(null) clears the visible editor but preserves each set', () => {
+      const s = useViewerStore.getState()
+      s.setProject('t1')
+      s.openFile('/proj1/a.txt', 'a.txt')
+      useViewerStore.getState().setProject(null)
+      expect(useViewerStore.getState().file).toBeNull()
+      useViewerStore.getState().setProject('t1')
+      expect(useViewerStore.getState().file?.path).toBe('/proj1/a.txt')
+    })
+
+    it('re-selecting the current project is a no-op (keeps edit mode)', () => {
+      const s = useViewerStore.getState()
+      s.setProject('t1')
+      s.openFile('/proj1/a.txt', 'a.txt')
+      s.setEditing(true)
+      useViewerStore.getState().setProject('t1')
+      expect(useViewerStore.getState().editing).toBe(true)
+    })
+
+    it('dropProject discards a closed project and clears it if it was showing', () => {
+      const s = useViewerStore.getState()
+      s.setProject('t1')
+      s.openFile('/proj1/a.txt', 'a.txt')
+      useViewerStore.getState().dropProject('t1')
+      expect(useViewerStore.getState().file).toBeNull()
+      // Re-selecting the dropped project starts empty (files were forgotten).
+      useViewerStore.getState().setProject('t1')
+      expect(useViewerStore.getState().openFiles.files).toHaveLength(0)
+    })
+
+    it('dropping a non-showing project leaves the active editor untouched', () => {
+      const s = useViewerStore.getState()
+      s.setProject('t1')
+      s.openFile('/proj1/a.txt', 'a.txt')
+      s.setProject('t2')
+      s.openFile('/proj2/z.txt', 'z.txt')
+      // Close project 1 while project 2 is showing.
+      useViewerStore.getState().dropProject('t1')
+      expect(useViewerStore.getState().file?.path).toBe('/proj2/z.txt')
+    })
   })
 })

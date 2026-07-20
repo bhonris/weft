@@ -3,10 +3,16 @@ import { useSessionStore, nextTheme, type Tab, type SpawnFailure } from './store
 import { useViewerStore } from './store/viewer-store'
 import { useTerminalStore } from './store/terminal-store'
 import { useDockStore } from './store/dock-store'
-import { nextDockPosition } from '@core/workspace/dock'
+import { useUsageStore } from './store/usage-store'
+import { useActivityStore } from './store/activity-store'
+import { formatUsageLabel, formatUsageTooltip } from '@core/usage/summary'
+import { formatUtilization, formatResetIn } from '@core/usage/plan-limits'
+import { nextDockPosition, dockResizeDelta } from '@core/workspace/dock'
 import { buildWorkspaceState, restoreWorkspace } from './store/workspace-sync'
 import { TerminalPane } from './components/TerminalPane'
 import { Explorer } from './components/Explorer'
+import { ActivityBar } from './components/ActivityBar'
+import { UsagePanel } from './components/UsagePanel'
 import { ViewerPane } from './components/ViewerPane'
 import { WorkbenchErrorBoundary } from './components/WorkbenchErrorBoundary'
 import { CommandPalette } from './components/CommandPalette'
@@ -29,6 +35,26 @@ const STATUS_GLYPH: Record<SessionStatus, string> = {
   done: '✓',
   error: '✕',
   unknown: '○'
+}
+
+/** Pull the latest aggregate Claude Code usage from main into the store. */
+function refreshUsage(): void {
+  void window.api
+    .getUsage()
+    .then((u) => useUsageStore.getState().setUsage(u))
+    .catch(() => {
+      /* transient read failure — keep the last value. */
+    })
+}
+
+/** Pull the full Usage-panel payload (plan limits + weekly + sessions). */
+function refreshUsagePanel(): void {
+  void window.api
+    .getUsagePanel()
+    .then((p) => useUsageStore.getState().setPanel(p))
+    .catch(() => {
+      /* transient read failure — keep the last value. */
+    })
 }
 
 /** Add a spawned session as a tab and clear any spawn-failure banner. */
@@ -85,6 +111,8 @@ async function retrySpawn(failure: SpawnFailure): Promise<void> {
 function closeTab(tabId: string): void {
   void window.api.closeSession(tabId)
   useSessionStore.getState().removeTab(tabId)
+  // Forget this project's open editor tabs (they don't outlive the project).
+  useViewerStore.getState().dropProject(tabId)
 }
 
 function TabButton({ tab, active }: { tab: Tab; active: boolean }): React.ReactElement {
@@ -177,6 +205,7 @@ function TabButton({ tab, active }: { tab: Tab; active: boolean }): React.ReactE
           // Move the view, not the session: the PTY stays alive in main.
           void window.api.moveTabToWindow(tab.tabId, 'new', { title: tab.title })
           useSessionStore.getState().removeTab(tab.tabId)
+          useViewerStore.getState().dropProject(tab.tabId)
         }}
       >
         ⤢
@@ -199,6 +228,11 @@ export function App(): React.ReactElement {
   const theme = useSessionStore((s) => s.theme)
   const setTheme = useSessionStore((s) => s.setTheme)
   const activeTab = tabs.find((t) => t.tabId === activeTabId) ?? null
+  const usage = useUsageStore((s) => s.usage)
+  // The 5-hour plan-limit window, shown in the status bar at all times.
+  const fiveHour = useUsageStore((s) => s.panel?.planLimits?.fiveHour ?? null)
+  const planStale = useUsageStore((s) => s.panel?.planLimits?.stale ?? false)
+  const activePanel = useActivityStore((s) => s.active)
   const spawnFailure = useSessionStore((s) => s.spawnFailure)
   const setSpawnFailure = useSessionStore((s) => s.setSpawnFailure)
   const [gitBranch, setGitBranch] = useState<string | null>(null)
@@ -208,11 +242,17 @@ export function App(): React.ReactElement {
   const setNotificationsEnabled = useSessionStore((s) => s.setNotificationsEnabled)
   const keymapOverrides = useSessionStore((s) => s.keymapOverrides)
   const setKeymapOverrides = useSessionStore((s) => s.setKeymapOverrides)
-  // In-project split: the editor area shows only when a file is open; otherwise
-  // the CLI dock fills the whole area. Dock position/size come from the dock store.
+  // In-project split: the editor area shows only when a file is open AND the CLI
+  // isn't maximized; otherwise the CLI dock fills the whole area. Dock
+  // position/size/maximized come from the dock store.
   const hasViewerFile = useViewerStore((s) => s.file !== null)
+  const viewerFilePath = useViewerStore((s) => s.file?.path ?? null)
   const dockPosition = useDockStore((s) => s.position)
   const dockSize = useDockStore((s) => s.size)
+  const cliMaximized = useDockStore((s) => s.maximized)
+  // "Maximize CLI" hides the editor pane without closing the file, so the CLI
+  // gets the full split area. The file stays open; toggling off restores it.
+  const showEditor = hasViewerFile && !cliMaximized
   const [overlay, setOverlay] = useState<'none' | 'palette' | 'help' | 'keybindings'>('none')
   // Read inside the stable window keydown listener without re-subscribing it.
   const overlayOpenRef = useRef(false)
@@ -277,7 +317,9 @@ export function App(): React.ReactElement {
   const presentRegions = (): RegionId[] => {
     const p: RegionId[] = ['tabs', 'explorer']
     if (useSessionStore.getState().activeTabId) p.push('terminal')
-    if (useViewerStore.getState().file) p.push('viewer')
+    // The viewer region only exists when a file is open AND the CLI isn't
+    // maximized (maximize hides the editor), so don't cycle to a hidden pane.
+    if (useViewerStore.getState().file && !useDockStore.getState().maximized) p.push('viewer')
     p.push('status')
     return p
   }
@@ -304,7 +346,12 @@ export function App(): React.ReactElement {
             : (ev.clientX - r.left) / r.width
       useDockStore.getState().setSize(size)
     }
+    // Suppress text selection across the editor/terminal while dragging the
+    // divider (otherwise a drag highlights everything it passes over).
+    const prevUserSelect = document.body.style.userSelect
+    document.body.style.userSelect = 'none'
     const onUp = (): void => {
+      document.body.style.userSelect = prevUserSelect
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
     }
@@ -363,9 +410,16 @@ export function App(): React.ReactElement {
       case 'viewer.save':
         useViewerStore.getState().requestSave()
         break
-      case 'focus.terminal':
-        focusRegion('terminal')
+      case 'focus.terminal': {
+        // Ctrl+` focuses the terminal; pressing it AGAIN while the terminal is
+        // already focused escalates to a full-pane CLI (and toggles back on the
+        // next press). So a double-tap from anywhere gets you a full-screen CLI
+        // without closing the open file — no separate chord needed.
+        const termFocused = terminalRef.current?.contains(document.activeElement) ?? false
+        if (termFocused) useDockStore.getState().toggleMaximized()
+        else focusRegion('terminal')
         break
+      }
       case 'focus.explorer':
         focusRegion('explorer')
         break
@@ -411,6 +465,10 @@ export function App(): React.ReactElement {
         dock.setPosition(nextDockPosition(dock.position))
         break
       }
+      case 'view.maximizeCli':
+        // Focus mode: full-pane CLI without closing the open file.
+        useDockStore.getState().toggleMaximized()
+        break
       default:
         break
     }
@@ -437,13 +495,52 @@ export function App(): React.ReactElement {
     document.documentElement.dataset['theme'] = theme
   }, [theme])
 
+  // The editor tabs are per project: point the viewer at the active project's
+  // file set whenever the active tab changes, so switching/closing projects never
+  // shows another project's files.
+  useEffect(() => {
+    useViewerStore.getState().setProject(activeTabId ?? null)
+  }, [activeTabId])
+
+  // Maximize CLI is a transient focus mode: any deliberate file navigation
+  // (open / switch / close) exits it, so you never open a file into a pane the
+  // maximize toggle is currently hiding.
+  useEffect(() => {
+    useDockStore.getState().setMaximized(false)
+  }, [viewerFilePath])
+
+  // Poll Claude Code usage for the bottom-left readout. Cheap: main caches
+  // transcript parses by mtime+size, so unchanged sessions aren't re-read.
+  useEffect(() => {
+    refreshUsage()
+    const id = window.setInterval(refreshUsage, 4000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  // Poll the richer Usage panel (plan limits + weekly + sessions) continuously,
+  // so the always-on 5-hour readout in the status bar stays live even when the
+  // file tree is showing. Refresh once a minute normally — the plan endpoint is
+  // main-cached to one real hit per minute — and speed up to every 15s while the
+  // Usage panel is the active sidebar so its weekly/session figures feel snappy.
+  useEffect(() => {
+    refreshUsagePanel()
+    const id = window.setInterval(refreshUsagePanel, activePanel === 'usage' ? 15000 : 60000)
+    return () => window.clearInterval(id)
+  }, [activePanel])
+
   // Hook-driven status → badges; PTY exit → done/error (spec §4.4).
   useEffect(() => {
     const setStatus = useSessionStore.getState().setStatus
-    const offStatus = window.api.onSessionStatus((e) => setStatus(e.tabId, e.status))
-    const offExit = window.api.onSessionExit((e) =>
+    const offStatus = window.api.onSessionStatus((e) => {
+      setStatus(e.tabId, e.status)
+      // A status change means a turn just started/finished — refresh cost now
+      // rather than waiting for the next poll tick.
+      refreshUsage()
+    })
+    const offExit = window.api.onSessionExit((e) => {
       setStatus(e.tabId, e.exitCode === 0 ? 'done' : 'error')
-    )
+      refreshUsage()
+    })
     const offActivate = window.api.onActivateTab((e) =>
       useSessionStore.getState().setActive(e.tabId)
     )
@@ -495,6 +592,7 @@ export function App(): React.ReactElement {
         useSessionStore.getState().setNotificationsEnabled(saved.notificationsEnabled)
         useSessionStore.getState().setKeymapOverrides(saved.keymapOverrides)
         useDockStore.getState().restore(saved.dock)
+        useActivityStore.getState().setActive(saved.activePanel)
         const restored = await restoreWorkspace(window.api, saved)
         if (disposed) return
         const add = useSessionStore.getState().addTab
@@ -507,10 +605,15 @@ export function App(): React.ReactElement {
       const s = useSessionStore.getState()
       const dock = useDockStore.getState()
       void window.api.saveWorkspace(
-        buildWorkspaceState(s.tabs, s.theme, s.resumeEnabled, s.notificationsEnabled, s.keymapOverrides, {
-          position: dock.position,
-          size: dock.size
-        })
+        buildWorkspaceState(
+          s.tabs,
+          s.theme,
+          s.resumeEnabled,
+          s.notificationsEnabled,
+          s.keymapOverrides,
+          { position: dock.position, size: dock.size },
+          useActivityStore.getState().active
+        )
       )
     }
     const unsubSession = useSessionStore.subscribe((state, prev) => {
@@ -527,16 +630,20 @@ export function App(): React.ReactElement {
     const unsubDock = useDockStore.subscribe((state, prev) => {
       if (state.position !== prev.position || state.size !== prev.size) persist()
     })
+    const unsubActivity = useActivityStore.subscribe((state, prev) => {
+      if (state.active !== prev.active) persist()
+    })
     return () => {
       disposed = true
       unsubSession()
       unsubDock()
+      unsubActivity()
     }
   }, [])
 
   // The in-project split regions. Order depends on the dock edge: a left dock
   // renders the CLI first (so it sits on the left of the editor).
-  const editorRegion = hasViewerFile && (
+  const editorRegion = showEditor && (
     <div
       className="viewer-region"
       data-testid="viewer-region"
@@ -553,7 +660,7 @@ export function App(): React.ReactElement {
       <ViewerPane />
     </div>
   )
-  const dockDivider = hasViewerFile && (
+  const dockDivider = showEditor && (
     <div
       className="dock-divider"
       data-testid="dock-divider"
@@ -566,13 +673,13 @@ export function App(): React.ReactElement {
       tabIndex={0}
       onMouseDown={startDockDrag}
       onKeyDown={(e) => {
-        const cur = useDockStore.getState().size
-        if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        // Delta depends on the dock edge so the divider moves in the arrow's
+        // direction (matching a mouse drag) — see dockResizeDelta.
+        const delta = dockResizeDelta(dockPosition, e.key)
+        if (delta !== 0) {
           e.preventDefault()
-          useDockStore.getState().setSize(cur - 0.02)
-        } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-          e.preventDefault()
-          useDockStore.getState().setSize(cur + 0.02)
+          const dock = useDockStore.getState()
+          dock.setSize(dock.size + delta)
         }
       }}
     />
@@ -584,7 +691,7 @@ export function App(): React.ReactElement {
       ref={terminalRef}
       tabIndex={-1}
       aria-label="Terminal"
-      style={hasViewerFile ? { flex: `0 0 ${Math.round(dockSize * 100)}%` } : { flex: '1 1 auto' }}
+      style={showEditor ? { flex: `0 0 ${Math.round(dockSize * 100)}%` } : { flex: '1 1 auto' }}
     >
       {activeTabId ? (
         <TerminalPane key={activeTabId} tabId={activeTabId} />
@@ -634,20 +741,25 @@ export function App(): React.ReactElement {
           </div>
         )}
         <main className="workbench">
+          <ActivityBar />
           <aside
             className="explorer"
             data-testid="explorer"
             ref={explorerRef}
             tabIndex={-1}
-            aria-label="File explorer"
+            aria-label={activePanel === 'usage' ? 'Usage' : 'File explorer'}
           >
-            <Explorer root={activeTab?.cwd ?? null} />
+            {activePanel === 'usage' ? (
+              <UsagePanel />
+            ) : (
+              <Explorer root={activeTab?.cwd ?? null} />
+            )}
           </aside>
           <section
             className="terminal-host"
             data-testid="terminal-host"
             data-dock={dockPosition}
-            data-split={hasViewerFile ? 'on' : 'off'}
+            data-split={showEditor ? 'on' : 'off'}
             ref={terminalHostRef}
           >
             {dockPosition === 'left' ? (
@@ -677,7 +789,50 @@ export function App(): React.ReactElement {
               )}
             </span>
           )}
+          {usage && usage.totalTokens > 0 && (
+            <span
+              className="status-bar__usage"
+              data-testid="usage-readout"
+              title={formatUsageTooltip(usage)}
+            >
+              ✳ {formatUsageLabel(usage)}
+            </span>
+          )}
+          {fiveHour && (
+            <span
+              className="status-bar__plan"
+              data-testid="status-plan-5h"
+              data-level={
+                fiveHour.utilization >= 90 ? 'crit' : fiveHour.utilization >= 75 ? 'warn' : 'ok'
+              }
+              title={
+                `5-hour plan limit: ${formatUtilization(fiveHour.utilization)} used` +
+                (formatResetIn(fiveHour.resetsAt, Date.now())
+                  ? ` — ${formatResetIn(fiveHour.resetsAt, Date.now())}`
+                  : '') +
+                (planStale ? ' (last known)' : '')
+              }
+            >
+              ⏱ 5h {formatUtilization(fiveHour.utilization)}
+              {planStale ? ' •' : ''}
+            </span>
+          )}
           <span className="status-bar__spacer" />
+          {hasViewerFile && (
+            <button
+              type="button"
+              className="status-bar__theme"
+              aria-label={cliMaximized ? 'show editor' : 'maximize CLI'}
+              title={
+                cliMaximized
+                  ? 'Restore the split view (or press Ctrl+` in the terminal)'
+                  : 'Give the CLI the full pane without closing your file (or double-tap Ctrl+`)'
+              }
+              onClick={() => useDockStore.getState().toggleMaximized()}
+            >
+              {cliMaximized ? '❐ show editor' : '⛶ max CLI'}
+            </button>
+          )}
           <button
             type="button"
             className="status-bar__theme"

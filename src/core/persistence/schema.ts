@@ -2,7 +2,7 @@ import { z } from 'zod'
 import type { WorkspaceState } from '@shared/ipc/api-contract'
 
 /** Current persisted schema version. Bump when the shape changes. */
-export const WORKSPACE_VERSION = 5
+export const WORKSPACE_VERSION = 6
 
 export const tabStateSchema = z.object({
   tabId: z.string(),
@@ -36,6 +36,7 @@ export const workspaceStateSchema = z.object({
     // .finite() rejects NaN/Infinity; the store re-clamps the range on restore.
     size: z.number().finite()
   }),
+  activePanel: z.enum(['explorer', 'usage']),
   windowBounds: windowBoundsSchema.optional()
 })
 

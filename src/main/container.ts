@@ -3,7 +3,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
-import { tmpdir } from 'node:os'
+import { tmpdir, homedir } from 'node:os'
 import { basename } from 'node:path'
 import { app, ipcMain, dialog, shell, BrowserWindow, Notification } from 'electron'
 import { PtyManager } from './services/pty-manager'
@@ -21,9 +21,13 @@ import { WatchService } from './services/watch-service'
 import { GitService } from './services/git-service'
 import { resolveBinary } from './services/resolve-binary'
 import { watch as chokidarWatch } from 'chokidar'
+import { UsageService } from './services/usage-service'
+import { UsageHistoryService } from './services/usage-history-service'
+import { PlanLimitsService } from './services/plan-limits-service'
 import { registerSessionIpc } from './ipc/register'
 import { registerFsIpc } from './ipc/register-fs'
 import { registerWorkspaceIpc } from './ipc/register-workspace'
+import { registerUsageIpc } from './ipc/register-usage'
 import { CH } from '@shared/ipc/channels'
 
 /**
@@ -208,6 +212,56 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
   })
 
   registerWorkspaceIpc({ ipcMain, store: workspaceStore })
+
+  // Claude Code usage: read the CLI's own transcripts and aggregate cost/tokens
+  // across live claude sessions (read-only; never writes under ~/.claude).
+  const usageFs = {
+    readFile: (path: string, encoding: 'utf8') => fsPromises.readFile(path, encoding),
+    stat: (path: string) => fsPromises.stat(path),
+    readdir: (path: string) => fsPromises.readdir(path)
+  }
+  const projectsDir = join(homedir(), '.claude', 'projects')
+  const usageService = new UsageService(usageFs, projectsDir)
+  // The Usage panel: all-projects weekly/session history + plan-limit meters.
+  const historyService = new UsageHistoryService(usageFs, projectsDir, () => Date.now())
+  const planLimitsService = new PlanLimitsService({
+    // Read-only OAuth token; used only to authorize the usage request and never
+    // sent to the renderer. A missing/unreadable file simply disables the meter.
+    // WEFT_DISABLE_PLAN_LIMITS is an E2E seam: no token → no network call, so
+    // tests never hit the real authenticated endpoint.
+    getToken: async () => {
+      if (process.env['WEFT_DISABLE_PLAN_LIMITS']) return null
+      try {
+        const raw = await fsPromises.readFile(
+          join(homedir(), '.claude', '.credentials.json'),
+          'utf8'
+        )
+        const parsed = JSON.parse(raw) as { claudeAiOauth?: { accessToken?: unknown } }
+        const token = parsed.claudeAiOauth?.accessToken
+        return typeof token === 'string' ? token : null
+      } catch {
+        return null
+      }
+    },
+    fetch: (url, init) => fetch(url, init),
+    now: () => Date.now(),
+    // Refresh the plan-limit meters ~once a minute so the always-on 5-hour
+    // readout stays live. The renderer may poll faster while the Usage panel is
+    // open; this cache still bounds real hits to the (rate-limited) endpoint to
+    // one per minute.
+    cacheMs: 60 * 1000
+  })
+  registerUsageIpc({
+    ipcMain,
+    usageService,
+    historyService,
+    planLimitsService,
+    getSessions: () =>
+      pty
+        .tabRefs()
+        .filter((r) => r.command === 'claude')
+        .map((r) => ({ sessionId: r.sessionId, cwd: r.cwd }))
+  })
 
   // Main-process introspection for the E2E suite (never exposed to the renderer).
   ;(globalThis as Record<string, unknown>)['__weft'] = {

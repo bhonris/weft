@@ -4,11 +4,12 @@ import { defaultWorkspace } from './default-workspace'
 import { migrations } from './migrations'
 
 const validV1 = {
-  version: 5,
+  version: 6,
   resumeEnabled: false,
   notificationsEnabled: true,
   keymapOverrides: {},
   dock: { position: 'bottom', size: 0.4 },
+  activePanel: 'explorer',
   tabs: [
     {
       tabId: 't1',
@@ -44,7 +45,7 @@ describe('loadWorkspace', () => {
     expect(r.ok).toBe(true)
     if (r.ok) {
       expect(r.value.state.theme).toBe('dark')
-      expect(r.value.fromVersion).toBe(5)
+      expect(r.value.fromVersion).toBe(6)
       expect(r.value.migrated).toBe(false)
     }
   })
@@ -53,7 +54,7 @@ describe('loadWorkspace', () => {
     const r = loadWorkspace({ theme: 'light', tabs: [] })
     expect(r.ok).toBe(true)
     if (r.ok) {
-      expect(r.value.state.version).toBe(5)
+      expect(r.value.state.version).toBe(6)
       expect(r.value.state.theme).toBe('light')
       expect(r.value.state.resumeEnabled).toBe(false)
       expect(r.value.state.notificationsEnabled).toBe(true)
