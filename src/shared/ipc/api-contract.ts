@@ -44,7 +44,7 @@ export interface WorkspaceState {
 }
 
 /** The sidebar panels selectable from the activity bar. */
-export type SidebarPanel = 'explorer' | 'usage'
+export type SidebarPanel = 'explorer' | 'usage' | 'issues'
 
 export interface CreateSessionOpts {
   cwd: string
@@ -123,6 +123,58 @@ export interface UsagePanelData {
   sessions: SessionUsage[]
 }
 
+/** Which credential source authorized the GitHub request (or none). */
+export type GithubAuthSource = 'gh' | 'env' | 'oauth' | 'none'
+
+/** A GitHub issue label — `color` is a hex string without the leading '#'. */
+export interface GithubLabel {
+  name: string
+  color: string
+}
+
+/** One row in the GitHub Issues panel (pull requests are excluded upstream). */
+export interface GithubIssue {
+  number: number
+  title: string
+  state: 'open' | 'closed'
+  /** Issue author login, or '' when unknown. */
+  author: string
+  labels: GithubLabel[]
+  /** Comment count. */
+  comments: number
+  /** Canonical github.com URL — opened in the default browser on click. */
+  htmlUrl: string
+  /** ISO time of the last update ('' when unknown). */
+  updatedAt: string
+}
+
+/** Everything the GitHub Issues sidebar panel renders. */
+export interface IssuesPanelData {
+  /** The detected `owner/repo`, or null when the cwd isn't a GitHub repo. */
+  repo: { owner: string; repo: string } | null
+  /** Fetched issues (open + closed); the panel filters these client-side. */
+  issues: GithubIssue[]
+  /** Which credential source is in use — drives the panel's auth banner. */
+  authSource: GithubAuthSource
+  /** ISO time the figures were fetched. */
+  fetchedAt: string
+  /** True when served from cache after a fresh fetch failed. */
+  stale: boolean
+  /** Human-readable error (rate limit, 404, network), or null. */
+  error: string | null
+}
+
+/** Result of starting the GitHub device-flow sign-in. */
+export type GithubSignInResult =
+  | { userCode: string; verificationUri: string; expiresInSec: number }
+  | { error: string }
+
+/** A device-flow progress/terminal event pushed from main during sign-in. */
+export interface GithubAuthEvent {
+  state: 'authorized' | 'pending' | 'error'
+  message?: string
+}
+
 export type OpenProjectResult =
   | { tabId: string; sessionId: string; cwd: string; title: string; command: SessionCommand }
   | { error: string; cwd: string; title: string; command: SessionCommand }
@@ -195,6 +247,26 @@ export interface WeftApi {
   getUsage(): Promise<UsageSummary>
   /** Full Usage-panel payload: plan limits + weekly totals + recent sessions. */
   getUsagePanel(): Promise<UsagePanelData>
+
+  // GitHub Issues
+  /**
+   * Issues for the GitHub repo at `cwd` (its `origin` remote). Resolves with
+   * `repo: null` when `cwd` is null or not a GitHub repo. Never rejects — main
+   * degrades every failure to a stale/empty payload with a human `error`.
+   */
+  getIssues(cwd: string | null): Promise<IssuesPanelData>
+  /**
+   * Start the GitHub OAuth device flow: opens the browser to the verification
+   * URI and returns the user code to display. Main polls in the background and
+   * pushes the outcome via {@link WeftApi.onGithubAuth}.
+   */
+  githubSignIn(): Promise<GithubSignInResult>
+  /** Forget the stored GitHub token (device-flow sign-out). */
+  githubSignOut(): Promise<void>
+  /** Device-flow progress + terminal result, pushed from main. */
+  onGithubAuth(cb: (e: GithubAuthEvent) => void): Unsubscribe
+  /** Open an http(s) URL in the OS default browser (guarded against other schemes). */
+  openExternal(url: string): Promise<void>
 }
 
 /**
@@ -232,5 +304,10 @@ export type WeftBridge = Pick<
   | 'saveFile'
   | 'getUsage'
   | 'getUsagePanel'
+  | 'getIssues'
+  | 'githubSignIn'
+  | 'githubSignOut'
+  | 'onGithubAuth'
+  | 'openExternal'
 >
 

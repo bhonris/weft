@@ -4,6 +4,7 @@ import { useViewerStore } from './store/viewer-store'
 import { useTerminalStore } from './store/terminal-store'
 import { useDockStore } from './store/dock-store'
 import { useUsageStore } from './store/usage-store'
+import { useIssuesStore } from './store/issues-store'
 import { useActivityStore } from './store/activity-store'
 import { formatUsageLabel, formatUsageTooltip } from '@core/usage/summary'
 import { formatUtilization, formatResetIn } from '@core/usage/plan-limits'
@@ -13,6 +14,7 @@ import { TerminalPane } from './components/TerminalPane'
 import { Explorer } from './components/Explorer'
 import { ActivityBar } from './components/ActivityBar'
 import { UsagePanel } from './components/UsagePanel'
+import { IssuesPanel } from './components/IssuesPanel'
 import { ViewerPane } from './components/ViewerPane'
 import { WorkbenchErrorBoundary } from './components/WorkbenchErrorBoundary'
 import { CommandPalette } from './components/CommandPalette'
@@ -52,6 +54,16 @@ function refreshUsagePanel(): void {
   void window.api
     .getUsagePanel()
     .then((p) => useUsageStore.getState().setPanel(p))
+    .catch(() => {
+      /* transient read failure — keep the last value. */
+    })
+}
+
+/** Pull the GitHub Issues payload for `cwd` (its origin repo) into the store. */
+function refreshIssues(cwd: string | null): void {
+  void window.api
+    .getIssues(cwd)
+    .then((p) => useIssuesStore.getState().setPanel(p))
     .catch(() => {
       /* transient read failure — keep the last value. */
     })
@@ -528,6 +540,34 @@ export function App(): React.ReactElement {
     return () => window.clearInterval(id)
   }, [activePanel])
 
+  // GitHub Issues: poll only while the panel is active (per active tab's repo).
+  // Main caches per-repo to one real GitHub hit per minute, so 15s is cheap.
+  useEffect(() => {
+    if (activePanel !== 'issues') return
+    const cwd = activeTab?.cwd ?? null
+    refreshIssues(cwd)
+    const id = window.setInterval(() => refreshIssues(cwd), 15000)
+    return () => window.clearInterval(id)
+  }, [activePanel, activeTab?.cwd])
+
+  // Device-flow sign-in outcome (pushed from main): on approval, clear the code
+  // prompt and re-fetch as authenticated; on failure, surface the message.
+  useEffect(() => {
+    return window.api.onGithubAuth((e) => {
+      const store = useIssuesStore.getState()
+      if (e.state === 'authorized') {
+        store.setSignIn(null)
+        store.setAuthError(null)
+        const s = useSessionStore.getState()
+        const cwd = s.tabs.find((t) => t.tabId === s.activeTabId)?.cwd ?? null
+        refreshIssues(cwd)
+      } else if (e.state === 'error') {
+        store.setSignIn(null)
+        store.setAuthError(e.message ?? 'Sign-in failed. Please try again.')
+      }
+    })
+  }, [])
+
   // Hook-driven status → badges; PTY exit → done/error (spec §4.4).
   useEffect(() => {
     const setStatus = useSessionStore.getState().setStatus
@@ -747,10 +787,18 @@ export function App(): React.ReactElement {
             data-testid="explorer"
             ref={explorerRef}
             tabIndex={-1}
-            aria-label={activePanel === 'usage' ? 'Usage' : 'File explorer'}
+            aria-label={
+              activePanel === 'usage'
+                ? 'Usage'
+                : activePanel === 'issues'
+                  ? 'GitHub Issues'
+                  : 'File explorer'
+            }
           >
             {activePanel === 'usage' ? (
               <UsagePanel />
+            ) : activePanel === 'issues' ? (
+              <IssuesPanel cwd={activeTab?.cwd ?? null} />
             ) : (
               <Explorer root={activeTab?.cwd ?? null} />
             )}

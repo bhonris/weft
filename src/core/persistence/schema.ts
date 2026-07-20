@@ -36,7 +36,9 @@ export const workspaceStateSchema = z.object({
     // .finite() rejects NaN/Infinity; the store re-clamps the range on restore.
     size: z.number().finite()
   }),
-  activePanel: z.enum(['explorer', 'usage']),
+  // Widened with 'issues' (v6-compatible: old blobs still validate, so no
+  // version bump / migration is needed — see documents/github-issues-panel.md).
+  activePanel: z.enum(['explorer', 'usage', 'issues']),
   windowBounds: windowBoundsSchema.optional()
 })
 

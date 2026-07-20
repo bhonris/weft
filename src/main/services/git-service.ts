@@ -19,4 +19,18 @@ export class GitService {
       return null
     }
   }
+
+  /**
+   * The `origin` remote URL for `cwd`, or null when there is no origin / not a
+   * repo. Used to detect the GitHub `owner/repo` for the Issues panel.
+   */
+  async remoteUrl(cwd: string): Promise<string | null> {
+    try {
+      const { stdout } = await this.exec('git', ['remote', 'get-url', 'origin'], { cwd })
+      const url = stdout.trim()
+      return url.length === 0 ? null : url
+    } catch {
+      return null
+    }
+  }
 }

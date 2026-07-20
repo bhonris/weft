@@ -7,7 +7,9 @@ import type {
   OpenProjectResult,
   LiveSession,
   UsageSummary,
-  UsagePanelData
+  UsagePanelData,
+  IssuesPanelData,
+  GithubSignInResult
 } from '@shared/ipc/api-contract'
 
 /** The ipcRenderer surface the bridge needs — satisfied by electron and a fake. */
@@ -66,6 +68,11 @@ export function createWeftApi(ipc: IpcRendererLike): WeftBridge {
     getGitBranch: (cwd) => ipc.invoke(CH.getGitBranch, cwd) as Promise<string | null>,
     saveFile: (path, content) => ipc.invoke(CH.saveFile, path, content) as Promise<void>,
     getUsage: () => ipc.invoke(CH.getUsage) as Promise<UsageSummary>,
-    getUsagePanel: () => ipc.invoke(CH.getUsagePanel) as Promise<UsagePanelData>
+    getUsagePanel: () => ipc.invoke(CH.getUsagePanel) as Promise<UsagePanelData>,
+    getIssues: (cwd) => ipc.invoke(CH.getIssues, cwd) as Promise<IssuesPanelData>,
+    githubSignIn: () => ipc.invoke(CH.githubSignIn) as Promise<GithubSignInResult>,
+    githubSignOut: () => ipc.invoke(CH.githubSignOut) as Promise<void>,
+    onGithubAuth: (cb) => subscribe(CH.githubAuth, cb),
+    openExternal: (url) => ipc.invoke(CH.openExternal, url) as Promise<void>
   }
 }

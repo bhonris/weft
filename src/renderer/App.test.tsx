@@ -16,6 +16,7 @@ import { useViewerStore } from './store/viewer-store'
 import { emptyOpenFiles } from '@core/workspace/open-files'
 import { useDockStore } from './store/dock-store'
 import { useUsageStore } from './store/usage-store'
+import { useIssuesStore } from './store/issues-store'
 
 type StatusEvent = { tabId: string; status: SessionStatus; message?: string }
 
@@ -42,6 +43,7 @@ beforeEach(() => {
   // The usage store is a singleton; clear panel/usage so plan-readout state
   // never leaks between tests.
   useUsageStore.setState({ usage: null, panel: null })
+  useIssuesStore.setState({ panel: null, signIn: null, authError: null })
   // Reset the viewer store fully — it is a singleton whose per-project state
   // would otherwise leak between tests (App's setProject effect writes to it).
   useViewerStore.setState({
@@ -97,7 +99,20 @@ beforeEach(() => {
       listDir: vi.fn(async () => []),
       watchDir: vi.fn(async () => ({ watchId: 'w1' })),
       unwatchDir: vi.fn(async () => {}),
-      onFsChange: vi.fn(unsub)
+      onFsChange: vi.fn(unsub),
+      // GitHub Issues panel bridge.
+      getIssues: vi.fn(async () => ({
+        repo: null,
+        issues: [],
+        authSource: 'none' as const,
+        fetchedAt: '2026-07-20T12:00:00Z',
+        stale: false,
+        error: null
+      })),
+      githubSignIn: vi.fn(async () => ({ error: 'not configured' })),
+      githubSignOut: vi.fn(async () => {}),
+      onGithubAuth: vi.fn(unsub),
+      openExternal: vi.fn(async () => {})
     }
   })
 })
