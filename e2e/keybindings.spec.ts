@@ -2,7 +2,7 @@ import { join } from 'node:path'
 import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { test, expect, type ElectronApplication } from '@playwright/test'
-import { launchWeft } from './helpers'
+import { launchWeft, openCommandPalette } from './helpers'
 
 /**
  * Expansion 7 — the remappable-keybindings journey. Opens the editor, rebinds a
@@ -39,14 +39,19 @@ test('rebind a command, invoke the new chord, and reject a reserved chord', asyn
   await page.keyboard.press('Enter')
   await expect(page.getByTestId('keybindings-editor')).toBeVisible()
 
-  // "New Tab" is the first (active) row; rebind it to Ctrl+Shift+Y.
+  // "New Tab" is the first (active) row; rebind it to Ctrl+Shift+Y. Home pins
+  // the highlight to row 0 first, so the capture targets New Tab even if the
+  // active row was nudged during the palette→editor transition under load.
   const newTabRow = page.getByRole('option').filter({ hasText: 'New Tab' })
   await expect(newTabRow).toContainText('T') // default Ctrl+T
+  await page.keyboard.press('Home')
+  await expect(page.getByRole('option', { selected: true })).toContainText('New Tab')
   await page.keyboard.press('Enter') // capture
   await page.keyboard.press('Control+Shift+Y')
   await expect(newTabRow).toContainText('Y') // now Ctrl+Shift+Y
 
   // A reserved terminal chord (Ctrl+C) is refused with a clear message.
+  await page.keyboard.press('Home')
   await page.keyboard.press('Enter') // capture New Tab again
   await page.keyboard.press('Control+c')
   await expect(page.getByRole('status')).toContainText(/reserved/i)
@@ -120,12 +125,17 @@ test('a rebind survives an app restart', async () => {
   await page1.waitForLoadState('domcontentloaded')
   await expect(page1.getByTestId('status-bar')).toBeVisible()
 
-  await page1.keyboard.press('Control+Shift+P')
-  await expect(page1.getByTestId('command-palette')).toBeVisible()
+  await openCommandPalette(page1)
   await page1.keyboard.type('edit keybindings')
   await page1.keyboard.press('Enter')
   await expect(page1.getByTestId('keybindings-editor')).toBeVisible()
-  await page1.keyboard.press('Enter') // capture New Tab (active row 0)
+  // Home forces the highlight to row 0 (New Tab) right before capture, so the
+  // rebind targets New Tab deterministically even if the editor's active row was
+  // nudged during the palette→editor transition under load (else a slow runner
+  // can bind the wrong command — the source of a pre-existing CI flake).
+  await page1.keyboard.press('Home')
+  await expect(page1.getByRole('option', { selected: true })).toContainText('New Tab')
+  await page1.keyboard.press('Enter') // capture New Tab (now guaranteed active)
   await page1.keyboard.press('Control+Shift+Y')
 
   const configPath = join(userDataDir, 'config.json')
@@ -149,8 +159,7 @@ test('a rebind survives an app restart', async () => {
   await page2.waitForLoadState('domcontentloaded')
   await expect(page2.getByTestId('status-bar')).toBeVisible()
 
-  await page2.keyboard.press('Control+Shift+P')
-  await expect(page2.getByTestId('command-palette')).toBeVisible()
+  await openCommandPalette(page2)
   await page2.keyboard.type('edit keybindings')
   await page2.keyboard.press('Enter')
   await expect(page2.getByTestId('keybindings-editor')).toBeVisible()

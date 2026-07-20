@@ -2,7 +2,7 @@ import { join } from 'node:path'
 import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { test, expect, type ElectronApplication, type Page } from '@playwright/test'
-import { launchWeft } from './helpers'
+import { launchWeft, openCommandPalette } from './helpers'
 
 /**
  * Expansion 6 — the mouseless proof. This spec drives a full journey using the
@@ -37,8 +37,7 @@ test.afterEach(async () => {
 
 test('a complete session is driven with the keyboard only (no mouse)', async () => {
   // 1) Open a tab from the command palette — no clicking the + button.
-  await page.keyboard.press('Control+Shift+P')
-  await expect(page.getByTestId('command-palette')).toBeVisible()
+  await openCommandPalette(page)
   await page.keyboard.type('new shell tab')
   await page.keyboard.press('Enter')
 
@@ -66,6 +65,10 @@ test('a complete session is driven with the keyboard only (no mouse)', async () 
   // 4) A terminal-bound chord (Ctrl+C) reaches the PTY, not an app shortcut:
   //    the tab is not closed and the terminal stays interactive.
   await page.keyboard.press('Control+C')
+  // ConPTY handles the SIGINT and redraws a fresh prompt asynchronously; on a
+  // slow CI runner, typing immediately can race that redraw and drop the input.
+  // Wait for the interrupt to settle (a new prompt line appears) before typing.
+  await page.waitForTimeout(500)
   await page.keyboard.type('echo still-alive')
   await page.keyboard.press('Enter')
   await expect(page.getByTestId('terminal-host')).toContainText('still-alive', { timeout: 20_000 })
