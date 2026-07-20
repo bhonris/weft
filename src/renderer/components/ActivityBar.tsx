@@ -12,6 +12,7 @@ interface ActivityItem {
 // VS Code-style: primary panels at the top, utility panels pinned bottom.
 const ITEMS: ActivityItem[] = [
   { id: 'explorer', label: 'Explorer', glyph: '🗂', place: 'top' },
+  { id: 'issues', label: 'GitHub Issues', glyph: '🐙', place: 'top' },
   { id: 'usage', label: 'Usage', glyph: '📊', place: 'bottom' }
 ]
 

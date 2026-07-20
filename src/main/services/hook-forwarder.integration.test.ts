@@ -30,8 +30,14 @@ function runRelay(
   extraEnv: Record<string, string> = {}
 ): Promise<number> {
   return new Promise((resolve, reject) => {
+    // Build a deterministic child env. `CLAUDE_IDE_TAB` is deleted from the
+    // inherited env so the ambient value present when this suite runs INSIDE a
+    // live Claude Code session can't leak into cases that don't set it (a test
+    // that wants a tabId supplies it via `extraEnv`, applied last).
+    const env: NodeJS.ProcessEnv = { ...process.env, WEFT_STATUS_ENDPOINT: endpoint }
+    delete env['CLAUDE_IDE_TAB']
     const child = spawn(process.execPath, [scriptPath, eventName], {
-      env: { ...process.env, WEFT_STATUS_ENDPOINT: endpoint, ...extraEnv },
+      env: { ...env, ...extraEnv },
       stdio: ['pipe', 'ignore', 'ignore']
     })
     child.on('error', reject)
