@@ -1,8 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { useViewerStore } from '../store/viewer-store'
+import { useSessionStore } from '../store/session-store'
+import { languageIdForFile, isMarkdown } from '@core/viewer/file-language'
+import { monacoThemeForApp } from '@core/viewer/monaco-theme'
+import { MarkdownPreview } from './MarkdownPreview'
 import type { monaco as MonacoNs } from '../monaco-setup'
 
 type Editor = ReturnType<typeof MonacoNs.editor.create>
+
+/** Resolve the app theme to a Monaco theme name, reading the OS preference. */
+function resolveMonacoTheme(appTheme: Parameters<typeof monacoThemeForApp>[0]): string {
+  const prefersDark =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  return monacoThemeForApp(appTheme, prefersDark)
+}
 
 /**
  * Monaco viewer: read-only View, side-by-side Diff vs HEAD, and a light Edit
@@ -16,10 +28,13 @@ export function ViewerPane(): React.ReactElement | null {
   const closeFileTab = useViewerStore((s) => s.closeFile)
   const mode = useViewerStore((s) => s.mode)
   const editing = useViewerStore((s) => s.editing)
+  const preview = useViewerStore((s) => s.preview)
   const saveTick = useViewerStore((s) => s.saveTick)
   const setMode = useViewerStore((s) => s.setMode)
   const setEditing = useViewerStore((s) => s.setEditing)
+  const setPreview = useViewerStore((s) => s.setPreview)
   const close = useViewerStore((s) => s.close)
+  const theme = useSessionStore((s) => s.theme)
   const hostRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<Editor | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -52,8 +67,11 @@ export function ViewerPane(): React.ReactElement | null {
     setSaveError(null)
   }, [file, mode])
 
+  // Rendered Markdown preview replaces the Monaco surface (view mode only).
+  const showPreview = !!file && mode === 'view' && preview && isMarkdown(file.name)
+
   useEffect(() => {
-    if (!file) return
+    if (!file || showPreview) return
     const host = hostRef.current
     if (!host) return
 
@@ -64,11 +82,12 @@ export function ViewerPane(): React.ReactElement | null {
     void (async () => {
       try {
         const { monaco } = await import('../monaco-setup')
+        const language = languageIdForFile(file.name)
         const common = {
           readOnly: !editing,
           automaticLayout: true,
           minimap: { enabled: false },
-          theme: 'vs-dark',
+          theme: resolveMonacoTheme(theme),
           renderWhitespace: 'none' as const
         }
         if (mode === 'diff') {
@@ -79,8 +98,8 @@ export function ViewerPane(): React.ReactElement | null {
             readOnly: true,
             renderSideBySide: true
           })
-          const originalModel = monaco.editor.createModel(original)
-          const modifiedModel = monaco.editor.createModel(modified)
+          const originalModel = monaco.editor.createModel(original, language)
+          const modifiedModel = monaco.editor.createModel(modified, language)
           editor.setModel({ original: originalModel, modified: modifiedModel })
           dispose = () => {
             editor.dispose()
@@ -90,7 +109,7 @@ export function ViewerPane(): React.ReactElement | null {
         } else {
           const content = await window.api.readFileText(file.path)
           if (disposed) return
-          const model = monaco.editor.createModel(content)
+          const model = monaco.editor.createModel(content, language)
           const editor = monaco.editor.create(host, { ...common, model })
           editorRef.current = editor
           const changeSub = model.onDidChangeContent(() => setDirty(true))
@@ -115,7 +134,20 @@ export function ViewerPane(): React.ReactElement | null {
       disposed = true
       dispose?.()
     }
-  }, [file, mode, editing])
+    // `theme` is intentionally not a dep: the setTheme effect below applies it
+    // globally without recreating the editor (which would drop unsaved edits).
+  }, [file, mode, editing, showPreview])
+
+  // Follow the app theme without tearing down the editor: setTheme is global.
+  useEffect(() => {
+    let cancelled = false
+    void import('../monaco-setup').then(({ monaco }) => {
+      if (!cancelled) monaco.editor.setTheme(resolveMonacoTheme(theme))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [theme])
 
   if (!file) return null
 
@@ -168,7 +200,9 @@ export function ViewerPane(): React.ReactElement | null {
           </button>
           <button
             type="button"
-            className={`viewer__mode${mode === 'view' && !editing ? ' viewer__mode--on' : ''}`}
+            className={`viewer__mode${
+              mode === 'view' && !editing && !showPreview ? ' viewer__mode--on' : ''
+            }`}
             onClick={() => {
               setMode('view')
               setEditing(false)
@@ -176,6 +210,21 @@ export function ViewerPane(): React.ReactElement | null {
           >
             View
           </button>
+          {isMarkdown(file.name) && (
+            <button
+              type="button"
+              className={`viewer__mode${showPreview ? ' viewer__mode--on' : ''}`}
+              data-testid="viewer-preview-toggle"
+              title="Render this Markdown file"
+              onClick={() => {
+                setMode('view')
+                setEditing(false)
+                setPreview(true)
+              }}
+            >
+              Preview
+            </button>
+          )}
           <button
             type="button"
             className={`viewer__mode${mode === 'view' && editing ? ' viewer__mode--on' : ''}`}
@@ -213,6 +262,8 @@ export function ViewerPane(): React.ReactElement | null {
       )}
       {error ? (
         <div className="viewer__error">Cannot open file: {error}</div>
+      ) : showPreview ? (
+        <MarkdownPreview file={file} />
       ) : (
         <div className="viewer__editor" ref={hostRef} data-testid="viewer-editor" />
       )}

@@ -10,6 +10,7 @@ beforeEach(() => {
     file: null,
     mode: 'view',
     editing: false,
+    preview: false,
     saveTick: 0
   })
 })
@@ -125,6 +126,55 @@ describe('useViewerStore', () => {
     expect(useViewerStore.getState().file?.path).toBe('/p/a.txt')
     useViewerStore.getState().closeFile('/p/a.txt')
     expect(useViewerStore.getState().file).toBeNull()
+  })
+
+  describe('markdown preview toggle', () => {
+    it('setPreview flips the preview flag', () => {
+      const s = useViewerStore.getState()
+      s.openFile('/p/readme.md', 'readme.md')
+      expect(useViewerStore.getState().preview).toBe(false) // raw by default
+      useViewerStore.getState().setPreview(true)
+      expect(useViewerStore.getState().preview).toBe(true)
+      useViewerStore.getState().setPreview(false)
+      expect(useViewerStore.getState().preview).toBe(false)
+    })
+
+    it('switching to a different file resets preview to raw source', () => {
+      const s = useViewerStore.getState()
+      s.openFile('/p/a.md', 'a.md')
+      s.setPreview(true)
+      s.openFile('/p/b.md', 'b.md')
+      expect(useViewerStore.getState().preview).toBe(false)
+    })
+
+    it('entering edit mode or diff turns the preview off', () => {
+      const s = useViewerStore.getState()
+      s.openFile('/p/a.md', 'a.md')
+      s.setPreview(true)
+      s.setEditing(true)
+      expect(useViewerStore.getState().preview).toBe(false)
+
+      useViewerStore.getState().setPreview(true)
+      useViewerStore.getState().setMode('diff')
+      expect(useViewerStore.getState().preview).toBe(false)
+    })
+
+    it('re-selecting the active file keeps the preview open', () => {
+      const s = useViewerStore.getState()
+      s.openFile('/p/a.md', 'a.md')
+      s.setPreview(true)
+      useViewerStore.getState().openFile('/p/a.md', 'a.md')
+      expect(useViewerStore.getState().preview).toBe(true)
+    })
+
+    it('switching project resets preview', () => {
+      const s = useViewerStore.getState()
+      s.setProject('t1')
+      s.openFile('/proj1/a.md', 'a.md')
+      s.setPreview(true)
+      useViewerStore.getState().setProject('t2')
+      expect(useViewerStore.getState().preview).toBe(false)
+    })
   })
 
   describe('per-project scoping (regression: files were global)', () => {
