@@ -2,11 +2,13 @@ import { join } from 'node:path'
 import {
   encodeProjectDir,
   transcriptFileName,
-  parseTranscriptUsage
+  parseTranscriptDetail,
+  rollupUsageByModel
 } from '@core/usage/transcript'
 import { summarize } from '@core/usage/summary'
+import { latestSessionInfo } from '@core/usage/session-info'
 import { mergeUsageInto, type TokenUsage } from '@core/usage/pricing'
-import type { UsageSummary } from '@shared/ipc/api-contract'
+import type { SessionInfo, UsageSummary } from '@shared/ipc/api-contract'
 
 /** The minimal filesystem surface the service needs (injected for tests). */
 export interface UsageFsLike {
@@ -25,6 +27,8 @@ interface CacheEntry {
   mtimeMs: number
   size: number
   byModel: Record<string, TokenUsage>
+  /** The session's current model + effort (latest real turn), or null. */
+  info: SessionInfo | null
 }
 
 /**
@@ -57,41 +61,62 @@ export class UsageService {
     return summarize(merged, count)
   }
 
+  /**
+   * The model + reasoning-effort a session is currently running, from its
+   * transcript's latest real assistant turn. Null when there's no readable
+   * transcript or no turn yet. Never throws.
+   */
+  async sessionInfo(session: UsageSessionRef): Promise<SessionInfo | null> {
+    return (await this.resolveEntry(session))?.info ?? null
+  }
+
   private async usageForSession(
     session: UsageSessionRef
   ): Promise<Record<string, TokenUsage> | null> {
+    return (await this.resolveEntry(session))?.byModel ?? null
+  }
+
+  /**
+   * Locate + parse a session's transcript into a cached {@link CacheEntry}
+   * (usage-by-model + current info), or null when it can't be found/read. Tries
+   * the deterministic encoded project dir first, then scans all project dirs
+   * (the session id is a unique filename) to cover path-encoding edge cases.
+   */
+  private async resolveEntry(session: UsageSessionRef): Promise<CacheEntry | null> {
     const file = transcriptFileName(session.sessionId)
-    // Fast path: the deterministic encoded project directory.
     const direct = join(this.projectsDir, encodeProjectDir(session.cwd), file)
-    const byDirect = await this.readUsageFile(direct)
+    const byDirect = await this.readFile(direct)
     if (byDirect) return byDirect
-    // Fallback: the session id is a unique filename, so scan project dirs for it
-    // (covers any path-encoding edge case the fast path misses).
     try {
       const dirs = await this.fs.readdir(this.projectsDir)
       for (const dir of dirs) {
-        const byModel = await this.readUsageFile(join(this.projectsDir, dir, file))
-        if (byModel) return byModel
+        const entry = await this.readFile(join(this.projectsDir, dir, file))
+        if (entry) return entry
       }
     } catch {
-      /* projects dir missing — no usage. */
+      /* projects dir missing — no data. */
     }
     return null
   }
 
-  private async readUsageFile(
-    path: string
-  ): Promise<Record<string, TokenUsage> | null> {
+  private async readFile(path: string): Promise<CacheEntry | null> {
     try {
       const { mtimeMs, size } = await this.fs.stat(path)
       const cached = this.cache.get(path)
       if (cached && cached.mtimeMs === mtimeMs && cached.size === size) {
-        return cached.byModel
+        return cached
       }
       const text = await this.fs.readFile(path, 'utf8')
-      const byModel = parseTranscriptUsage(text)
-      this.cache.set(path, { mtimeMs, size, byModel })
-      return byModel
+      // Parse once; derive both the usage roll-up and the current model/effort.
+      const detail = parseTranscriptDetail(text)
+      const entry: CacheEntry = {
+        mtimeMs,
+        size,
+        byModel: rollupUsageByModel(detail.entries),
+        info: latestSessionInfo(detail)
+      }
+      this.cache.set(path, entry)
+      return entry
     } catch {
       return null
     }

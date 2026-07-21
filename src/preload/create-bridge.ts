@@ -9,6 +9,7 @@ import type {
   LiveSession,
   UsageSummary,
   UsagePanelData,
+  SessionInfo,
   IssuesPanelData,
   GithubSignInResult
 } from '@shared/ipc/api-contract'
@@ -71,6 +72,8 @@ export function createWeftApi(ipc: IpcRendererLike): WeftBridge {
     saveFile: (path, content) => ipc.invoke(CH.saveFile, path, content) as Promise<void>,
     getUsage: () => ipc.invoke(CH.getUsage) as Promise<UsageSummary>,
     getUsagePanel: () => ipc.invoke(CH.getUsagePanel) as Promise<UsagePanelData>,
+    getSessionInfo: (cwd, sessionId) =>
+      ipc.invoke(CH.getSessionInfo, cwd, sessionId) as Promise<SessionInfo | null>,
     getIssues: (cwd) => ipc.invoke(CH.getIssues, cwd) as Promise<IssuesPanelData>,
     githubSignIn: () => ipc.invoke(CH.githubSignIn) as Promise<GithubSignInResult>,
     githubSignOut: () => ipc.invoke(CH.githubSignOut) as Promise<void>,

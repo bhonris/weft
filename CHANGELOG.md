@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Model & effort in the status bar.** A Claude Code tab now shows which model
+  and reasoning-effort tier the session is running — e.g. `✦ Opus 4.8 · High` —
+  read from the session's own transcript (authoritative, not scraped). It
+  updates on turn boundaries and tab switches, and is hidden for shell tabs or
+  before the first turn.
 - **Go to File (`Ctrl+Shift+O`).** A VS Code-style fuzzy file finder over the
   active project: type part of a filename or path, **↑/↓** to move, **Enter** to
   open it in the viewer, **Esc** to cancel. Also runnable from the command

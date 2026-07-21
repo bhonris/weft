@@ -318,6 +318,12 @@ body,
 
 /* Always-on 5-hour plan-limit readout. Colored by utilization level so a near-
    full window is legible at a glance without opening the Usage panel. */
+.status-bar__model {
+  margin-left: 14px;
+  opacity: 0.9;
+  white-space: pre;
+}
+
 .status-bar__plan {
   margin-left: 14px;
   opacity: 0.9;
@@ -1015,6 +1021,12 @@ body,
   color: var(--p2);
 }
 :root[data-theme='cyberpunk'] .status-bar__usage {
+  margin-left: 0;
+  padding: 0 12px;
+  color: var(--p1);
+  text-shadow: 0 0 8px var(--p1);
+}
+:root[data-theme='cyberpunk'] .status-bar__model {
   margin-left: 0;
   padding: 0 12px;
   color: var(--p1);

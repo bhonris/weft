@@ -60,6 +60,8 @@ interface AssistantLine {
   uuid?: unknown
   timestamp?: unknown
   cwd?: unknown
+  /** Reasoning-effort tier recorded on the turn (top-level, e.g. "high"). */
+  effort?: unknown
   message?: { model?: unknown; usage?: unknown }
 }
 
@@ -68,6 +70,8 @@ export interface TranscriptEntry {
   /** Epoch ms of the turn, or null when the line had no parseable timestamp. */
   timestamp: number | null
   model: string
+  /** Reasoning-effort tier for the turn (e.g. "high"), or null when absent. */
+  effort: string | null
   usage: TokenUsage
 }
 
@@ -111,10 +115,22 @@ export function parseTranscriptDetail(text: string): TranscriptDetail {
     entries.push({
       timestamp: Number.isFinite(ms) ? ms : null,
       model: message.model,
+      effort: typeof entry.effort === 'string' ? entry.effort : null,
       usage: extractUsage(message.usage as RawUsage)
     })
   }
   return { entries, cwd }
+}
+
+/** Sum already-parsed transcript entries' token usage, grouped by model id. */
+export function rollupUsageByModel(
+  entries: readonly TranscriptEntry[]
+): Record<string, TokenUsage> {
+  const byModel: Record<string, TokenUsage> = {}
+  for (const { model, usage } of entries) {
+    byModel[model] = addUsage(byModel[model] ?? emptyUsage(), usage)
+  }
+  return byModel
 }
 
 /**
@@ -122,9 +138,5 @@ export function parseTranscriptDetail(text: string): TranscriptDetail {
  * Convenience roll-up over {@link parseTranscriptDetail}.
  */
 export function parseTranscriptUsage(text: string): Record<string, TokenUsage> {
-  const byModel: Record<string, TokenUsage> = {}
-  for (const { model, usage } of parseTranscriptDetail(text).entries) {
-    byModel[model] = addUsage(byModel[model] ?? emptyUsage(), usage)
-  }
-  return byModel
+  return rollupUsageByModel(parseTranscriptDetail(text).entries)
 }

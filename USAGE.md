@@ -258,6 +258,14 @@ changes, and `Ctrl+S` writes to disk. Saves are only permitted inside open
 project folders and up to 5 MB. The status bar also shows the active
 project's git branch (⎇).
 
+### Model & effort readout
+
+For a Claude Code tab, the status bar shows which **model** and **reasoning
+effort** the session is currently on — e.g. `✦ Opus 4.8 · High` — read from the
+session's own transcript (so it reflects what Claude Code actually used, not a
+guess). It updates as turns happen and when you switch tabs, and is hidden for
+shell tabs or before the session's first turn.
+
 ### Themes
 
 The status-bar toggle cycles **system → light → dark → cyberpunk**. `system`

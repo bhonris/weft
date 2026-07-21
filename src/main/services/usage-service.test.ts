@@ -127,3 +127,63 @@ describe('UsageService', () => {
     expect(summary.sessionCount).toBe(0)
   })
 })
+
+/** An assistant line carrying a top-level effort tier + a timestamp for ordering. */
+const turn = (model: string, effort: string, ts: string): string =>
+  JSON.stringify({
+    type: 'assistant',
+    uuid: `${model}-${ts}`,
+    timestamp: ts,
+    effort,
+    message: { model, usage: { input_tokens: 1, output_tokens: 0 } }
+  })
+
+describe('UsageService.sessionInfo', () => {
+  it('returns the latest turn\'s model + effort from the direct path', async () => {
+    const path = directPath('C:/p', 's1')
+    const content = [
+      turn('claude-sonnet-5', 'medium', '2026-07-20T10:00:00Z'),
+      turn('claude-opus-4-8', 'high', '2026-07-20T11:00:00Z')
+    ].join('\n')
+    const { fs } = fakeFs(new Map([[path, { content, mtimeMs: 1, size: content.length }]]))
+    const svc = new UsageService(fs, PROJECTS)
+
+    expect(await svc.sessionInfo({ sessionId: 's1', cwd: 'C:/p' })).toEqual({
+      model: 'claude-opus-4-8',
+      effort: 'high'
+    })
+  })
+
+  it('finds the transcript via the fallback dir scan', async () => {
+    const scanned = join(PROJECTS, 'weird-dir', transcriptFileName('s1'))
+    const content = turn('claude-fable-5', 'low', '2026-07-20T10:00:00Z')
+    const { fs } = fakeFs(
+      new Map([[scanned, { content, mtimeMs: 1, size: content.length }]]),
+      ['weird-dir']
+    )
+    const svc = new UsageService(fs, PROJECTS)
+    expect(await svc.sessionInfo({ sessionId: 's1', cwd: 'C:/nomatch' })).toEqual({
+      model: 'claude-fable-5',
+      effort: 'low'
+    })
+  })
+
+  it('returns null when the transcript is missing', async () => {
+    const { fs } = fakeFs(new Map(), [])
+    const svc = new UsageService(fs, PROJECTS)
+    expect(await svc.sessionInfo({ sessionId: 's1', cwd: 'C:/p' })).toBeNull()
+  })
+
+  it('shares the mtime+size cache with summarize (one read for both)', async () => {
+    const path = directPath('C:/p', 's1')
+    const content = turn('claude-opus-4-8', 'high', '2026-07-20T10:00:00Z')
+    const { fs, readFile } = fakeFs(
+      new Map([[path, { content, mtimeMs: 1, size: content.length }]])
+    )
+    const svc = new UsageService(fs, PROJECTS)
+
+    await svc.summarize([{ sessionId: 's1', cwd: 'C:/p' }])
+    await svc.sessionInfo({ sessionId: 's1', cwd: 'C:/p' })
+    expect(readFile).toHaveBeenCalledTimes(1) // info served from the usage parse
+  })
+})

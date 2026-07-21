@@ -46,6 +46,7 @@ export const CH = {
   // Claude Code usage (renderer -> main, invoke)
   getUsage: 'usage:get',
   getUsagePanel: 'usage:panel',
+  getSessionInfo: 'usage:session-info',
 
   // GitHub Issues (renderer -> main, invoke)
   getIssues: 'github:get',

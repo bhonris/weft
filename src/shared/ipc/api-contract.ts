@@ -135,6 +135,14 @@ export interface UsagePanelData {
   sessions: SessionUsage[]
 }
 
+/** The model + reasoning-effort an active session is running, from its transcript. */
+export interface SessionInfo {
+  /** Raw model id, e.g. `claude-opus-4-8` (mapped to a display name by the UI). */
+  model: string
+  /** Reasoning-effort tier (e.g. "high"), or null when the turn recorded none. */
+  effort: string | null
+}
+
 /** Which credential source authorized the GitHub request (or none). */
 export type GithubAuthSource = 'gh' | 'env' | 'oauth' | 'none'
 
@@ -265,6 +273,12 @@ export interface WeftApi {
   getUsage(): Promise<UsageSummary>
   /** Full Usage-panel payload: plan limits + weekly totals + recent sessions. */
   getUsagePanel(): Promise<UsagePanelData>
+  /**
+   * The model + reasoning-effort the given session is currently running, read
+   * from its transcript's latest assistant turn. Resolves null when there's no
+   * readable transcript or no turn yet. Never rejects.
+   */
+  getSessionInfo(cwd: string, sessionId: string): Promise<SessionInfo | null>
 
   // GitHub Issues
   /**
@@ -323,6 +337,7 @@ export type WeftBridge = Pick<
   | 'saveFile'
   | 'getUsage'
   | 'getUsagePanel'
+  | 'getSessionInfo'
   | 'getIssues'
   | 'githubSignIn'
   | 'githubSignOut'

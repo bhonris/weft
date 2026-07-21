@@ -8,6 +8,7 @@ import { useIssuesStore } from './store/issues-store'
 import { useActivityStore } from './store/activity-store'
 import { formatUsageLabel, formatUsageTooltip } from '@core/usage/summary'
 import { formatUtilization, formatResetIn } from '@core/usage/plan-limits'
+import { modelDisplayName, effortLabel } from '@core/model/model-name'
 import { nextDockPosition, dockResizeDelta } from '@core/workspace/dock'
 import { buildWorkspaceState, restoreWorkspace } from './store/workspace-sync'
 import { TerminalPane } from './components/TerminalPane'
@@ -46,6 +47,30 @@ function refreshUsage(): void {
   void window.api
     .getUsage()
     .then((u) => useUsageStore.getState().setUsage(u))
+    .catch(() => {
+      /* transient read failure — keep the last value. */
+    })
+}
+
+/**
+ * Pull the active claude tab's current model + effort from its transcript into
+ * the store. Cleared for shell tabs / no active tab. Guards against a tab switch
+ * racing the fetch, so a slow read never stamps a stale tab's model on the bar.
+ */
+function refreshSessionInfo(): void {
+  const s = useSessionStore.getState()
+  const tab = s.tabs.find((t) => t.tabId === s.activeTabId)
+  const set = useUsageStore.getState().setSessionInfo
+  if (!tab || tab.command !== 'claude' || !tab.sessionId) {
+    set(null)
+    return
+  }
+  const sessionId = tab.sessionId
+  void window.api
+    .getSessionInfo(tab.cwd, sessionId)
+    .then((info) => {
+      if (useSessionStore.getState().activeTabId === tab.tabId) set(info)
+    })
     .catch(() => {
       /* transient read failure — keep the last value. */
     })
@@ -251,6 +276,8 @@ export function App(): React.ReactElement {
   const setTheme = useSessionStore((s) => s.setTheme)
   const activeTab = tabs.find((t) => t.tabId === activeTabId) ?? null
   const usage = useUsageStore((s) => s.usage)
+  // The active claude tab's model + reasoning effort, for the status-bar readout.
+  const sessionInfo = useUsageStore((s) => s.sessionInfo)
   // The 5-hour plan-limit window, shown in the status bar at all times.
   const fiveHour = useUsageStore((s) => s.panel?.planLimits?.fiveHour ?? null)
   const planStale = useUsageStore((s) => s.panel?.planLimits?.stale ?? false)
@@ -536,6 +563,12 @@ export function App(): React.ReactElement {
     useViewerStore.getState().setProject(activeTabId ?? null)
   }, [activeTabId])
 
+  // Refresh the status-bar model/effort readout when the active tab changes.
+  // (It also refreshes on session-status changes — see the status listener.)
+  useEffect(() => {
+    refreshSessionInfo()
+  }, [activeTabId])
+
   // Maximize CLI is a transient focus mode: any deliberate file navigation
   // (open / switch / close) exits it, so you never open a file into a pane the
   // maximize toggle is currently hiding.
@@ -595,9 +628,11 @@ export function App(): React.ReactElement {
     const setStatus = useSessionStore.getState().setStatus
     const offStatus = window.api.onSessionStatus((e) => {
       setStatus(e.tabId, e.status)
-      // A status change means a turn just started/finished — refresh cost now
-      // rather than waiting for the next poll tick.
+      // A status change means a turn just started/finished — refresh cost and
+      // the model/effort readout now rather than waiting for the next poll tick
+      // (the model or effort may have changed for the turn that just began).
       refreshUsage()
+      refreshSessionInfo()
     })
     const offExit = window.api.onSessionExit((e) => {
       setStatus(e.tabId, e.exitCode === 0 ? 'done' : 'error')
@@ -871,6 +906,21 @@ export function App(): React.ReactElement {
               title={formatUsageTooltip(usage)}
             >
               ✳ {formatUsageLabel(usage)}
+            </span>
+          )}
+          {sessionInfo && (
+            <span
+              className="status-bar__model"
+              data-testid="status-model"
+              title={
+                `Model: ${modelDisplayName(sessionInfo.model)}` +
+                (effortLabel(sessionInfo.effort)
+                  ? ` · reasoning effort ${effortLabel(sessionInfo.effort)}`
+                  : '')
+              }
+            >
+              ✦ {modelDisplayName(sessionInfo.model)}
+              {effortLabel(sessionInfo.effort) ? ` · ${effortLabel(sessionInfo.effort)}` : ''}
             </span>
           )}
           {fiveHour && (
