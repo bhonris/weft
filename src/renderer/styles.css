@@ -1168,6 +1168,22 @@ body,
   letter-spacing: 0.04em;
 }
 
+/* Quick-open: the muted directory path shown after a file's name. */
+.palette__opt-path {
+  font-size: 11px;
+  opacity: 0.55;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 55%;
+  direction: rtl; /* clip from the left so the deepest folder stays visible */
+  text-align: left;
+}
+
+.palette__opt--active .palette__opt-path {
+  opacity: 0.85;
+}
+
 .palette__opt-kbd {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 11px;
@@ -1260,6 +1276,77 @@ body,
 .help__title {
   margin: 0;
   font-size: 15px;
+}
+
+/* ==========================================================================
+   Confirm dialog — guards destructive actions (e.g. closing a project tab).
+   Reuses the shared overlay look; theme-agnostic via shared vars.
+   ========================================================================== */
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 22vh;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.confirm {
+  width: min(420px, 92vw);
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  padding: 18px 20px;
+  outline: none;
+}
+
+.confirm__title {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.confirm__msg {
+  margin: 0 0 18px;
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.confirm__btn {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.confirm__btn:hover {
+  border-color: var(--accent);
+}
+
+.confirm__btn--danger {
+  background: var(--danger, #d64545);
+  border-color: var(--danger, #d64545);
+  color: #fff;
+}
+
+.confirm__btn--danger:hover {
+  filter: brightness(1.08);
+  border-color: var(--danger, #d64545);
 }
 
 /* --- Keybindings editor (Expansion 7) --------------------------------------- */

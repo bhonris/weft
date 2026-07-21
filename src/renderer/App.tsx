@@ -18,8 +18,10 @@ import { IssuesPanel } from './components/IssuesPanel'
 import { ViewerPane } from './components/ViewerPane'
 import { WorkbenchErrorBoundary } from './components/WorkbenchErrorBoundary'
 import { CommandPalette } from './components/CommandPalette'
+import { QuickOpen } from './components/QuickOpen'
 import { KeyboardHelp } from './components/KeyboardHelp'
 import { KeybindingsEditor } from './components/KeybindingsEditor'
+import { ConfirmDialog } from './components/ConfirmDialog'
 import { routeKey } from '@core/keybindings/keybinding-router'
 import { commandIdForAction } from '@core/commands/action-dispatch'
 import { buildKeymap } from '@core/keybindings/effective-keymap'
@@ -127,7 +129,15 @@ function closeTab(tabId: string): void {
   useViewerStore.getState().dropProject(tabId)
 }
 
-function TabButton({ tab, active }: { tab: Tab; active: boolean }): React.ReactElement {
+function TabButton({
+  tab,
+  active,
+  onRequestClose
+}: {
+  tab: Tab
+  active: boolean
+  onRequestClose: (tab: Tab) => void
+}): React.ReactElement {
   const setActive = useSessionStore((s) => s.setActive)
   const rename = useSessionStore((s) => s.rename)
   const moveTab = useSessionStore((s) => s.moveTab)
@@ -226,7 +236,7 @@ function TabButton({ tab, active }: { tab: Tab; active: boolean }): React.ReactE
         type="button"
         className="tab__close"
         aria-label={`close ${tab.title}`}
-        onClick={() => closeTab(tab.tabId)}
+        onClick={() => onRequestClose(tab)}
       >
         ×
       </button>
@@ -265,12 +275,18 @@ export function App(): React.ReactElement {
   // "Maximize CLI" hides the editor pane without closing the file, so the CLI
   // gets the full split area. The file stays open; toggling off restores it.
   const showEditor = hasViewerFile && !cliMaximized
-  const [overlay, setOverlay] = useState<'none' | 'palette' | 'help' | 'keybindings'>('none')
+  const [overlay, setOverlay] = useState<
+    'none' | 'palette' | 'quickOpen' | 'help' | 'keybindings'
+  >('none')
+  // The project tab awaiting a close confirmation, or null. Closing a project
+  // terminates its Claude session, so it's guarded by a confirm dialog.
+  const [closeTarget, setCloseTarget] = useState<Tab | null>(null)
   // Read inside the stable window keydown listener without re-subscribing it.
   const overlayOpenRef = useRef(false)
   useEffect(() => {
-    overlayOpenRef.current = overlay !== 'none'
-  }, [overlay])
+    // The confirm dialog owns the keyboard too, so treat it as an open overlay.
+    overlayOpenRef.current = overlay !== 'none' || closeTarget !== null
+  }, [overlay, closeTarget])
   // Effective keymap (defaults + user overrides), read live by the key listener
   // so a rebind takes effect without re-subscribing.
   const keymapRef = useRef(buildKeymap({}))
@@ -383,9 +399,12 @@ export function App(): React.ReactElement {
       case 'tab.newShell':
         void openProject('shell')
         break
-      case 'tab.close':
-        if (s.activeTabId) closeTab(s.activeTabId)
+      case 'tab.close': {
+        // Closing a whole project kills its Claude session — confirm first.
+        const active = s.tabs.find((t) => t.tabId === s.activeTabId)
+        if (active) setCloseTarget(active)
         break
+      }
       case 'tab.next':
         s.cycleTab(1)
         break
@@ -400,6 +419,9 @@ export function App(): React.ReactElement {
         break
       case 'general.commandPalette':
         setOverlay('palette')
+        break
+      case 'general.quickOpen':
+        setOverlay('quickOpen')
         break
       case 'general.keyboardHelp':
         setOverlay('help')
@@ -746,7 +768,12 @@ export function App(): React.ReactElement {
       <div className="weft-shell">
         <header className="tab-strip" data-testid="tab-strip" ref={tabStripRef}>
           {tabs.map((t) => (
-            <TabButton key={t.tabId} tab={t} active={t.tabId === activeTabId} />
+            <TabButton
+              key={t.tabId}
+              tab={t}
+              active={t.tabId === activeTabId}
+              onRequestClose={setCloseTarget}
+            />
           ))}
           <button
             type="button"
@@ -924,6 +951,12 @@ export function App(): React.ReactElement {
           onRun={runCommand}
           onClose={() => setOverlay((o) => (o === 'palette' ? 'none' : o))}
         />
+        <QuickOpen
+          open={overlay === 'quickOpen'}
+          cwd={activeTab?.cwd ?? null}
+          onOpen={(path, name) => useViewerStore.getState().openFile(path, name)}
+          onClose={() => setOverlay((o) => (o === 'quickOpen' ? 'none' : o))}
+        />
         <KeyboardHelp
           open={overlay === 'help'}
           onClose={() => setOverlay((o) => (o === 'help' ? 'none' : o))}
@@ -933,6 +966,22 @@ export function App(): React.ReactElement {
           overrides={keymapOverrides}
           onChange={setKeymapOverrides}
           onClose={() => setOverlay((o) => (o === 'keybindings' ? 'none' : o))}
+        />
+        <ConfirmDialog
+          open={closeTarget !== null}
+          title="Close project?"
+          message={
+            <>
+              This ends the Claude session in{' '}
+              <strong>{closeTarget?.title}</strong> and closes any files open in it.
+            </>
+          }
+          confirmLabel="Close project"
+          onConfirm={() => {
+            if (closeTarget) closeTab(closeTarget.tabId)
+            setCloseTarget(null)
+          }}
+          onCancel={() => setCloseTarget(null)}
         />
       </div>
     </WorkbenchErrorBoundary>

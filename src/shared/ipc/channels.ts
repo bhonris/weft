@@ -28,6 +28,7 @@ export const CH = {
 
   // Filesystem
   listDir: 'fs:list-dir',
+  listFilesDeep: 'fs:list-deep',
   watchDir: 'fs:watch-dir',
   unwatchDir: 'fs:unwatch-dir',
   fsChange: 'fs:change',

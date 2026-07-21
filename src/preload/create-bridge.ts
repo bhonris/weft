@@ -5,6 +5,7 @@ import type {
   DiffPayload,
   WorkspaceState,
   OpenProjectResult,
+  IndexedFile,
   LiveSession,
   UsageSummary,
   UsagePanelData,
@@ -56,6 +57,7 @@ export function createWeftApi(ipc: IpcRendererLike): WeftBridge {
     openProject: (command) =>
       ipc.invoke(CH.openProject, command) as Promise<OpenProjectResult | null>,
     listDir: (path) => ipc.invoke(CH.listDir, path) as Promise<DirEntry[]>,
+    listFilesDeep: (root) => ipc.invoke(CH.listFilesDeep, root) as Promise<IndexedFile[]>,
     watchDir: (path) => ipc.invoke(CH.watchDir, path) as Promise<{ watchId: string }>,
     unwatchDir: (watchId) => ipc.invoke(CH.unwatchDir, watchId) as Promise<void>,
     onFsChange: (cb) => subscribe(CH.fsChange, cb),

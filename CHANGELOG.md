@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Go to File (`Ctrl+Shift+O`).** A VS Code-style fuzzy file finder over the
+  active project: type part of a filename or path, **↑/↓** to move, **Enter** to
+  open it in the viewer, **Esc** to cancel. Also runnable from the command
+  palette ("Go to File…"). It lives on `Ctrl+Shift+O`, not `Ctrl+P`, because
+  plain `Ctrl+P` is reserved for the terminal (shell / Claude Code history) and
+  always passes through; like every chord it's rebindable. The index skips
+  `node_modules`/`.git`, never follows symlinks, and is confined to the open
+  project root.
+- **`Ctrl+W` now closes the open file, not the project.** Intra-project: `Ctrl+W`
+  closes the active editor file (a no-op when none is open). Closing a whole
+  project tab — which terminates its Claude session — moves to `Ctrl+Shift+W` and
+  now asks for confirmation first (as does the tab's `×` button), so a stray
+  keystroke can't kill a running session.
 - **In-project split workspace.** Open multiple files as editor tabs, with the
   Claude CLI now always visible in a dock pane beside them (it no longer gets
   hidden when you open a file). The dock is moveable (bottom / right / left via

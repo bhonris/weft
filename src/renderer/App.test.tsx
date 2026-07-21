@@ -378,7 +378,9 @@ describe('App per-project editor tabs (regression: files were global)', () => {
     act(() => useViewerStore.getState().openFile('/a/x.ts', 'x.ts'))
     expect(useViewerStore.getState().file?.path).toBe('/a/x.ts')
 
+    // Closing a whole project is guarded by a confirm dialog now.
     fireEvent.click(await screen.findByLabelText('close one'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Close project' }))
     await waitFor(() => expect(useViewerStore.getState().file).toBeNull())
   })
 })

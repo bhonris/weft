@@ -1,4 +1,4 @@
-import { promises as fsPromises } from 'node:fs'
+import { promises as fsPromises, existsSync, readdirSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { randomUUID } from 'node:crypto'
@@ -144,6 +144,19 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
     pty,
     hooks: { endpoint, settingsJson },
     onSessionClosed: (tabId) => statusServer.forget(tabId),
+    // Only resume when a transcript actually exists for the id: session ids are
+    // globally-unique UUIDs, so `<id>.jsonl` under ANY project dir means the
+    // conversation is real and resumable. A pinned-but-never-used id has none,
+    // and resuming it would fail ("No conversation found") — createSession then
+    // falls back to a fresh session. Read-only; a missing projects dir → false.
+    transcriptExists: (sessionId) => {
+      const dir = join(homedir(), '.claude', 'projects')
+      try {
+        return readdirSync(dir).some((d) => existsSync(join(dir, d, `${sessionId}.jsonl`)))
+      } catch {
+        return false
+      }
+    },
     // Tear-off (spec §4.2): the PTY stays in main; a new window re-attaches to
     // the same stream. Closing the window with the session alive re-docks it.
     openTearOff: (tabId, title) => {

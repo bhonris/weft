@@ -10,6 +10,18 @@ export interface DirEntry {
   kind: 'file' | 'dir' | 'symlink'
 }
 
+/**
+ * A file discovered by the recursive project walk behind the quick-open finder.
+ * `rel` is the path relative to the walked root, always with `/` separators
+ * (so the fuzzy matcher scores segments consistently across platforms); `path`
+ * is the absolute OS path used to open the file.
+ */
+export interface IndexedFile {
+  name: string
+  path: string
+  rel: string
+}
+
 export interface TabState {
   /** App-side identifier. */
   tabId: string
@@ -216,6 +228,12 @@ export interface WeftApi {
 
   // Filesystem
   listDir(path: string): Promise<DirEntry[]>
+  /**
+   * Recursively enumerate the files under `root` for the quick-open finder.
+   * Prunes ignored directories (node_modules/.git…), never follows symlinks,
+   * and is bounded in depth and count. Main confines `root` to an open project.
+   */
+  listFilesDeep(root: string): Promise<IndexedFile[]>
   watchDir(path: string): Promise<{ watchId: string }>
   unwatchDir(watchId: string): Promise<void>
   onFsChange(
@@ -291,6 +309,7 @@ export type WeftBridge = Pick<
   | 'onReDockTab'
   | 'openProject'
   | 'listDir'
+  | 'listFilesDeep'
   | 'watchDir'
   | 'unwatchDir'
   | 'onFsChange'

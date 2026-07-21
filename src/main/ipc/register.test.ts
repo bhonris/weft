@@ -122,18 +122,82 @@ describe('registerSessionIpc', () => {
     })
   })
 
-  it('createSession with resumeSessionId adds --resume while keeping a fresh pinned id', () => {
-    ctx.ipcMain.invoke(CH.createSession, ctx.event, {
+  it('createSession with resumeSessionId resumes the original id (no fresh pin, no fork)', () => {
+    // Regression: passing our own --session-id alongside --resume forced
+    // --fork-session, and --session-id (pin id) + --fork-session (make a NEW id)
+    // are contradictory — claude ended up resuming an empty "session id: ''".
+    // Resuming instead CONTINUES the conversation under its own id.
+    const res = ctx.ipcMain.invoke(CH.createSession, ctx.event, {
       cwd: 'C:/proj',
       command: 'claude',
       resumeSessionId: 'aaaabbbb-1111-2222-3333-ccccddddeeee'
     })
     expect(ctx.factory.spawns[0]!.args).toEqual([
-      '--session-id',
-      'id2',
       '--resume',
       'aaaabbbb-1111-2222-3333-ccccddddeeee'
     ])
+    // The reported/pinned session id IS the resumed id — so hook correlation
+    // (by session_id) matches and the next persist round-trips the same id.
+    expect(res).toEqual({ tabId: 'id1', sessionId: 'aaaabbbb-1111-2222-3333-ccccddddeeee' })
+  })
+
+  it('falls back to a fresh session when no transcript exists for the resume id', () => {
+    // Regression: a pinned id that was never used has no conversation on disk, so
+    // `claude --resume <id>` fails with "No conversation found" and opens a dead
+    // tab. When transcriptExists reports false, start fresh instead.
+    const factory = new FakeFactory()
+    const pty = new PtyManager(factory)
+    const ipcMain = new FakeIpcMain()
+    let n = 0
+    registerSessionIpc({
+      ipcMain,
+      pty,
+      pickDirectory: async () => null,
+      generateId: () => `id${++n}`,
+      baseEnv: { PATH: '/usr/bin' },
+      shellPath: 'bash',
+      transcriptExists: () => false // conversation is gone
+    })
+    const event: IpcEventLike = { sender: new FakeSender(1) }
+
+    const res = ipcMain.invoke(CH.createSession, event, {
+      cwd: 'C:/proj',
+      command: 'claude',
+      resumeSessionId: 'aaaabbbb-1111-2222-3333-ccccddddeeee'
+    })
+    // No --resume; a fresh pinned id instead.
+    expect(factory.spawns[0]!.args).toEqual(['--session-id', 'id2'])
+    expect(res).toEqual({ tabId: 'id1', sessionId: 'id2' })
+  })
+
+  it('resumes when a transcript exists for the resume id', () => {
+    const factory = new FakeFactory()
+    const pty = new PtyManager(factory)
+    const ipcMain = new FakeIpcMain()
+    let n = 0
+    const seen: string[] = []
+    registerSessionIpc({
+      ipcMain,
+      pty,
+      pickDirectory: async () => null,
+      generateId: () => `id${++n}`,
+      baseEnv: { PATH: '/usr/bin' },
+      shellPath: 'bash',
+      transcriptExists: (id) => {
+        seen.push(id)
+        return true
+      }
+    })
+    const event: IpcEventLike = { sender: new FakeSender(1) }
+
+    const res = ipcMain.invoke(CH.createSession, event, {
+      cwd: 'C:/proj',
+      command: 'claude',
+      resumeSessionId: 'aaaabbbb-1111-2222-3333-ccccddddeeee'
+    })
+    expect(seen).toEqual(['aaaabbbb-1111-2222-3333-ccccddddeeee'])
+    expect(factory.spawns[0]!.args).toEqual(['--resume', 'aaaabbbb-1111-2222-3333-ccccddddeeee'])
+    expect(res).toEqual({ tabId: 'id1', sessionId: 'aaaabbbb-1111-2222-3333-ccccddddeeee' })
   })
 
   it('rejects a malformed resumeSessionId (would flow into argv)', () => {
@@ -305,7 +369,9 @@ describe('registerSessionIpc', () => {
   })
 
   it('closeSession terminates and deregisters the session', () => {
-    ctx.ipcMain.invoke(CH.createSession, ctx.event, { cwd: 'C:/p', command: 'claude' })
+    // A shell has no graceful-exit sequence, so close is synchronous here. The
+    // graceful (deferred) close path for claude is covered in pty-manager tests.
+    ctx.ipcMain.invoke(CH.createSession, ctx.event, { cwd: 'C:/p', command: 'shell' })
     ctx.ipcMain.invoke(CH.closeSession, ctx.event, 'id1')
     expect(ctx.factory.last.killed).toBe(true)
     expect(ctx.pty.has('id1')).toBe(false)

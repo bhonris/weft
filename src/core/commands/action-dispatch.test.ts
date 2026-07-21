@@ -8,10 +8,12 @@ import type { CommandId } from './registry'
 const ALL_ACTIONS: KeyAction[] = [
   { kind: 'new-tab' },
   { kind: 'close-tab' },
+  { kind: 'close-file' },
   { kind: 'next-tab' },
   { kind: 'prev-tab' },
   { kind: 'jump-tab', index: 0 },
   { kind: 'command-palette' },
+  { kind: 'quick-open' },
   { kind: 'help-overlay' },
   { kind: 'focus-region', region: 'terminal' },
   { kind: 'focus-region', region: 'explorer' },
@@ -27,11 +29,13 @@ describe('commandIdForAction', () => {
   it.each<[KeyAction, CommandId | null]>([
     [{ kind: 'new-tab' }, 'tab.new'],
     [{ kind: 'close-tab' }, 'tab.close'],
+    [{ kind: 'close-file' }, 'viewer.close'],
     [{ kind: 'next-tab' }, 'tab.next'],
     [{ kind: 'prev-tab' }, 'tab.prev'],
     [{ kind: 'move-tab', dir: -1 }, 'tab.moveLeft'],
     [{ kind: 'move-tab', dir: 1 }, 'tab.moveRight'],
     [{ kind: 'command-palette' }, 'general.commandPalette'],
+    [{ kind: 'quick-open' }, 'general.quickOpen'],
     [{ kind: 'help-overlay' }, 'general.keyboardHelp'],
     [{ kind: 'focus-region', region: 'terminal' }, 'focus.terminal'],
     [{ kind: 'focus-region', region: 'explorer' }, 'focus.explorer'],
@@ -83,6 +87,7 @@ describe('actionForCommand (inverse — for rebinding)', () => {
   const ROUND_TRIP: CommandId[] = [
     'tab.new',
     'tab.close',
+    'viewer.close',
     'tab.next',
     'tab.prev',
     'tab.moveLeft',
@@ -92,6 +97,7 @@ describe('actionForCommand (inverse — for rebinding)', () => {
     'focus.cycleNext',
     'focus.cyclePrev',
     'general.commandPalette',
+    'general.quickOpen',
     'general.keyboardHelp'
   ]
 

@@ -41,6 +41,34 @@ describe('registerFsIpc', () => {
     expect(out).toEqual([{ name: 'src', path: join('/proj', 'src'), kind: 'dir' }])
   })
 
+  it('listFilesDeep returns the walk, confined to open project roots', async () => {
+    const ipcMain = new FakeIpcMain()
+    // A fs that terminates (files only) so the recursive walk doesn't loop.
+    const deepFs = new FsService({
+      readdir: async () => [
+        { name: 'a.ts', isDirectory: () => false, isSymbolicLink: () => false }
+      ]
+    })
+    registerFsIpc({
+      ipcMain,
+      fsService: deepFs,
+      reveal: () => {},
+      open: () => {},
+      ...makeDeps()
+    })
+
+    const out = await ipcMain.invoke(CH.listFilesDeep, 'C:/proj')
+    expect(out).toEqual([{ name: 'a.ts', path: join('C:/proj', 'a.ts'), rel: 'a.ts' }])
+
+    // Outside every open root, or a non-string arg → rejected.
+    await expect(ipcMain.invoke(CH.listFilesDeep, 'C:/somewhere-else')).rejects.toThrow(
+      /outside an open project/
+    )
+    await expect(ipcMain.invoke(CH.listFilesDeep, 123 as never)).rejects.toThrow(
+      /invalid listFilesDeep/
+    )
+  })
+
   it('reveal and open delegate to the injected handlers', async () => {
     const ipcMain = new FakeIpcMain()
     const reveal = vi.fn()

@@ -71,6 +71,7 @@ describe('createWeftApi', () => {
     const api = createWeftApi(ipc)
 
     await api.listDir('/p')
+    await api.listFilesDeep('/p')
     await api.watchDir('/p')
     await api.unwatchDir('w1')
     await api.revealInOs('/p/a')
@@ -90,6 +91,7 @@ describe('createWeftApi', () => {
     await api.getUsagePanel()
 
     expect(invoke).toHaveBeenCalledWith(CH.listDir, '/p')
+    expect(invoke).toHaveBeenCalledWith(CH.listFilesDeep, '/p')
     expect(invoke).toHaveBeenCalledWith(CH.getUsage)
     expect(invoke).toHaveBeenCalledWith(CH.getUsagePanel)
     expect(invoke).toHaveBeenCalledWith(CH.watchDir, '/p')

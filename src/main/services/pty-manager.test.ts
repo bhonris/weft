@@ -5,6 +5,7 @@ import {
   type PtyFactory,
   type PtySpawnOptions
 } from './pty-manager'
+import { GRACEFUL_CLOSE_TIMEOUT_MS } from '@core/terminal/graceful-close'
 
 class FakePty implements IPtyProcess {
   private dataCbs: Array<(d: string) => void> = []
@@ -102,11 +103,95 @@ describe('PtyManager — lifecycle', () => {
   it('close kills the PTY and deregisters the tab', () => {
     const factory = new FakeFactory()
     const mgr = new PtyManager(factory)
-    mgr.create(spec())
+    mgr.create(spec()) // shell (no graceful sequence) → killed immediately
     mgr.close('t1')
     expect(factory.last.killed).toBe(true)
     expect(mgr.has('t1')).toBe(false)
     expect(mgr.pidOf('t1')).toBeUndefined()
+  })
+
+  // Deterministic timer harness for the graceful-close path.
+  const makeTimers = () => {
+    let now = 0
+    let id = 1
+    const timers: Array<{ id: number; cb: () => void; at: number }> = []
+    const deps = {
+      now: () => now,
+      setTimer: (cb: () => void, ms: number) => {
+        const t = { id: id++, cb, at: now + ms }
+        timers.push(t)
+        return t.id
+      },
+      clearTimer: (h: unknown) => {
+        const i = timers.findIndex((t) => t.id === h)
+        if (i >= 0) timers.splice(i, 1)
+      }
+    }
+    const advance = (ms: number): void => {
+      now += ms
+      // Fire all due timers in time order (a fired cb may clear others).
+      for (;;) {
+        const next = timers.filter((t) => t.at <= now).sort((a, b) => a.at - b.at)[0]
+        if (!next) break
+        timers.splice(timers.indexOf(next), 1)
+        next.cb()
+      }
+    }
+    return { deps, advance }
+  }
+
+  it('close on a claude session sends Ctrl-C twice, hard-killing only after the grace window', () => {
+    const { deps, advance } = makeTimers()
+    const factory = new FakeFactory()
+    const mgr = new PtyManager(factory, { throttleDeps: deps })
+    mgr.create(spec({ command: 'claude' }))
+
+    mgr.close('t1')
+    // The tab stops receiving output at once, but the process is NOT yet killed.
+    expect(factory.last.killed).toBe(false)
+
+    advance(0) // first Ctrl-C (queued at delay 0)
+    expect(factory.last.writes).toEqual(['\x03'])
+    advance(200) // second Ctrl-C (queued 120ms later)
+    expect(factory.last.writes).toEqual(['\x03', '\x03'])
+    expect(factory.last.killed).toBe(false)
+
+    // Still alive after the grace window → hard kill + deregister.
+    advance(GRACEFUL_CLOSE_TIMEOUT_MS)
+    expect(factory.last.killed).toBe(true)
+    expect(mgr.has('t1')).toBe(false)
+  })
+
+  it('close on a claude session that exits gracefully never hard-kills', () => {
+    const { deps, advance } = makeTimers()
+    const factory = new FakeFactory()
+    const mgr = new PtyManager(factory, { throttleDeps: deps })
+    mgr.create(spec({ command: 'claude' }))
+
+    mgr.close('t1')
+    advance(200) // both Ctrl-C presses delivered
+
+    // Claude honors the sequence and exits on its own before the backstop fires.
+    factory.last.exit(0)
+    expect(mgr.has('t1')).toBe(false)
+
+    // The fallback timer was cancelled, so no redundant hard kill lands.
+    advance(GRACEFUL_CLOSE_TIMEOUT_MS)
+    expect(factory.last.killed).toBe(false)
+  })
+
+  it('close on an already-exited claude session deregisters without a kill', () => {
+    const { deps, advance } = makeTimers()
+    const factory = new FakeFactory()
+    const mgr = new PtyManager(factory, { throttleDeps: deps })
+    mgr.create(spec({ command: 'claude' }))
+    factory.last.exit(0) // process already dead
+
+    mgr.close('t1')
+    expect(mgr.has('t1')).toBe(false)
+    expect(factory.last.killed).toBe(false) // nothing to kill
+    advance(GRACEFUL_CLOSE_TIMEOUT_MS)
+    expect(factory.last.writes).toEqual([]) // no shutdown sequence sent
   })
 
   it('close on an unknown tab is a no-op', () => {

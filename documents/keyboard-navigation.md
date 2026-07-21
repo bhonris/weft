@@ -137,6 +137,7 @@ Follows Weft's layer boundary (pure `core/` + thin adapters).
 | Chord | Action |
 |---|---|
 | `Ctrl+Shift+P` | Open command palette |
+| `Ctrl+Shift+O` | Go to file (fuzzy finder over the active project) |
 | `Ctrl+Shift+/` (`Ctrl+?`) | Open keyboard help overlay |
 | `Ctrl+F6` / `Ctrl+Shift+F6` | Cycle focus region forward / back |
 | `` Ctrl+` `` | Focus terminal |
@@ -144,7 +145,9 @@ Follows Weft's layer boundary (pure `core/` + thin adapters).
 | `F2` | Rename active tab |
 | `Ctrl+Shift+PageUp` / `PageDown` | Move active tab left / right |
 | `Ctrl+S` | Save (when viewer region focused) |
-| `Ctrl+T` / `Ctrl+W` / `Ctrl+Tab` / `Ctrl+1..9` | (existing) new / close / cycle / jump tab |
+| `Ctrl+T` / `Ctrl+Tab` / `Ctrl+1..9` | New / cycle / jump tab |
+| `Ctrl+W` | Close the open file (intra-project) |
+| `Ctrl+Shift+W` | Close the project tab (confirms first — ends the session) |
 | `Ctrl+C`, arrows, `Ctrl+R/D/Z/L/A/E`, F-keys, Alt/Meta | (unchanged) passthrough to PTY |
 
 Anything not on a dedicated chord (theme cycle, resume toggle, View/Edit/Diff,

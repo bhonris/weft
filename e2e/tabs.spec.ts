@@ -35,7 +35,7 @@ test('double-click renames a tab', async () => {
   await expect(page.getByTestId('tab')).toContainText('renamed-project')
 })
 
-test('Ctrl+1/Ctrl+2 jump between tabs and Ctrl+W closes the active one', async () => {
+test('Ctrl+1/Ctrl+2 jump between tabs and Ctrl+Shift+W closes the active one (with confirm)', async () => {
   // Two tabs (same fixture dir — titles identical, ids distinct).
   await page.getByRole('button', { name: 'open project' }).click()
   await page.getByRole('button', { name: 'open project' }).click()
@@ -57,8 +57,17 @@ test('Ctrl+1/Ctrl+2 jump between tabs and Ctrl+W closes the active one', async (
   await page.keyboard.press('Control+Shift+Tab')
   await expect(page.locator('.tab').nth(1)).toHaveClass(/tab--active/)
 
-  // Ctrl+W closes the active (second) tab.
-  await page.keyboard.press('Control+w')
+  // Ctrl+Shift+W asks to close the active (second) project tab; confirm it.
+  await page.keyboard.press('Control+Shift+W')
+  const confirm = page.getByTestId('confirm-dialog')
+  await expect(confirm).toBeVisible()
+  // Cancelling leaves both tabs open.
+  await confirm.getByRole('button', { name: 'Cancel' }).click()
+  await expect(confirm).toBeHidden()
+  await expect(page.getByTestId('tab')).toHaveCount(2)
+  // Confirming closes the tab.
+  await page.keyboard.press('Control+Shift+W')
+  await confirm.getByRole('button', { name: 'Close project' }).click()
   await expect(page.getByTestId('tab')).toHaveCount(1)
 })
 
