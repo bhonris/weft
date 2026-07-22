@@ -19,6 +19,11 @@ export interface UsageRegisterDeps {
 /** Wire the `usage:get` and `usage:panel` channels to their services. */
 export function registerUsageIpc(deps: UsageRegisterDeps): void {
   deps.ipcMain.handle(CH.getUsage, () => deps.usageService.summarize(deps.getSessions()))
+  deps.ipcMain.handle(CH.getSessionInfo, (_e, cwd, sessionId) =>
+    typeof cwd === 'string' && typeof sessionId === 'string'
+      ? deps.usageService.sessionInfo({ cwd, sessionId })
+      : Promise.resolve(null)
+  )
   deps.ipcMain.handle(CH.getUsagePanel, async (): Promise<UsagePanelData> => {
     const [history, planLimits] = await Promise.all([
       deps.historyService.panel(),

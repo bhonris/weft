@@ -76,6 +76,8 @@ test('closing the tab returns to the empty state', async () => {
 
   const title = projectDir.split(/[\\/]/).pop() as string
   await page.getByRole('button', { name: `close ${title}` }).click()
+  // Closing a project is confirm-guarded (it kills the project's Claude session).
+  await page.getByTestId('confirm-dialog').getByRole('button', { name: 'Close project' }).click()
 
   await expect(page.getByTestId('tab')).toHaveCount(0)
   await expect(page.getByText('Open a project to begin')).toBeVisible()

@@ -35,6 +35,7 @@ export type CommandId =
   | 'viewer.close'
   | 'viewer.save'
   | 'general.commandPalette'
+  | 'general.quickOpen'
   | 'general.keyboardHelp'
   | 'general.terminalSearch'
   | 'general.cycleTheme'
@@ -68,9 +69,9 @@ export const COMMANDS: readonly Command[] = [
   { id: 'tab.openProject', title: 'Open Project…', category: 'Tabs' },
   {
     id: 'tab.close',
-    title: 'Close Tab',
+    title: 'Close Project Tab',
     category: 'Tabs',
-    shortcutHint: 'Ctrl+W',
+    shortcutHint: 'Ctrl+Shift+W',
     routes: 'close-tab'
   },
   {
@@ -138,7 +139,13 @@ export const COMMANDS: readonly Command[] = [
   { id: 'viewer.edit', title: 'Viewer: Edit Mode', category: 'Viewer' },
   { id: 'viewer.diff', title: 'Viewer: Diff vs HEAD', category: 'Viewer' },
   { id: 'viewer.reveal', title: 'Reveal File in OS', category: 'Viewer' },
-  { id: 'viewer.close', title: 'Close Viewer', category: 'Viewer' },
+  {
+    id: 'viewer.close',
+    title: 'Close File',
+    category: 'Viewer',
+    shortcutHint: 'Ctrl+W',
+    routes: 'close-file'
+  },
   { id: 'viewer.save', title: 'Save File', category: 'Viewer', shortcutHint: 'Ctrl+S' },
 
   // ── General ──
@@ -148,6 +155,13 @@ export const COMMANDS: readonly Command[] = [
     category: 'General',
     shortcutHint: 'Ctrl+Shift+P',
     routes: 'command-palette'
+  },
+  {
+    id: 'general.quickOpen',
+    title: 'Go to File…',
+    category: 'General',
+    shortcutHint: 'Ctrl+Shift+O',
+    routes: 'quick-open'
   },
   {
     id: 'general.keyboardHelp',

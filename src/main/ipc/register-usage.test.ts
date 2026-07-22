@@ -45,6 +45,31 @@ describe('registerUsageIpc', () => {
     expect(out).toBe(summary)
   })
 
+  it('returns the session model/effort on usage:session-info, and null for bad args', async () => {
+    const ipcMain = new FakeIpcMain()
+    const info = { model: 'claude-opus-4-8', effort: 'high' }
+    const usageService = {
+      summarize: vi.fn(),
+      sessionInfo: vi.fn(async () => info)
+    } as unknown as UsageService
+
+    registerUsageIpc({
+      ipcMain,
+      usageService,
+      historyService: noopHistory,
+      planLimitsService: noopPlan,
+      getSessions: () => []
+    })
+
+    expect(await ipcMain.invoke(CH.getSessionInfo, 'C:/p', 's1')).toBe(info)
+    expect(usageService.sessionInfo).toHaveBeenCalledWith({ cwd: 'C:/p', sessionId: 's1' })
+
+    // Missing/invalid args resolve to null without touching the service.
+    expect(await ipcMain.invoke(CH.getSessionInfo, 'C:/p')).toBeNull()
+    expect(await ipcMain.invoke(CH.getSessionInfo, 123, 's1')).toBeNull()
+    expect(usageService.sessionInfo).toHaveBeenCalledTimes(1)
+  })
+
   it('assembles the panel payload from history + plan-limit services on usage:panel', async () => {
     const ipcMain = new FakeIpcMain()
     const weekly = { ...emptySummary(), costUsd: 4.2, totalTokens: 1000 }

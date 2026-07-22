@@ -10,6 +10,15 @@ vi.mock('./components/TerminalPane', () => ({
   TerminalPane: () => <div data-testid="terminal-pane-stub" />
 }))
 
+// ViewerPane is Monaco/DOM-bound (verified by E2E). Stub it so opening a file in
+// these unit tests never triggers the lazy `import('../monaco-setup')`, whose
+// heavy module graph would otherwise evaluate after the jsdom env is torn down
+// and throw "window is not defined". App owns the .viewer-region wrapper these
+// tests assert on, so a stub is sufficient.
+vi.mock('./components/ViewerPane', () => ({
+  ViewerPane: () => <div data-testid="viewer-pane-stub" />
+}))
+
 import { App } from './App'
 import { useSessionStore } from './store/session-store'
 import { useViewerStore } from './store/viewer-store'
@@ -378,7 +387,9 @@ describe('App per-project editor tabs (regression: files were global)', () => {
     act(() => useViewerStore.getState().openFile('/a/x.ts', 'x.ts'))
     expect(useViewerStore.getState().file?.path).toBe('/a/x.ts')
 
+    // Closing a whole project is guarded by a confirm dialog now.
     fireEvent.click(await screen.findByLabelText('close one'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Close project' }))
     await waitFor(() => expect(useViewerStore.getState().file).toBeNull())
   })
 })

@@ -151,4 +151,20 @@ describe('parseTranscriptDetail', () => {
     })
     expect(parseTranscriptDetail(text).cwd).toBeNull()
   })
+
+  it('captures the top-level effort tier when present, else null', () => {
+    const withEffort = JSON.stringify({
+      type: 'assistant',
+      uuid: 'e',
+      effort: 'high',
+      message: { model: 'claude-opus-4-8', usage: { input_tokens: 1 } }
+    })
+    const noEffort = JSON.stringify({
+      type: 'assistant',
+      uuid: 'n',
+      message: { model: 'claude-opus-4-8', usage: { input_tokens: 1 } }
+    })
+    expect(parseTranscriptDetail(withEffort).entries[0]!.effort).toBe('high')
+    expect(parseTranscriptDetail(noEffort).entries[0]!.effort).toBeNull()
+  })
 })

@@ -1,5 +1,6 @@
 import { OutputRingBuffer } from '@core/terminal/output-ring-buffer'
 import { Throttle, type ThrottleDeps } from '@core/terminal/resize-throttle'
+import { gracefulCloseSequence, GRACEFUL_CLOSE_TIMEOUT_MS } from '@core/terminal/graceful-close'
 
 /** Real-timer throttle deps for production (the pure core injects these). */
 export const realThrottleDeps: ThrottleDeps = {
@@ -136,7 +137,8 @@ export class PtyManager {
     proc.onExit((e) => {
       session.exited = true
       session.exitCode = e.exitCode
-      for (const listener of session.exitListeners) listener(e)
+      // Copy first: a listener (e.g. graceful-close cleanup) may clear the set.
+      for (const listener of [...session.exitListeners]) listener(e)
     })
     this.sessions.set(spec.tabId, session)
     return { tabId: spec.tabId, pid: proc.pid }
@@ -154,15 +156,76 @@ export class PtyManager {
     session.resizeThrottle.call(cols, rows)
   }
 
-  /** Explicitly terminate and deregister a session (tab close). */
+  /**
+   * Explicitly terminate and deregister a session (tab close).
+   *
+   * For an interactive command (Claude Code) this first asks the process to exit
+   * on its own — sending the shutdown key sequence from
+   * {@link gracefulCloseSequence} so it can flush its transcript and run its
+   * SessionEnd hook — and only hard-kills if it hasn't exited within
+   * {@link GRACEFUL_CLOSE_TIMEOUT_MS}. A plain shell (or an already-exited
+   * process) is killed and deregistered immediately.
+   *
+   * Either way the tab stops receiving output at once (data listeners are
+   * dropped up front); the process may linger briefly during the grace window,
+   * but the caller's view is already gone.
+   */
   close(tabId: string): void {
     const session = this.sessions.get(tabId)
     if (!session) return
+    // Stop pending resizes and forwarding output regardless of how we exit.
     session.resizeThrottle.dispose()
-    session.proc.kill()
     session.dataListeners.clear()
+
+    const steps = session.exited ? [] : gracefulCloseSequence(session.command)
+    if (steps.length === 0) {
+      this.finalizeClose(session)
+      return
+    }
+
+    const timers = this.options.throttleDeps ?? realThrottleDeps
+    // Clean up exactly once — whether the process exits on its own or times out.
+    let finished = false
+    let fallback: unknown = null
+    const finish = (): void => {
+      if (finished) return
+      finished = true
+      if (fallback !== null) timers.clearTimer(fallback)
+      this.finalizeClose(session)
+    }
+    // If the process honors the sequence and exits, finalize right away.
+    session.exitListeners.add(() => finish())
+
+    // Send the shutdown sequence, honoring the inter-key pauses.
+    let delay = 0
+    for (const step of steps) {
+      const at = delay
+      timers.setTimer(() => {
+        // Skip if we've already finalized or the process died meanwhile.
+        if (!this.sessions.has(session.tabId) || session.exited) return
+        try {
+          session.proc.write(step.data)
+        } catch {
+          /* PTY died mid-sequence — the fallback (or its own exit) handles it. */
+        }
+      }, at)
+      delay += step.pauseMs
+    }
+    // Hard-kill backstop if it's still alive after the grace window.
+    fallback = timers.setTimer(finish, delay + GRACEFUL_CLOSE_TIMEOUT_MS)
+  }
+
+  /** Kill (if still alive) and deregister a session — the terminal teardown step. */
+  private finalizeClose(session: Session): void {
+    if (!session.exited) {
+      try {
+        session.proc.kill()
+      } catch {
+        /* already gone */
+      }
+    }
     session.exitListeners.clear()
-    this.sessions.delete(tabId)
+    this.sessions.delete(session.tabId)
   }
 
   /**

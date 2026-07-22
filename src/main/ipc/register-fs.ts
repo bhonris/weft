@@ -26,6 +26,16 @@ export function registerFsIpc(deps: FsRegisterDeps): void {
 
   ipcMain.handle(CH.listDir, (_event, path) => fsService.listDir(path as string))
 
+  ipcMain.handle(CH.listFilesDeep, async (_event, root) => {
+    if (typeof root !== 'string') throw new Error('invalid listFilesDeep arguments')
+    // The renderer is semi-trusted: the walk is confined to open project roots
+    // so it can never enumerate arbitrary directories.
+    if (!isInsideAnyRoot(deps.getWritableRoots(), root)) {
+      throw new Error('refusing to index outside an open project')
+    }
+    return fsService.listFilesDeep(root)
+  })
+
   ipcMain.handle(CH.revealInOs, (_event, path) => {
     deps.reveal(path as string)
   })

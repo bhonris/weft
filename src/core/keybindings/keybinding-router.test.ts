@@ -14,7 +14,9 @@ describe('routeKey', () => {
   it('maps the reserved tab Ctrl chords', () => {
     expect(routeKey(k({ ctrlKey: true, key: 't' }))).toEqual({ kind: 'new-tab' })
     expect(routeKey(k({ ctrlKey: true, key: 'T' }))).toEqual({ kind: 'new-tab' })
-    expect(routeKey(k({ ctrlKey: true, key: 'w' }))).toEqual({ kind: 'close-tab' })
+    // Ctrl+W closes the active file; Ctrl+Shift+W closes the whole project tab.
+    expect(routeKey(k({ ctrlKey: true, key: 'w' }))).toEqual({ kind: 'close-file' })
+    expect(routeKey(k({ ctrlKey: true, shiftKey: true, key: 'w' }))).toEqual({ kind: 'close-tab' })
     expect(routeKey(k({ ctrlKey: true, key: 'Tab' }))).toEqual({ kind: 'next-tab' })
     expect(routeKey(k({ ctrlKey: true, shiftKey: true, key: 'Tab' }))).toEqual({
       kind: 'prev-tab'

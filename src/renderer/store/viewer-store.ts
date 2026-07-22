@@ -25,6 +25,9 @@ export interface ViewerState {
   mode: ViewerMode
   /** In 'view' mode, whether the editor is editable (Ctrl+S saves). */
   editing: boolean
+  /** In 'view' mode, show the rendered Markdown preview instead of the source.
+   *  Only meaningful for Markdown files; reset whenever the file/mode changes. */
+  preview: boolean
   /** Bumped by requestSave(); ViewerPane saves the current model on change. */
   saveTick: number
   /** Switch the viewer to a project's file set (e.g. when the active tab changes). */
@@ -39,6 +42,8 @@ export interface ViewerState {
   setActiveFile: (index: number) => void
   setMode: (mode: ViewerMode) => void
   setEditing: (editing: boolean) => void
+  /** Toggle the rendered Markdown preview (view mode only). */
+  setPreview: (preview: boolean) => void
   /** Ask the viewer to persist the current edit (app-level Ctrl+S). */
   requestSave: () => void
   /** Close the active tab (the viewer's × / "Close Viewer" command). */
@@ -68,7 +73,9 @@ export const useViewerStore = create<ViewerState>((set) => {
       openFiles: nextOpen,
       file
     }
-    return file?.path === s.file?.path ? base : { ...base, mode: 'view', editing: false }
+    return file?.path === s.file?.path
+      ? base
+      : { ...base, mode: 'view', editing: false, preview: false }
   }
 
   return {
@@ -78,13 +85,21 @@ export const useViewerStore = create<ViewerState>((set) => {
     file: null,
     mode: 'view',
     editing: false,
+    preview: false,
     saveTick: 0,
     setProject: (projectId) =>
       set((s) => {
         if (projectId === s.projectId) return s
         const open = s.byProject[keyOf(projectId)] ?? emptyOpenFiles
         // A different project is fresh context: reset transient view state.
-        return { projectId, openFiles: open, file: activeFile(open), mode: 'view', editing: false }
+        return {
+          projectId,
+          openFiles: open,
+          file: activeFile(open),
+          mode: 'view',
+          editing: false,
+          preview: false
+        }
       }),
     dropProject: (projectId) =>
       set((s) => {
@@ -94,17 +109,28 @@ export const useViewerStore = create<ViewerState>((set) => {
         delete byProject[key]
         // Dropping the project being shown also clears the visible editor.
         if (projectId === s.projectId) {
-          return { byProject, openFiles: emptyOpenFiles, file: null, mode: 'view', editing: false }
+          return {
+            byProject,
+            openFiles: emptyOpenFiles,
+            file: null,
+            mode: 'view',
+            editing: false,
+            preview: false
+          }
         }
         return { byProject }
       }),
     openFile: (path, name) => set((s) => mutate(s, (open) => coreOpenFile(open, { path, name }))),
     closeFile: (path) => set((s) => mutate(s, (open) => coreCloseFile(open, path))),
     setActiveFile: (index) => set((s) => mutate(s, (open) => coreSetActive(open, index))),
-    // Diff is read-only, so switching to it drops edit mode.
-    setMode: (mode) => set(mode === 'diff' ? { mode, editing: false } : { mode }),
-    // Editing implies view mode (you can't edit the diff).
-    setEditing: (editing) => set(editing ? { editing, mode: 'view' } : { editing }),
+    // Diff is read-only, so switching to it drops edit mode. Changing mode always
+    // leaves the rendered preview (preview is a view-mode-only surface).
+    setMode: (mode) => set(mode === 'diff' ? { mode, editing: false, preview: false } : { mode, preview: false }),
+    // Editing implies view mode (you can't edit the diff) and the raw source, not
+    // the rendered preview.
+    setEditing: (editing) =>
+      set(editing ? { editing, mode: 'view', preview: false } : { editing }),
+    setPreview: (preview) => set({ preview }),
     requestSave: () => set((s) => ({ saveTick: s.saveTick + 1 })),
     close: () =>
       set((s) => {

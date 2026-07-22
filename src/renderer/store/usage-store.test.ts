@@ -4,12 +4,20 @@ import { emptySummary } from '@core/usage/summary'
 
 describe('useUsageStore', () => {
   beforeEach(() => {
-    useUsageStore.setState({ usage: null, panel: null })
+    useUsageStore.setState({ usage: null, panel: null, sessionInfo: null })
   })
 
   it('starts empty', () => {
     expect(useUsageStore.getState().usage).toBeNull()
     expect(useUsageStore.getState().panel).toBeNull()
+    expect(useUsageStore.getState().sessionInfo).toBeNull()
+  })
+
+  it('setSessionInfo replaces (and clears) the active model/effort', () => {
+    useUsageStore.getState().setSessionInfo({ model: 'claude-opus-4-8', effort: 'high' })
+    expect(useUsageStore.getState().sessionInfo).toEqual({ model: 'claude-opus-4-8', effort: 'high' })
+    useUsageStore.getState().setSessionInfo(null)
+    expect(useUsageStore.getState().sessionInfo).toBeNull()
   })
 
   it('setUsage replaces the summary', () => {
