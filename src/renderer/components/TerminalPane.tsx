@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { SearchAddon } from '@xterm/addon-search'
+import { UnicodeGraphemesAddon } from '@xterm/addon-unicode-graphemes'
 import { routeKey } from '@core/keybindings/keybinding-router'
 import { buildKeymap } from '@core/keybindings/effective-keymap'
-import { TERMINAL_FONT_FAMILY } from '@core/terminal/font-stack'
+import { TERMINAL_FONT_FAMILY, TERMINAL_LINE_HEIGHT } from '@core/terminal/font-stack'
 import { useTerminalStore } from '../store/terminal-store'
 import { useSessionStore } from '../store/session-store'
 import { useFontStore } from '../store/font-store'
@@ -64,10 +65,14 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
       // Thai (and other non-Latin) support depends on this fallback chain —
       // the leading monospace fonts have no Thai glyphs. See font-stack.ts.
       fontFamily: TERMINAL_FONT_FAMILY,
+      // Extra row height so stacked Thai vowels/tone marks aren't cropped.
+      lineHeight: TERMINAL_LINE_HEIGHT,
       // Initial size read once from the font store; live changes are applied by
       // the separate effect below (so a resize never re-mounts the terminal).
       fontSize: useFontStore.getState().terminalFontSize,
       cursorBlink: true,
+      // Required by the Unicode graphemes addon (unicode.activeVersion is proposed API).
+      allowProposedApi: true,
       scrollback: 8000, // spec §4.3: cap live scrollback per tab
       theme: { background: '#1e1e1e', foreground: '#e6e6e6' }
     })
@@ -75,6 +80,14 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
     const search = new SearchAddon()
     term.loadAddon(fit)
     term.loadAddon(search)
+    // Grapheme clustering: group a Thai base consonant with its stacked upper
+    // vowel + tone mark (U+0E31/0E34–3A/0E47–4E, etc.) into a single cell, so
+    // the DOM renderer emits the whole cluster as one span and the browser's
+    // shaper can stack the marks over the base (best the grid model allows —
+    // xterm does no HarfBuzz-class shaping itself). Also fixes combining-mark
+    // width so the cursor advances correctly. Complements the Thai font stack.
+    term.loadAddon(new UnicodeGraphemesAddon())
+    term.unicode.activeVersion = '15-graphemes'
     termRef.current = term
     fitRef.current = fit
     searchRef.current = search
