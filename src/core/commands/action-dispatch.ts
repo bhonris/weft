@@ -44,6 +44,12 @@ export function commandIdForAction(action: KeyAction): CommandId | null {
       return action.region === 'terminal' ? 'focus.terminal' : 'focus.explorer'
     case 'focus-cycle':
       return action.dir === 1 ? 'focus.cycleNext' : 'focus.cyclePrev'
+    case 'terminal-font':
+      return action.dir === 1
+        ? 'view.terminalFontIn'
+        : action.dir === -1
+          ? 'view.terminalFontOut'
+          : 'view.terminalFontReset'
     case 'jump-tab':
     case 'terminal-search':
     case 'passthrough':
@@ -85,6 +91,12 @@ export function actionForCommand(id: string): KeyAction | null {
       return { kind: 'focus-cycle', dir: 1 }
     case 'focus.cyclePrev':
       return { kind: 'focus-cycle', dir: -1 }
+    case 'view.terminalFontIn':
+      return { kind: 'terminal-font', dir: 1 }
+    case 'view.terminalFontOut':
+      return { kind: 'terminal-font', dir: -1 }
+    case 'view.terminalFontReset':
+      return { kind: 'terminal-font', dir: 0 }
     case 'general.commandPalette':
       return { kind: 'command-palette' }
     case 'general.quickOpen':

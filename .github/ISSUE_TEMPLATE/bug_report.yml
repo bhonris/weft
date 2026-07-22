@@ -1,0 +1,69 @@
+name: Bug report
+description: Something in weft behaves incorrectly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please search existing issues first to avoid duplicates.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, and what you expected instead.
+      placeholder: |
+        When I ..., weft ... . I expected ... .
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, ordered steps. Include the project/repo type if relevant.
+      placeholder: |
+        1. Open a tab on ...
+        2. ...
+        3. See error
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of weft?
+      options:
+        - Terminal / PTY session
+        - Tab status (working/waiting/done/error)
+        - File explorer / Monaco viewer
+        - Tear-off tabs / windows
+        - Workspace persistence
+        - GitHub Issues panel
+        - Build / packaging
+        - Other / not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: weft version
+      description: From the app, or the `version` in package.json / your build.
+      placeholder: "0.2.0"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS & version
+      placeholder: "Windows 11 26100"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: |
+        Relevant terminal output, DevTools console errors, or screenshots.
+        Do NOT paste secrets (tokens, API keys) — redact them.
+      render: shell
+    validations:
+      required: false

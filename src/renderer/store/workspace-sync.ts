@@ -6,6 +6,7 @@ import type {
   SidebarPanel
 } from '@shared/ipc/api-contract'
 import { WORKSPACE_VERSION } from '@core/persistence/schema'
+import { DEFAULT_FONT, type FontState } from '@core/workspace/font'
 import type { Tab } from './session-store'
 
 /** The bridge subset workspace sync needs (test-friendly). */
@@ -22,7 +23,8 @@ export function buildWorkspaceState(
   notificationsEnabled = true,
   keymapOverrides: Record<string, string> = {},
   dock: WorkspaceState['dock'] = { position: 'bottom', size: 0.4 },
-  activePanel: SidebarPanel = 'explorer'
+  activePanel: SidebarPanel = 'explorer',
+  font: FontState = DEFAULT_FONT
 ): WorkspaceState {
   return {
     version: WORKSPACE_VERSION,
@@ -43,7 +45,10 @@ export function buildWorkspaceState(
     notificationsEnabled,
     keymapOverrides,
     dock,
-    activePanel
+    activePanel,
+    terminalFontSize: font.terminalFontSize,
+    editorFontSize: font.editorFontSize,
+    uiZoom: font.uiZoom
   }
 }
 

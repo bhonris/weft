@@ -26,6 +26,11 @@ describe('chordOf', () => {
     expect(chordOf(k({ ctrlKey: true, shiftKey: true, key: '/' }))).toBe('ctrl+shift+/')
   })
 
+  it('folds + (Shift+= / numpad +) to = so Ctrl+Plus reaches the font-increase chord', () => {
+    expect(chordOf(k({ ctrlKey: true, shiftKey: true, key: '+' }))).toBe('ctrl+shift+=')
+    expect(chordOf(k({ ctrlKey: true, key: '+' }))).toBe('ctrl+=')
+  })
+
   it('returns null for anything that must pass through (no Ctrl / Alt / Meta / bare modifier)', () => {
     expect(chordOf(k({ key: 't' }))).toBeNull()
     expect(chordOf(k({ ctrlKey: true, altKey: true, key: 't' }))).toBeNull()

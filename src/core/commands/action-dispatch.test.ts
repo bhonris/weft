@@ -21,6 +21,9 @@ const ALL_ACTIONS: KeyAction[] = [
   { kind: 'focus-cycle', dir: -1 },
   { kind: 'move-tab', dir: 1 },
   { kind: 'move-tab', dir: -1 },
+  { kind: 'terminal-font', dir: 1 },
+  { kind: 'terminal-font', dir: -1 },
+  { kind: 'terminal-font', dir: 0 },
   { kind: 'terminal-search' },
   { kind: 'passthrough' }
 ]
@@ -41,6 +44,9 @@ describe('commandIdForAction', () => {
     [{ kind: 'focus-region', region: 'explorer' }, 'focus.explorer'],
     [{ kind: 'focus-cycle', dir: 1 }, 'focus.cycleNext'],
     [{ kind: 'focus-cycle', dir: -1 }, 'focus.cyclePrev'],
+    [{ kind: 'terminal-font', dir: 1 }, 'view.terminalFontIn'],
+    [{ kind: 'terminal-font', dir: -1 }, 'view.terminalFontOut'],
+    [{ kind: 'terminal-font', dir: 0 }, 'view.terminalFontReset'],
     // Not command-dispatched — must return null so the caller handles/passes them.
     [{ kind: 'jump-tab', index: 3 }, null],
     [{ kind: 'terminal-search' }, null],
@@ -96,6 +102,9 @@ describe('actionForCommand (inverse — for rebinding)', () => {
     'focus.explorer',
     'focus.cycleNext',
     'focus.cyclePrev',
+    'view.terminalFontIn',
+    'view.terminalFontOut',
+    'view.terminalFontReset',
     'general.commandPalette',
     'general.quickOpen',
     'general.keyboardHelp'
@@ -116,7 +125,16 @@ describe('actionForCommand (inverse — for rebinding)', () => {
   })
 
   it('returns null for palette-only / region-local commands (no chord form)', () => {
-    for (const id of ['general.cycleTheme', 'general.toggleResume', 'tab.rename', 'viewer.save']) {
+    for (const id of [
+      'general.cycleTheme',
+      'general.toggleResume',
+      'tab.rename',
+      'viewer.save',
+      // Whole-window zoom is palette-only now (Ctrl+= family drives terminal font).
+      'view.zoomIn',
+      'view.zoomOut',
+      'view.zoomReset'
+    ]) {
       expect(actionForCommand(id)).toBeNull()
     }
   })

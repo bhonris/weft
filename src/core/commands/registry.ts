@@ -45,6 +45,12 @@ export type CommandId =
   | 'general.resetKeybindings'
   | 'view.cycleDock'
   | 'view.maximizeCli'
+  | 'view.terminalFontIn'
+  | 'view.terminalFontOut'
+  | 'view.terminalFontReset'
+  | 'view.zoomIn'
+  | 'view.zoomOut'
+  | 'view.zoomReset'
 
 export interface Command {
   id: CommandId
@@ -181,7 +187,33 @@ export const COMMANDS: readonly Command[] = [
     id: 'view.maximizeCli',
     title: 'Toggle Maximize CLI (double-tap Ctrl+`)',
     category: 'Viewer'
-  }
+  },
+  {
+    id: 'view.terminalFontIn',
+    title: 'Increase Terminal Font Size',
+    category: 'Viewer',
+    shortcutHint: 'Ctrl+=',
+    routes: 'terminal-font'
+  },
+  {
+    id: 'view.terminalFontOut',
+    title: 'Decrease Terminal Font Size',
+    category: 'Viewer',
+    shortcutHint: 'Ctrl+-',
+    routes: 'terminal-font'
+  },
+  {
+    id: 'view.terminalFontReset',
+    title: 'Reset Terminal Font Size',
+    category: 'Viewer',
+    shortcutHint: 'Ctrl+0',
+    routes: 'terminal-font'
+  },
+  // Whole-window zoom — palette-only now that Ctrl+= family drives terminal font.
+  // Still adjustable from the status-bar zoom buttons.
+  { id: 'view.zoomIn', title: 'Zoom In', category: 'Viewer' },
+  { id: 'view.zoomOut', title: 'Zoom Out', category: 'Viewer' },
+  { id: 'view.zoomReset', title: 'Reset Zoom', category: 'Viewer' }
 ]
 
 /** Categories in display order for the help overlay grouping. */

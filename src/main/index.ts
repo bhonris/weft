@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { app, BrowserWindow, screen } from 'electron'
+import { app, BrowserWindow, Menu, screen } from 'electron'
 import { wireApp } from './container'
 import { clampBoundsToDisplays } from '@core/persistence/clamp-bounds'
 
@@ -53,6 +53,13 @@ function createWindow(query?: string, bounds?: Bounds): BrowserWindow {
 }
 
 app.whenReady().then(async () => {
+  // Drop Electron's default application menu. Its View-submenu roles claim
+  // accelerators the app owns itself: Zoom In/Out/Reset (Ctrl+= / Ctrl+- /
+  // Ctrl+0) are handled by the renderer's keybinding router, and Reload
+  // (Ctrl+R) must reach the terminal as readline reverse-search (spec §7.4).
+  // With the menu present those keys are swallowed before the renderer sees them.
+  Menu.setApplicationMenu(null)
+
   const { shutdown, initialBounds: savedBounds } = await wireApp({
     createAppWindow: createWindow
   })

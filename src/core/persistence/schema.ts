@@ -2,7 +2,7 @@ import { z } from 'zod'
 import type { WorkspaceState } from '@shared/ipc/api-contract'
 
 /** Current persisted schema version. Bump when the shape changes. */
-export const WORKSPACE_VERSION = 6
+export const WORKSPACE_VERSION = 7
 
 export const tabStateSchema = z.object({
   tabId: z.string(),
@@ -36,9 +36,14 @@ export const workspaceStateSchema = z.object({
     // .finite() rejects NaN/Infinity; the store re-clamps the range on restore.
     size: z.number().finite()
   }),
-  // Widened with 'issues' (v6-compatible: old blobs still validate, so no
-  // version bump / migration is needed — see documents/github-issues-panel.md).
+  // Widened with 'issues' (see documents/github-issues-panel.md).
   activePanel: z.enum(['explorer', 'usage', 'issues']),
+  // v7: user-adjustable text sizing. The store re-clamps each on restore, so a
+  // corrupt/hand-edited value can never yield an unreadable UI — .finite() only
+  // rejects NaN/Infinity here.
+  terminalFontSize: z.number().finite(),
+  editorFontSize: z.number().finite(),
+  uiZoom: z.number().finite(),
   windowBounds: windowBoundsSchema.optional()
 })
 

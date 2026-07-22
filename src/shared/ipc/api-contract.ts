@@ -52,6 +52,12 @@ export interface WorkspaceState {
   dock: { position: 'bottom' | 'right' | 'left'; size: number }
   /** v6: which sidebar activity-bar panel is showing. */
   activePanel: SidebarPanel
+  /** v7: xterm terminal font size in px. */
+  terminalFontSize: number
+  /** v7: Monaco viewer/diff font size in px. */
+  editorFontSize: number
+  /** v7: whole-window zoom factor (1 = 100%), applied on top of the font sizes. */
+  uiZoom: number
   windowBounds?: { x: number; y: number; width: number; height: number }
 }
 

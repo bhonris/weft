@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useViewerStore } from '../store/viewer-store'
 import { useSessionStore } from '../store/session-store'
+import { useFontStore } from '../store/font-store'
 import { languageIdForFile, isMarkdown } from '@core/viewer/file-language'
 import { monacoThemeForApp } from '@core/viewer/monaco-theme'
 import { MarkdownPreview } from './MarkdownPreview'
 import type { monaco as MonacoNs } from '../monaco-setup'
 
 type Editor = ReturnType<typeof MonacoNs.editor.create>
+type DiffEditor = ReturnType<typeof MonacoNs.editor.createDiffEditor>
 
 /** Resolve the app theme to a Monaco theme name, reading the OS preference. */
 function resolveMonacoTheme(appTheme: Parameters<typeof monacoThemeForApp>[0]): string {
@@ -37,6 +39,7 @@ export function ViewerPane(): React.ReactElement | null {
   const theme = useSessionStore((s) => s.theme)
   const hostRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<Editor | null>(null)
+  const diffEditorRef = useRef<DiffEditor | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -88,7 +91,10 @@ export function ViewerPane(): React.ReactElement | null {
           automaticLayout: true,
           minimap: { enabled: false },
           theme: resolveMonacoTheme(theme),
-          renderWhitespace: 'none' as const
+          renderWhitespace: 'none' as const,
+          // Initial size read once from the font store; live changes flow through
+          // the dedicated updateOptions effect below (no editor re-create).
+          fontSize: useFontStore.getState().editorFontSize
         }
         if (mode === 'diff') {
           const { original, modified } = await window.api.getDiff(file.path)
@@ -101,7 +107,9 @@ export function ViewerPane(): React.ReactElement | null {
           const originalModel = monaco.editor.createModel(original, language)
           const modifiedModel = monaco.editor.createModel(modified, language)
           editor.setModel({ original: originalModel, modified: modifiedModel })
+          diffEditorRef.current = editor
           dispose = () => {
+            diffEditorRef.current = null
             editor.dispose()
             originalModel.dispose()
             modifiedModel.dispose()
@@ -153,6 +161,15 @@ export function ViewerPane(): React.ReactElement | null {
       cancelled = true
     }
   }, [file, theme])
+
+  // Apply a live editor font-size change without re-creating the editor (which
+  // would drop scroll position / selection). Covers both the plain and diff
+  // editors; automaticLayout handles the reflow.
+  const editorFontSize = useFontStore((s) => s.editorFontSize)
+  useEffect(() => {
+    editorRef.current?.updateOptions({ fontSize: editorFontSize })
+    diffEditorRef.current?.updateOptions({ fontSize: editorFontSize })
+  }, [editorFontSize])
 
   if (!file) return null
 
