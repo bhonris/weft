@@ -139,7 +139,12 @@ export function ViewerPane(): React.ReactElement | null {
   }, [file, mode, editing, showPreview])
 
   // Follow the app theme without tearing down the editor: setTheme is global.
+  // Guarded on `file` so we never load the (large) Monaco chunk — or touch
+  // `window` in its async resolution — when the viewer is closed. Without this,
+  // the import resolves after a test env is torn down (App renders a fileless
+  // ViewerPane) and throws "window is not defined".
   useEffect(() => {
+    if (!file) return
     let cancelled = false
     void import('../monaco-setup').then(({ monaco }) => {
       if (!cancelled) monaco.editor.setTheme(resolveMonacoTheme(theme))
@@ -147,7 +152,7 @@ export function ViewerPane(): React.ReactElement | null {
     return () => {
       cancelled = true
     }
-  }, [theme])
+  }, [file, theme])
 
   if (!file) return null
 
