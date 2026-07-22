@@ -47,6 +47,11 @@ export function CommandPalette({
       setActive(0)
       inputRef.current?.focus()
     } else {
+      // Clear on close too, not just on open: otherwise a stale query survives
+      // in state between opens, and if the next open's reset races the first
+      // keystroke (observed on newer Chromium), the old text gets prepended.
+      setQuery('')
+      setActive(0)
       if (!skipRestoreRef.current) restoreRef.current?.focus?.()
       skipRestoreRef.current = false
     }
