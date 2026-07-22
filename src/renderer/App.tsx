@@ -9,6 +9,7 @@ import { useActivityStore } from './store/activity-store'
 import { useFontStore } from './store/font-store'
 import { formatUsageLabel, formatUsageTooltip } from '@core/usage/summary'
 import { formatUtilization, formatResetIn } from '@core/usage/plan-limits'
+import { modelDisplayName, effortLabel } from '@core/model/model-name'
 import { nextDockPosition, dockResizeDelta } from '@core/workspace/dock'
 import { buildWorkspaceState, restoreWorkspace } from './store/workspace-sync'
 import { TerminalPane } from './components/TerminalPane'
@@ -19,8 +20,10 @@ import { IssuesPanel } from './components/IssuesPanel'
 import { ViewerPane } from './components/ViewerPane'
 import { WorkbenchErrorBoundary } from './components/WorkbenchErrorBoundary'
 import { CommandPalette } from './components/CommandPalette'
+import { QuickOpen } from './components/QuickOpen'
 import { KeyboardHelp } from './components/KeyboardHelp'
 import { KeybindingsEditor } from './components/KeybindingsEditor'
+import { ConfirmDialog } from './components/ConfirmDialog'
 import { routeKey } from '@core/keybindings/keybinding-router'
 import { commandIdForAction } from '@core/commands/action-dispatch'
 import { buildKeymap } from '@core/keybindings/effective-keymap'
@@ -45,6 +48,30 @@ function refreshUsage(): void {
   void window.api
     .getUsage()
     .then((u) => useUsageStore.getState().setUsage(u))
+    .catch(() => {
+      /* transient read failure — keep the last value. */
+    })
+}
+
+/**
+ * Pull the active claude tab's current model + effort from its transcript into
+ * the store. Cleared for shell tabs / no active tab. Guards against a tab switch
+ * racing the fetch, so a slow read never stamps a stale tab's model on the bar.
+ */
+function refreshSessionInfo(): void {
+  const s = useSessionStore.getState()
+  const tab = s.tabs.find((t) => t.tabId === s.activeTabId)
+  const set = useUsageStore.getState().setSessionInfo
+  if (!tab || tab.command !== 'claude' || !tab.sessionId) {
+    set(null)
+    return
+  }
+  const sessionId = tab.sessionId
+  void window.api
+    .getSessionInfo(tab.cwd, sessionId)
+    .then((info) => {
+      if (useSessionStore.getState().activeTabId === tab.tabId) set(info)
+    })
     .catch(() => {
       /* transient read failure — keep the last value. */
     })
@@ -128,7 +155,15 @@ function closeTab(tabId: string): void {
   useViewerStore.getState().dropProject(tabId)
 }
 
-function TabButton({ tab, active }: { tab: Tab; active: boolean }): React.ReactElement {
+function TabButton({
+  tab,
+  active,
+  onRequestClose
+}: {
+  tab: Tab
+  active: boolean
+  onRequestClose: (tab: Tab) => void
+}): React.ReactElement {
   const setActive = useSessionStore((s) => s.setActive)
   const rename = useSessionStore((s) => s.rename)
   const moveTab = useSessionStore((s) => s.moveTab)
@@ -227,7 +262,7 @@ function TabButton({ tab, active }: { tab: Tab; active: boolean }): React.ReactE
         type="button"
         className="tab__close"
         aria-label={`close ${tab.title}`}
-        onClick={() => closeTab(tab.tabId)}
+        onClick={() => onRequestClose(tab)}
       >
         ×
       </button>
@@ -242,6 +277,8 @@ export function App(): React.ReactElement {
   const setTheme = useSessionStore((s) => s.setTheme)
   const activeTab = tabs.find((t) => t.tabId === activeTabId) ?? null
   const usage = useUsageStore((s) => s.usage)
+  // The active claude tab's model + reasoning effort, for the status-bar readout.
+  const sessionInfo = useUsageStore((s) => s.sessionInfo)
   // The 5-hour plan-limit window, shown in the status bar at all times.
   const fiveHour = useUsageStore((s) => s.panel?.planLimits?.fiveHour ?? null)
   const planStale = useUsageStore((s) => s.panel?.planLimits?.stale ?? false)
@@ -271,12 +308,18 @@ export function App(): React.ReactElement {
   // "Maximize CLI" hides the editor pane without closing the file, so the CLI
   // gets the full split area. The file stays open; toggling off restores it.
   const showEditor = hasViewerFile && !cliMaximized
-  const [overlay, setOverlay] = useState<'none' | 'palette' | 'help' | 'keybindings'>('none')
+  const [overlay, setOverlay] = useState<
+    'none' | 'palette' | 'quickOpen' | 'help' | 'keybindings'
+  >('none')
+  // The project tab awaiting a close confirmation, or null. Closing a project
+  // terminates its Claude session, so it's guarded by a confirm dialog.
+  const [closeTarget, setCloseTarget] = useState<Tab | null>(null)
   // Read inside the stable window keydown listener without re-subscribing it.
   const overlayOpenRef = useRef(false)
   useEffect(() => {
-    overlayOpenRef.current = overlay !== 'none'
-  }, [overlay])
+    // The confirm dialog owns the keyboard too, so treat it as an open overlay.
+    overlayOpenRef.current = overlay !== 'none' || closeTarget !== null
+  }, [overlay, closeTarget])
   // Effective keymap (defaults + user overrides), read live by the key listener
   // so a rebind takes effect without re-subscribing.
   const keymapRef = useRef(buildKeymap({}))
@@ -389,9 +432,12 @@ export function App(): React.ReactElement {
       case 'tab.newShell':
         void openProject('shell')
         break
-      case 'tab.close':
-        if (s.activeTabId) closeTab(s.activeTabId)
+      case 'tab.close': {
+        // Closing a whole project kills its Claude session — confirm first.
+        const active = s.tabs.find((t) => t.tabId === s.activeTabId)
+        if (active) setCloseTarget(active)
         break
+      }
       case 'tab.next':
         s.cycleTab(1)
         break
@@ -406,6 +452,9 @@ export function App(): React.ReactElement {
         break
       case 'general.commandPalette':
         setOverlay('palette')
+        break
+      case 'general.quickOpen':
+        setOverlay('quickOpen')
         break
       case 'general.keyboardHelp':
         setOverlay('help')
@@ -546,6 +595,12 @@ export function App(): React.ReactElement {
     useViewerStore.getState().setProject(activeTabId ?? null)
   }, [activeTabId])
 
+  // Refresh the status-bar model/effort readout when the active tab changes.
+  // (It also refreshes on session-status changes — see the status listener.)
+  useEffect(() => {
+    refreshSessionInfo()
+  }, [activeTabId])
+
   // Maximize CLI is a transient focus mode: any deliberate file navigation
   // (open / switch / close) exits it, so you never open a file into a pane the
   // maximize toggle is currently hiding.
@@ -605,9 +660,11 @@ export function App(): React.ReactElement {
     const setStatus = useSessionStore.getState().setStatus
     const offStatus = window.api.onSessionStatus((e) => {
       setStatus(e.tabId, e.status)
-      // A status change means a turn just started/finished — refresh cost now
-      // rather than waiting for the next poll tick.
+      // A status change means a turn just started/finished — refresh cost and
+      // the model/effort readout now rather than waiting for the next poll tick
+      // (the model or effort may have changed for the turn that just began).
       refreshUsage()
+      refreshSessionInfo()
     })
     const offExit = window.api.onSessionExit((e) => {
       setStatus(e.tabId, e.exitCode === 0 ? 'done' : 'error')
@@ -799,7 +856,12 @@ export function App(): React.ReactElement {
       <div className="weft-shell">
         <header className="tab-strip" data-testid="tab-strip" ref={tabStripRef}>
           {tabs.map((t) => (
-            <TabButton key={t.tabId} tab={t} active={t.tabId === activeTabId} />
+            <TabButton
+              key={t.tabId}
+              tab={t}
+              active={t.tabId === activeTabId}
+              onRequestClose={setCloseTarget}
+            />
           ))}
           <button
             type="button"
@@ -897,6 +959,21 @@ export function App(): React.ReactElement {
               title={formatUsageTooltip(usage)}
             >
               ✳ {formatUsageLabel(usage)}
+            </span>
+          )}
+          {sessionInfo && (
+            <span
+              className="status-bar__model"
+              data-testid="status-model"
+              title={
+                `Model: ${modelDisplayName(sessionInfo.model)}` +
+                (effortLabel(sessionInfo.effort)
+                  ? ` · reasoning effort ${effortLabel(sessionInfo.effort)}`
+                  : '')
+              }
+            >
+              ✦ {modelDisplayName(sessionInfo.model)}
+              {effortLabel(sessionInfo.effort) ? ` · ${effortLabel(sessionInfo.effort)}` : ''}
             </span>
           )}
           {fiveHour && (
@@ -1053,6 +1130,12 @@ export function App(): React.ReactElement {
           onRun={runCommand}
           onClose={() => setOverlay((o) => (o === 'palette' ? 'none' : o))}
         />
+        <QuickOpen
+          open={overlay === 'quickOpen'}
+          cwd={activeTab?.cwd ?? null}
+          onOpen={(path, name) => useViewerStore.getState().openFile(path, name)}
+          onClose={() => setOverlay((o) => (o === 'quickOpen' ? 'none' : o))}
+        />
         <KeyboardHelp
           open={overlay === 'help'}
           onClose={() => setOverlay((o) => (o === 'help' ? 'none' : o))}
@@ -1062,6 +1145,22 @@ export function App(): React.ReactElement {
           overrides={keymapOverrides}
           onChange={setKeymapOverrides}
           onClose={() => setOverlay((o) => (o === 'keybindings' ? 'none' : o))}
+        />
+        <ConfirmDialog
+          open={closeTarget !== null}
+          title="Close project?"
+          message={
+            <>
+              This ends the Claude session in{' '}
+              <strong>{closeTarget?.title}</strong> and closes any files open in it.
+            </>
+          }
+          confirmLabel="Close project"
+          onConfirm={() => {
+            if (closeTarget) closeTab(closeTarget.tabId)
+            setCloseTarget(null)
+          }}
+          onCancel={() => setCloseTarget(null)}
         />
       </div>
     </WorkbenchErrorBoundary>

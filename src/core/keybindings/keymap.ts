@@ -47,7 +47,10 @@ export function chordOf(e: KeyLike): Chord | null {
  */
 export const DEFAULT_KEYMAP: Keymap = {
   'ctrl+t': { kind: 'new-tab' },
-  'ctrl+w': { kind: 'close-tab' },
+  // Ctrl+W closes the active editor file (intra-project); Ctrl+Shift+W closes the
+  // whole project tab (inter-project) — the heavier action is on the harder chord.
+  'ctrl+w': { kind: 'close-file' },
+  'ctrl+shift+w': { kind: 'close-tab' },
   'ctrl+tab': { kind: 'next-tab' },
   'ctrl+shift+tab': { kind: 'prev-tab' },
   'ctrl+shift+pageup': { kind: 'move-tab', dir: -1 },
@@ -57,6 +60,9 @@ export const DEFAULT_KEYMAP: Keymap = {
   'ctrl+f6': { kind: 'focus-cycle', dir: 1 },
   'ctrl+shift+f6': { kind: 'focus-cycle', dir: -1 },
   'ctrl+shift+p': { kind: 'command-palette' },
+  // Ctrl+P (plain) is reserved for the terminal (shell/Claude history), so the
+  // VS Code "Go to File" finder lives on the Ctrl+Shift+* app-chord space.
+  'ctrl+shift+o': { kind: 'quick-open' },
   'ctrl+shift+/': { kind: 'help-overlay' },
   'ctrl+shift+f': { kind: 'terminal-search' },
   // Terminal font size. These are plain-Ctrl and therefore `isProtectedChord` —

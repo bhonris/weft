@@ -31,10 +31,12 @@ export type FocusRegion = 'terminal' | 'explorer'
 export type KeyAction =
   | { kind: 'new-tab' }
   | { kind: 'close-tab' }
+  | { kind: 'close-file' }
   | { kind: 'next-tab' }
   | { kind: 'prev-tab' }
   | { kind: 'jump-tab'; index: number }
   | { kind: 'command-palette' }
+  | { kind: 'quick-open' }
   | { kind: 'help-overlay' }
   | { kind: 'focus-region'; region: FocusRegion }
   | { kind: 'focus-cycle'; dir: 1 | -1 }

@@ -11,7 +11,9 @@ A cross-platform (Windows-first) Electron desktop app: a VS Code-style shell
 around **browser-style tabs of Claude Code CLI sessions** — one tab per project,
 each a live interactive `claude` process in its own pseudo-terminal
 (node-pty + xterm.js). Adds a file explorer, a Monaco read-only + diff + edit
-viewer, tear-off tabs into separate OS windows, workspace persistence, and the
+viewer (syntax-highlighted via `basic-languages`, theme-following, with a
+rendered Markdown preview), tear-off tabs into separate OS windows, workspace
+persistence, and the
 defining differentiator: **per-tab Claude session status (working / waiting /
 done / error) driven by Claude Code's own lifecycle hooks — not output
 scraping** — plus app-owned OS notifications that focus the right tab.

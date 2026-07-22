@@ -26,6 +26,8 @@ export function commandIdForAction(action: KeyAction): CommandId | null {
       return 'tab.new'
     case 'close-tab':
       return 'tab.close'
+    case 'close-file':
+      return 'viewer.close'
     case 'next-tab':
       return 'tab.next'
     case 'prev-tab':
@@ -34,6 +36,8 @@ export function commandIdForAction(action: KeyAction): CommandId | null {
       return action.dir === -1 ? 'tab.moveLeft' : 'tab.moveRight'
     case 'command-palette':
       return 'general.commandPalette'
+    case 'quick-open':
+      return 'general.quickOpen'
     case 'help-overlay':
       return 'general.keyboardHelp'
     case 'focus-region':
@@ -69,6 +73,8 @@ export function actionForCommand(id: string): KeyAction | null {
       return { kind: 'new-tab' }
     case 'tab.close':
       return { kind: 'close-tab' }
+    case 'viewer.close':
+      return { kind: 'close-file' }
     case 'tab.next':
       return { kind: 'next-tab' }
     case 'tab.prev':
@@ -93,6 +99,8 @@ export function actionForCommand(id: string): KeyAction | null {
       return { kind: 'terminal-font', dir: 0 }
     case 'general.commandPalette':
       return { kind: 'command-palette' }
+    case 'general.quickOpen':
+      return { kind: 'quick-open' }
     case 'general.keyboardHelp':
       return { kind: 'help-overlay' }
     case 'general.terminalSearch':

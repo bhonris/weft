@@ -39,6 +39,14 @@ export interface RegisterDeps {
   claudePath?: string
   /** Called after a session is explicitly closed (e.g. to forget its status). */
   onSessionClosed?: (tabId: string) => void
+  /**
+   * True when a resumable conversation transcript exists on disk for this
+   * session id. Used to decide whether `--resume` will actually work: a pinned
+   * id that was never used has no transcript, so resuming it would fail with
+   * "No conversation found" and open a dead tab. When omitted, resume is
+   * attempted unconditionally (the pre-check is opt-in, wired in the container).
+   */
+  transcriptExists?: (sessionId: string) => boolean
   /** Open a torn-off window hosting `tabId` (spec §4.2). */
   openTearOff?: (tabId: string, title: string) => void
   /** Status-reporting hook injection (spec §4.4). */
@@ -83,17 +91,33 @@ export function registerSessionIpc(deps: RegisterDeps): void {
 
   function createSession(opts: CreateSessionOpts): { tabId: string; sessionId: string } {
     const tabId = genId()
-    const sessionId = genId()
     const isClaude = opts.command === 'claude'
+    // Resuming CONTINUES the prior conversation under its original id, so we
+    // reuse that id rather than pinning a fresh one. This keeps hook correlation
+    // deterministic (claude emits hooks under the same id we already know) and,
+    // crucially, avoids combining our own --session-id with --resume: the CLI
+    // rejects that pairing unless --fork-session is set, and --session-id (pin
+    // this id) + --fork-session (generate a NEW id) are contradictory.
+    //
+    // Only resume when a transcript for that id actually exists — a pinned id
+    // that was never used has no conversation, so `--resume` would fail with
+    // "No conversation found" and open a dead tab. In that case fall back to a
+    // fresh session so the tab still opens working.
+    const resuming =
+      isClaude &&
+      !!opts.resumeSessionId &&
+      (deps.transcriptExists?.(opts.resumeSessionId) ?? true)
+    const sessionId = resuming ? opts.resumeSessionId! : genId()
     const file = isClaude ? (deps.claudePath ?? 'claude') : shellPath
     const hookArgs =
       isClaude && deps.hooks ? ['--settings', deps.hooks.settingsJson] : []
-    // Resume relaunches the prior conversation under a FRESH pinned id, so
-    // hook correlation stays deterministic for the new process.
-    const resumeArgs =
-      isClaude && opts.resumeSessionId ? ['--resume', opts.resumeSessionId] : []
+    const idArgs = resuming
+      ? ['--resume', opts.resumeSessionId!]
+      : isClaude
+        ? ['--session-id', sessionId]
+        : []
     const args = isClaude
-      ? ['--session-id', sessionId, ...resumeArgs, ...hookArgs, ...(opts.args ?? [])]
+      ? [...idArgs, ...hookArgs, ...(opts.args ?? [])]
       : opts.args ?? []
     pty.create({
       tabId,

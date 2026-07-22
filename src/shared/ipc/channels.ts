@@ -28,6 +28,7 @@ export const CH = {
 
   // Filesystem
   listDir: 'fs:list-dir',
+  listFilesDeep: 'fs:list-deep',
   watchDir: 'fs:watch-dir',
   unwatchDir: 'fs:unwatch-dir',
   fsChange: 'fs:change',
@@ -45,6 +46,7 @@ export const CH = {
   // Claude Code usage (renderer -> main, invoke)
   getUsage: 'usage:get',
   getUsagePanel: 'usage:panel',
+  getSessionInfo: 'usage:session-info',
 
   // GitHub Issues (renderer -> main, invoke)
   getIssues: 'github:get',

@@ -10,6 +10,18 @@ export interface DirEntry {
   kind: 'file' | 'dir' | 'symlink'
 }
 
+/**
+ * A file discovered by the recursive project walk behind the quick-open finder.
+ * `rel` is the path relative to the walked root, always with `/` separators
+ * (so the fuzzy matcher scores segments consistently across platforms); `path`
+ * is the absolute OS path used to open the file.
+ */
+export interface IndexedFile {
+  name: string
+  path: string
+  rel: string
+}
+
 export interface TabState {
   /** App-side identifier. */
   tabId: string
@@ -129,6 +141,14 @@ export interface UsagePanelData {
   sessions: SessionUsage[]
 }
 
+/** The model + reasoning-effort an active session is running, from its transcript. */
+export interface SessionInfo {
+  /** Raw model id, e.g. `claude-opus-4-8` (mapped to a display name by the UI). */
+  model: string
+  /** Reasoning-effort tier (e.g. "high"), or null when the turn recorded none. */
+  effort: string | null
+}
+
 /** Which credential source authorized the GitHub request (or none). */
 export type GithubAuthSource = 'gh' | 'env' | 'oauth' | 'none'
 
@@ -222,6 +242,12 @@ export interface WeftApi {
 
   // Filesystem
   listDir(path: string): Promise<DirEntry[]>
+  /**
+   * Recursively enumerate the files under `root` for the quick-open finder.
+   * Prunes ignored directories (node_modules/.git…), never follows symlinks,
+   * and is bounded in depth and count. Main confines `root` to an open project.
+   */
+  listFilesDeep(root: string): Promise<IndexedFile[]>
   watchDir(path: string): Promise<{ watchId: string }>
   unwatchDir(watchId: string): Promise<void>
   onFsChange(
@@ -253,6 +279,12 @@ export interface WeftApi {
   getUsage(): Promise<UsageSummary>
   /** Full Usage-panel payload: plan limits + weekly totals + recent sessions. */
   getUsagePanel(): Promise<UsagePanelData>
+  /**
+   * The model + reasoning-effort the given session is currently running, read
+   * from its transcript's latest assistant turn. Resolves null when there's no
+   * readable transcript or no turn yet. Never rejects.
+   */
+  getSessionInfo(cwd: string, sessionId: string): Promise<SessionInfo | null>
 
   // GitHub Issues
   /**
@@ -297,6 +329,7 @@ export type WeftBridge = Pick<
   | 'onReDockTab'
   | 'openProject'
   | 'listDir'
+  | 'listFilesDeep'
   | 'watchDir'
   | 'unwatchDir'
   | 'onFsChange'
@@ -310,6 +343,7 @@ export type WeftBridge = Pick<
   | 'saveFile'
   | 'getUsage'
   | 'getUsagePanel'
+  | 'getSessionInfo'
   | 'getIssues'
   | 'githubSignIn'
   | 'githubSignOut'

@@ -5,9 +5,11 @@ import type {
   DiffPayload,
   WorkspaceState,
   OpenProjectResult,
+  IndexedFile,
   LiveSession,
   UsageSummary,
   UsagePanelData,
+  SessionInfo,
   IssuesPanelData,
   GithubSignInResult
 } from '@shared/ipc/api-contract'
@@ -56,6 +58,7 @@ export function createWeftApi(ipc: IpcRendererLike): WeftBridge {
     openProject: (command) =>
       ipc.invoke(CH.openProject, command) as Promise<OpenProjectResult | null>,
     listDir: (path) => ipc.invoke(CH.listDir, path) as Promise<DirEntry[]>,
+    listFilesDeep: (root) => ipc.invoke(CH.listFilesDeep, root) as Promise<IndexedFile[]>,
     watchDir: (path) => ipc.invoke(CH.watchDir, path) as Promise<{ watchId: string }>,
     unwatchDir: (watchId) => ipc.invoke(CH.unwatchDir, watchId) as Promise<void>,
     onFsChange: (cb) => subscribe(CH.fsChange, cb),
@@ -69,6 +72,8 @@ export function createWeftApi(ipc: IpcRendererLike): WeftBridge {
     saveFile: (path, content) => ipc.invoke(CH.saveFile, path, content) as Promise<void>,
     getUsage: () => ipc.invoke(CH.getUsage) as Promise<UsageSummary>,
     getUsagePanel: () => ipc.invoke(CH.getUsagePanel) as Promise<UsagePanelData>,
+    getSessionInfo: (cwd, sessionId) =>
+      ipc.invoke(CH.getSessionInfo, cwd, sessionId) as Promise<SessionInfo | null>,
     getIssues: (cwd) => ipc.invoke(CH.getIssues, cwd) as Promise<IssuesPanelData>,
     githubSignIn: () => ipc.invoke(CH.githubSignIn) as Promise<GithubSignInResult>,
     githubSignOut: () => ipc.invoke(CH.githubSignOut) as Promise<void>,

@@ -18,6 +18,15 @@ test.beforeEach(async () => {
     execFileSync('git', args, { cwd: projectDir })
   }
   writeFileSync(join(projectDir, 'story.txt'), 'line one\nline two\n')
+  // A code file (syntax highlighting) and a markdown file (rendered preview).
+  writeFileSync(
+    join(projectDir, 'sample.ts'),
+    'const greeting: string = "hello weft"\nfunction wave(): void {\n  // a comment\n  console.log(greeting)\n}\n'
+  )
+  writeFileSync(
+    join(projectDir, 'README.md'),
+    '# Weft Readme\n\nA **bold** intro with a [link](https://example.com).\n\n- first item\n- second item\n\n```ts\nconst x: number = 42\n```\n'
+  )
   git('init', '-q')
   git('-c', 'user.email=lab@weft.test', '-c', 'user.name=Weft Lab', 'add', '.')
   git(
@@ -91,4 +100,48 @@ test('Edit mode: type into the file, Ctrl+S writes it to disk, dirty dot clears'
   await expect
     .poll(() => readFileSync(join(projectDir, 'story.txt'), 'utf8'))
     .toContain('EDITED-BY-WEFT')
+})
+
+test('code files are syntax-highlighted (multiple Monaco token colors)', async () => {
+  await page.getByRole('button', { name: 'open project' }).click()
+  await page.getByText('sample.ts').click()
+  await expect(page.getByTestId('viewer-pane')).toBeVisible()
+  await expect(page.getByTestId('viewer-editor')).toContainText('greeting', { timeout: 20_000 })
+
+  // Monaco tokenizes into <span class="mtkN"> per token type. Plaintext yields a
+  // single class; a highlighted language yields several distinct ones.
+  await expect
+    .poll(
+      async () =>
+        page.evaluate(() => {
+          const spans = document.querySelectorAll('.viewer__editor .view-lines span[class^="mtk"]')
+          const classes = new Set<string>()
+          spans.forEach((s) => s.classList.forEach((c) => c.startsWith('mtk') && classes.add(c)))
+          return classes.size
+        }),
+      { timeout: 20_000 }
+    )
+    .toBeGreaterThan(1)
+})
+
+test('markdown files render in the Preview toggle', async () => {
+  await page.getByRole('button', { name: 'open project' }).click()
+  await page.getByText('README.md').click()
+  await expect(page.getByTestId('viewer-pane')).toBeVisible()
+
+  // Opens as raw source (Monaco) by default; the Preview toggle is available.
+  await expect(page.getByTestId('viewer-editor')).toContainText('# Weft Readme', { timeout: 20_000 })
+  await page.getByTestId('viewer-preview-toggle').click()
+
+  // Rendered markup: heading, list, link, and a highlighted code fence.
+  const preview = page.getByTestId('markdown-preview')
+  await expect(preview.locator('h1')).toHaveText('Weft Readme', { timeout: 20_000 })
+  await expect(preview.locator('ul li')).toHaveCount(2)
+  await expect(preview.locator('a')).toHaveAttribute('href', 'https://example.com')
+  await expect(preview.locator('pre code .hljs-keyword').first()).toBeVisible()
+
+  // Back to raw source via View.
+  await page.getByRole('button', { name: 'View', exact: true }).click()
+  await expect(page.getByTestId('markdown-preview')).toHaveCount(0)
+  await expect(page.getByTestId('viewer-editor')).toBeVisible()
 })

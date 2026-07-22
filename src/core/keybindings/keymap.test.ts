@@ -51,6 +51,19 @@ describe('DEFAULT_KEYMAP', () => {
   })
 })
 
+describe('quick-open (Ctrl+Shift+O) vs terminal Ctrl+P', () => {
+  it('binds Ctrl+Shift+O to quick-open', () => {
+    expect(routeKey(k({ ctrlKey: true, shiftKey: true, key: 'o' }))).toEqual({ kind: 'quick-open' })
+  })
+
+  it('leaves plain Ctrl+P as terminal passthrough (never quick-open)', () => {
+    // Regression for the reported conflict: the finder must NOT steal Ctrl+P,
+    // which the shell/Claude Code use for history — it stays a passthrough.
+    expect(routeKey(k({ ctrlKey: true, key: 'p' }))).toEqual({ kind: 'passthrough' })
+    expect(isProtectedChord('ctrl+p')).toBe(true)
+  })
+})
+
 describe('routeKey (data-driven resolution)', () => {
   it('honors a custom keymap instead of the defaults', () => {
     const custom: Keymap = { 'ctrl+t': { kind: 'close-tab' } }

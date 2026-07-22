@@ -96,7 +96,8 @@ test('a session whose process exited shows the error badge and a dead-terminal n
   await page.keyboard.type('into the void')
   await expect(page.getByTestId('tab')).toHaveCount(1)
 
-  // The dead tab still closes cleanly.
+  // The dead tab still closes cleanly (confirm the close-project guard).
   await page.getByRole('button', { name: /^close / }).click()
+  await page.getByTestId('confirm-dialog').getByRole('button', { name: 'Close project' }).click()
   await expect(page.getByTestId('tab')).toHaveCount(0)
 })

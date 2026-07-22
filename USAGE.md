@@ -63,7 +63,8 @@ builds or git alongside your Claude sessions.
 
 - **Rename:** double-click the tab title, type, Enter (Esc cancels).
 - **Reorder:** drag a tab onto another.
-- **Close:** the tab's `×` (or `Ctrl+W`) — this terminates the session.
+- **Close:** the tab's `×` (or `Ctrl+Shift+W`) — this terminates the session, so
+  it asks for confirmation first. (`Ctrl+W` closes the open **file**, not the tab.)
 - **Switch:** click, `Ctrl+Tab` / `Ctrl+Shift+Tab` cycle, `Ctrl+1`–`Ctrl+9` jump.
 - All other keys — including `Ctrl+C`, arrows, `Ctrl+R` — pass through to the terminal.
 
@@ -184,6 +185,11 @@ Weft can be driven entirely from the keyboard — you never need the mouse.
   action Weft can do. Start typing to filter; **↑/↓** move, **Enter** runs,
   **Esc** cancels (and puts your cursor back where it was). Each row shows its
   shortcut, so the palette also teaches you the keys.
+- **`Ctrl+Shift+O`** — **Go to File**: a fuzzy finder over every file in the
+  active project (the equivalent of VS Code's `Ctrl+P`). Start typing part of a
+  filename or path; **↑/↓** move, **Enter** opens it in the viewer, **Esc**
+  cancels. It's `Ctrl+Shift+O` and not `Ctrl+P` because plain `Ctrl+P` belongs to
+  the terminal (shell / Claude Code history) and always passes straight through.
 - **`Ctrl+Shift+/`** (that's **`Ctrl+?`**) — a printable-style **cheat-sheet** of
   every shortcut, grouped by category. **Esc** closes.
 
@@ -213,13 +219,15 @@ So to leave the terminal and get back to the file list, press `Ctrl+Shift+E`
 into it), **←** collapse (or jump to the parent), **Home/End** first/last,
 **Enter** opens a file in the viewer or toggles a folder.
 
-**Tabs:** `Ctrl+T` new, `Ctrl+W` close, `Ctrl+Tab` / `Ctrl+Shift+Tab` cycle,
+**Tabs:** `Ctrl+T` new, `Ctrl+Shift+W` close the project tab (confirms first —
+it ends the session), `Ctrl+Tab` / `Ctrl+Shift+Tab` cycle,
 `Ctrl+1`…`Ctrl+9` jump to tab N, `Ctrl+Shift+PageUp` / `PageDown` move the active
 tab left / right, **`F2`** rename the focused tab (Enter commits, Esc cancels —
 double-clicking the tab title does the same thing).
 
-**Viewer:** switch **View / Edit / Diff vs HEAD**, **Reveal**, or **Close** from
-the palette; **`Ctrl+S`** saves whenever the viewer is focused.
+**Viewer:** `Ctrl+W` closes the open file; switch **View / Edit / Diff vs HEAD**,
+**Reveal**, or **Close** from the palette; **`Ctrl+S`** saves whenever the viewer
+is focused.
 
 **Search the terminal:** `Ctrl+Shift+F` (see *Find in terminal* below).
 
@@ -249,6 +257,14 @@ In the viewer, click **Edit**: the file becomes editable, a ● marks unsaved
 changes, and `Ctrl+S` writes to disk. Saves are only permitted inside open
 project folders and up to 5 MB. The status bar also shows the active
 project's git branch (⎇).
+
+### Model & effort readout
+
+For a Claude Code tab, the status bar shows which **model** and **reasoning
+effort** the session is currently on — e.g. `✦ Opus 4.8 · High` — read from the
+session's own transcript (so it reflects what Claude Code actually used, not a
+guess). It updates as turns happen and when you switch tabs, and is hidden for
+shell tabs or before the session's first turn.
 
 ### Themes
 
