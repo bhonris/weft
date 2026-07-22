@@ -7,6 +7,7 @@ import { buildKeymap } from '@core/keybindings/effective-keymap'
 import { TERMINAL_FONT_FAMILY } from '@core/terminal/font-stack'
 import { useTerminalStore } from '../store/terminal-store'
 import { useSessionStore } from '../store/session-store'
+import { useFontStore } from '../store/font-store'
 import '@xterm/xterm/css/xterm.css'
 
 interface Props {
@@ -28,6 +29,7 @@ interface Props {
 export function TerminalPane({ tabId }: Props): React.ReactElement {
   const hostRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
+  const fitRef = useRef<FitAddon | null>(null)
   const searchRef = useRef<SearchAddon | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -62,7 +64,9 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
       // Thai (and other non-Latin) support depends on this fallback chain —
       // the leading monospace fonts have no Thai glyphs. See font-stack.ts.
       fontFamily: TERMINAL_FONT_FAMILY,
-      fontSize: 13,
+      // Initial size read once from the font store; live changes are applied by
+      // the separate effect below (so a resize never re-mounts the terminal).
+      fontSize: useFontStore.getState().terminalFontSize,
       cursorBlink: true,
       scrollback: 8000, // spec §4.3: cap live scrollback per tab
       theme: { background: '#1e1e1e', foreground: '#e6e6e6' }
@@ -72,6 +76,7 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
     term.loadAddon(fit)
     term.loadAddon(search)
     termRef.current = term
+    fitRef.current = fit
     searchRef.current = search
     // Single source of truth: the pure router. terminal-search opens the search
     // bar (and is swallowed); passthrough reaches the PTY; any other reserved
@@ -133,10 +138,25 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
       keyListener.dispose()
       void window.api.detachSession(tabId) // leaves the PTY running
       termRef.current = null
+      fitRef.current = null
       searchRef.current = null
       term.dispose()
     }
   }, [tabId])
+
+  // Apply a live terminal font-size change without re-mounting the terminal:
+  // set the option, then re-fit and tell the PTY the new cols/rows so wrapping
+  // stays correct. Guarded so it no-ops before the terminal mounts.
+  const terminalFontSize = useFontStore((s) => s.terminalFontSize)
+  useEffect(() => {
+    const term = termRef.current
+    const fit = fitRef.current
+    if (!term || !fit) return
+    if (term.options.fontSize === terminalFontSize) return
+    term.options.fontSize = terminalFontSize
+    fit.fit()
+    window.api.resizeSession(tabId, term.cols, term.rows)
+  }, [terminalFontSize, tabId])
 
   const closeSearch = (): void => {
     setSearchOpen(false)

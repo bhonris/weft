@@ -6,6 +6,7 @@ import { useDockStore } from './store/dock-store'
 import { useUsageStore } from './store/usage-store'
 import { useIssuesStore } from './store/issues-store'
 import { useActivityStore } from './store/activity-store'
+import { useFontStore } from './store/font-store'
 import { formatUsageLabel, formatUsageTooltip } from '@core/usage/summary'
 import { formatUtilization, formatResetIn } from '@core/usage/plan-limits'
 import { nextDockPosition, dockResizeDelta } from '@core/workspace/dock'
@@ -262,6 +263,11 @@ export function App(): React.ReactElement {
   const dockPosition = useDockStore((s) => s.position)
   const dockSize = useDockStore((s) => s.size)
   const cliMaximized = useDockStore((s) => s.maximized)
+  // Text sizing (see font-store). Terminal/editor sizes are applied live inside
+  // their panes; App reads them for the status-bar readout and owns the uiZoom.
+  const terminalFontSize = useFontStore((s) => s.terminalFontSize)
+  const editorFontSize = useFontStore((s) => s.editorFontSize)
+  const uiZoom = useFontStore((s) => s.uiZoom)
   // "Maximize CLI" hides the editor pane without closing the file, so the CLI
   // gets the full split area. The file stays open; toggling off restores it.
   const showEditor = hasViewerFile && !cliMaximized
@@ -481,6 +487,24 @@ export function App(): React.ReactElement {
         // Focus mode: full-pane CLI without closing the open file.
         useDockStore.getState().toggleMaximized()
         break
+      case 'view.terminalFontIn':
+        useFontStore.getState().adjustTerminalFontSize(1)
+        break
+      case 'view.terminalFontOut':
+        useFontStore.getState().adjustTerminalFontSize(-1)
+        break
+      case 'view.terminalFontReset':
+        useFontStore.getState().adjustTerminalFontSize(0)
+        break
+      case 'view.zoomIn':
+        useFontStore.getState().adjustZoom(1)
+        break
+      case 'view.zoomOut':
+        useFontStore.getState().adjustZoom(-1)
+        break
+      case 'view.zoomReset':
+        useFontStore.getState().adjustZoom(0)
+        break
       default:
         break
     }
@@ -506,6 +530,14 @@ export function App(): React.ReactElement {
   useEffect(() => {
     document.documentElement.dataset['theme'] = theme
   }, [theme])
+
+  // Apply the whole-window zoom. CSS `zoom` scales the entire layout in Chromium
+  // (Electron); xterm and Monaco re-fit through their own ResizeObservers, so the
+  // terminal/editor stay correctly measured at any zoom. Multiplies on top of the
+  // per-surface font sizes.
+  useEffect(() => {
+    document.documentElement.style.zoom = String(uiZoom)
+  }, [uiZoom])
 
   // The editor tabs are per project: point the viewer at the active project's
   // file set whenever the active tab changes, so switching/closing projects never
@@ -633,6 +665,11 @@ export function App(): React.ReactElement {
         useSessionStore.getState().setKeymapOverrides(saved.keymapOverrides)
         useDockStore.getState().restore(saved.dock)
         useActivityStore.getState().setActive(saved.activePanel)
+        useFontStore.getState().restore({
+          terminalFontSize: saved.terminalFontSize,
+          editorFontSize: saved.editorFontSize,
+          uiZoom: saved.uiZoom
+        })
         const restored = await restoreWorkspace(window.api, saved)
         if (disposed) return
         const add = useSessionStore.getState().addTab
@@ -644,6 +681,7 @@ export function App(): React.ReactElement {
     const persist = (): void => {
       const s = useSessionStore.getState()
       const dock = useDockStore.getState()
+      const font = useFontStore.getState()
       void window.api.saveWorkspace(
         buildWorkspaceState(
           s.tabs,
@@ -652,7 +690,12 @@ export function App(): React.ReactElement {
           s.notificationsEnabled,
           s.keymapOverrides,
           { position: dock.position, size: dock.size },
-          useActivityStore.getState().active
+          useActivityStore.getState().active,
+          {
+            terminalFontSize: font.terminalFontSize,
+            editorFontSize: font.editorFontSize,
+            uiZoom: font.uiZoom
+          }
         )
       )
     }
@@ -673,11 +716,21 @@ export function App(): React.ReactElement {
     const unsubActivity = useActivityStore.subscribe((state, prev) => {
       if (state.active !== prev.active) persist()
     })
+    const unsubFont = useFontStore.subscribe((state, prev) => {
+      if (
+        state.terminalFontSize !== prev.terminalFontSize ||
+        state.editorFontSize !== prev.editorFontSize ||
+        state.uiZoom !== prev.uiZoom
+      ) {
+        persist()
+      }
+    })
     return () => {
       disposed = true
       unsubSession()
       unsubDock()
       unsubActivity()
+      unsubFont()
     }
   }, [])
 
@@ -881,6 +934,82 @@ export function App(): React.ReactElement {
               {cliMaximized ? '❐ show editor' : '⛶ max CLI'}
             </button>
           )}
+          <div
+            className="status-bar__fontctl"
+            role="group"
+            aria-label="text size"
+            data-testid="font-controls"
+          >
+            <span
+              className="status-bar__fontgroup"
+              title="Terminal font size (Ctrl+= / Ctrl+- / Ctrl+0)"
+            >
+              <span aria-hidden="true">⌨</span>
+              <button
+                type="button"
+                aria-label="decrease terminal font size"
+                onClick={() => useFontStore.getState().adjustTerminalFontSize(-1)}
+              >
+                −
+              </button>
+              <span className="status-bar__fontval" data-testid="terminal-font-size">
+                {terminalFontSize}
+              </span>
+              <button
+                type="button"
+                aria-label="increase terminal font size"
+                onClick={() => useFontStore.getState().adjustTerminalFontSize(1)}
+              >
+                +
+              </button>
+            </span>
+            <span className="status-bar__fontgroup" title="Editor font size">
+              <span aria-hidden="true">✎</span>
+              <button
+                type="button"
+                aria-label="decrease editor font size"
+                onClick={() => useFontStore.getState().adjustEditorFontSize(-1)}
+              >
+                −
+              </button>
+              <span className="status-bar__fontval" data-testid="editor-font-size">
+                {editorFontSize}
+              </span>
+              <button
+                type="button"
+                aria-label="increase editor font size"
+                onClick={() => useFontStore.getState().adjustEditorFontSize(1)}
+              >
+                +
+              </button>
+            </span>
+            <span className="status-bar__fontgroup" title="Window zoom (Command Palette)">
+              <span aria-hidden="true">⛶</span>
+              <button
+                type="button"
+                aria-label="zoom out"
+                onClick={() => useFontStore.getState().adjustZoom(-1)}
+              >
+                −
+              </button>
+              <button
+                type="button"
+                className="status-bar__fontval"
+                aria-label={`reset zoom (currently ${Math.round(uiZoom * 100)}%)`}
+                data-testid="ui-zoom"
+                onClick={() => useFontStore.getState().adjustZoom(0)}
+              >
+                {Math.round(uiZoom * 100)}%
+              </button>
+              <button
+                type="button"
+                aria-label="zoom in"
+                onClick={() => useFontStore.getState().adjustZoom(1)}
+              >
+                +
+              </button>
+            </span>
+          </div>
           <button
             type="button"
             className="status-bar__theme"

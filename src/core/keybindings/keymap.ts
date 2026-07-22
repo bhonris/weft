@@ -16,7 +16,12 @@ function normalizeKey(key: string): string {
   const k = key.toLowerCase()
   // Shift+/ yields '?' on US layouts; treat both as the same physical key so a
   // single `ctrl+shift+/` binding fires for either.
-  return k === '?' ? '/' : k
+  if (k === '?') return '/'
+  // The zoom-in key is the same physical key whether or not Shift is held: '='
+  // unshifted, '+' shifted (and numpad '+'). Fold '+' → '=' so a user pressing
+  // Ctrl+Plus (which is Ctrl+Shift+=) hits the same base as Ctrl+=.
+  if (k === '+') return '='
+  return k
 }
 
 const BARE_MODIFIERS = new Set(['control', 'shift', 'alt', 'meta', ''])
@@ -53,7 +58,16 @@ export const DEFAULT_KEYMAP: Keymap = {
   'ctrl+shift+f6': { kind: 'focus-cycle', dir: -1 },
   'ctrl+shift+p': { kind: 'command-palette' },
   'ctrl+shift+/': { kind: 'help-overlay' },
-  'ctrl+shift+f': { kind: 'terminal-search' }
+  'ctrl+shift+f': { kind: 'terminal-search' },
+  // Terminal font size. These are plain-Ctrl and therefore `isProtectedChord` —
+  // fixed built-ins, not user-remappable, like Ctrl+1..9. Ctrl+0 is free (the
+  // positional tab-jump built-in only claims Ctrl+1..9). Whole-window zoom keeps
+  // its palette commands (view.zoom*) but no longer owns these chords.
+  'ctrl+=': { kind: 'terminal-font', dir: 1 },
+  // Ctrl+Plus reaches here as Ctrl+Shift+= ('+' is folded to '=' by normalizeKey).
+  'ctrl+shift+=': { kind: 'terminal-font', dir: 1 },
+  'ctrl+-': { kind: 'terminal-font', dir: -1 },
+  'ctrl+0': { kind: 'terminal-font', dir: 0 }
 }
 
 /** Plain-Ctrl chords Weft is allowed to own (everything else plain-Ctrl belongs

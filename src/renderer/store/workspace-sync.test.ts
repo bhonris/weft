@@ -15,7 +15,7 @@ const tab = (id: string, over: Partial<Tab> = {}): Tab => ({
 describe('buildWorkspaceState', () => {
   it('serializes tabs, order, and defaults at the current version', () => {
     const ws = buildWorkspaceState([tab('a'), tab('b', { command: 'shell' })])
-    expect(ws.version).toBe(6)
+    expect(ws.version).toBe(7)
     expect(ws.tabs).toEqual([
       {
         tabId: 'a',
@@ -45,6 +45,26 @@ describe('buildWorkspaceState', () => {
     expect(ws.dock).toEqual({ position: 'bottom', size: 0.4 })
     // The explorer is the default active sidebar panel.
     expect(ws.activePanel).toBe('explorer')
+    // Text sizing defaults through when the caller doesn't specify.
+    expect(ws.terminalFontSize).toBe(15)
+    expect(ws.editorFontSize).toBe(14)
+    expect(ws.uiZoom).toBe(1)
+  })
+
+  it('serializes an explicit font override', () => {
+    const ws = buildWorkspaceState(
+      [],
+      'cyberpunk',
+      false,
+      true,
+      {},
+      { position: 'bottom', size: 0.4 },
+      'explorer',
+      { terminalFontSize: 18, editorFontSize: 20, uiZoom: 1.5 }
+    )
+    expect(ws.terminalFontSize).toBe(18)
+    expect(ws.editorFontSize).toBe(20)
+    expect(ws.uiZoom).toBe(1.5)
   })
 
   it('persists an explicit theme override', () => {
