@@ -300,10 +300,10 @@ export function App(): React.ReactElement {
   const dockPosition = useDockStore((s) => s.position)
   const dockSize = useDockStore((s) => s.size)
   const cliMaximized = useDockStore((s) => s.maximized)
-  // Text sizing (see font-store). Terminal/editor sizes are applied live inside
-  // their panes; App reads them for the status-bar readout and owns the uiZoom.
+  // Text sizing (see font-store). The terminal size is applied live inside its
+  // pane; App reads it for the status-bar readout and owns the uiZoom. The
+  // editor font size is still persisted, just no longer shown in the status bar.
   const terminalFontSize = useFontStore((s) => s.terminalFontSize)
-  const editorFontSize = useFontStore((s) => s.editorFontSize)
   const uiZoom = useFontStore((s) => s.uiZoom)
   // "Maximize CLI" hides the editor pane without closing the file, so the CLI
   // gets the full split area. The file stays open; toggling off restores it.
@@ -1036,26 +1036,6 @@ export function App(): React.ReactElement {
                 type="button"
                 aria-label="increase terminal font size"
                 onClick={() => useFontStore.getState().adjustTerminalFontSize(1)}
-              >
-                +
-              </button>
-            </span>
-            <span className="status-bar__fontgroup" title="Editor font size">
-              <span aria-hidden="true">✎</span>
-              <button
-                type="button"
-                aria-label="decrease editor font size"
-                onClick={() => useFontStore.getState().adjustEditorFontSize(-1)}
-              >
-                −
-              </button>
-              <span className="status-bar__fontval" data-testid="editor-font-size">
-                {editorFontSize}
-              </span>
-              <button
-                type="button"
-                aria-label="increase editor font size"
-                onClick={() => useFontStore.getState().adjustEditorFontSize(1)}
               >
                 +
               </button>
