@@ -26,6 +26,7 @@ import { UsageHistoryService } from './services/usage-history-service'
 import { PlanLimitsService } from './services/plan-limits-service'
 import { GithubService, type GithubFetchLike } from './services/github-service'
 import { GithubAuthService } from './services/github-auth-service'
+import { resolveGithubClientId } from '@core/github/client-id'
 import { registerSessionIpc } from './ipc/register'
 import { registerFsIpc } from './ipc/register-fs'
 import { registerWorkspaceIpc } from './ipc/register-workspace'
@@ -305,9 +306,11 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
     now: () => Date.now(),
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     // A registered GitHub OAuth App client id enables in-app sign-in. Public by
-    // design (device flow uses no client secret). Until provided, sign-in reports
-    // "not configured" and the gh/env/unauthenticated paths still work.
-    clientId: process.env['WEFT_GITHUB_CLIENT_ID'] ?? null
+    // design (device flow uses no client secret). The WEFT_GITHUB_CLIENT_ID env
+    // var overrides the shipped DEFAULT_GITHUB_CLIENT_ID constant; when neither is
+    // set, sign-in reports "not configured" and the gh/env/unauthenticated paths
+    // still work. See src/core/github/client-id.ts to drop in the id.
+    clientId: resolveGithubClientId((name) => process.env[name])
   })
   const githubService = new GithubService({
     fetch: githubFetch,

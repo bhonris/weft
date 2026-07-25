@@ -1,13 +1,17 @@
 # Feature: GitHub Issues sidebar panel
 
-Status: **implemented — blocked on OAuth client ID for sign-in** · Owner: (weft) · Created 2026-07-20
+Status: **implemented + E2E-tested — one manual OAuth App registration remains for sign-in** · Owner: (weft) · Created 2026-07-20 · Updated 2026-07-25
 
-> Built, typechecked, and unit-tested (coverage gate green at 98.8%/96.9%). The
-> `gh` / `GITHUB_TOKEN` / unauthenticated paths and all read/filter features are
-> fully functional. The device-flow **"Sign in with GitHub"** button reports "not
-> configured" until a GitHub OAuth App client ID is supplied via
-> `WEFT_GITHUB_CLIENT_ID` (see Open questions). Not yet moved to
-> `documents/completed/` for that reason.
+> Built, typechecked, unit-tested (coverage gate green at 98.95%/96.5%), and now
+> E2E-covered (`e2e/github-issues.spec.ts`, 2 tests green). The `gh` /
+> `GITHUB_TOKEN` / unauthenticated paths and all read/filter features are fully
+> functional. A build-time client-ID fallback now exists
+> (`src/core/github/client-id.ts`, `resolveGithubClientId`: env →
+> `DEFAULT_GITHUB_CLIENT_ID` constant → null). The device-flow **"Sign in with
+> GitHub"** button reports "not configured" only until someone registers a GitHub
+> OAuth App (Enable Device Flow) and drops its public Client ID into that constant
+> (or sets `WEFT_GITHUB_CLIENT_ID`). That's a one-line manual step, not a code
+> blocker; move to `documents/completed/` once the id is in.
 
 ## Feature specification
 
@@ -248,8 +252,11 @@ the default panel — the existing corruption-fallback path handles that safely.
 
 ## Open questions
 
-- [ ] **Client ID**: which GitHub OAuth App client ID ships as the default? (Needs
-  a registered app; until then device-flow sign-in is "not configured".)
+- [x] **Client ID**: resolved on the code side — a build-time
+  `DEFAULT_GITHUB_CLIENT_ID` constant in `src/core/github/client-id.ts` (overridable
+  by `WEFT_GITHUB_CLIENT_ID`) now feeds `clientId`. Only the value is outstanding:
+  register a GitHub OAuth App (Enable Device Flow) and paste its public Client ID
+  into that constant. Until then device-flow sign-in stays "not configured".
 - [ ] Token-source precedence: `gh` before stored OAuth (current choice) vs. the
   reverse? Chosen `gh → env → stored → none` to honour an existing gh login.
 - [ ] Should GitHub Enterprise (custom host) be supported later? (Out of scope now.)
@@ -274,8 +281,13 @@ the default panel — the existing corruption-fallback path handles that safely.
 - [x] renderer: `App.tsx` render + poll + auth subscribe
 - [x] renderer: `styles.css` `.issues-*`
 - [x] persistence: widen `SidebarPanel` enum in `schema.ts`
-- [x] typecheck clean; unit suite + coverage gate green (98.8% / 96.9%)
-- [ ] **blocked:** register a GitHub OAuth App → set `WEFT_GITHUB_CLIENT_ID` to
-      enable device-flow sign-in
-- [ ] E2E: add a Playwright case for the Issues tab (deferred — DOM/UI per project
-      convention; unit-tested pieces are covered)
+- [x] typecheck clean; unit suite + coverage gate green (98.95% / 96.5%)
+- [x] core: `github/client-id.ts` — build-time constant fallback +
+      `resolveGithubClientId` (env → constant → null) (+test); wired in
+      `container.ts`
+- [x] E2E: `e2e/github-issues.spec.ts` — tab appears, not-a-repo empty state,
+      active-panel persists across restart (2 tests green)
+- [ ] **one manual step remains:** register a GitHub OAuth App (Enable Device
+      Flow) and paste its public Client ID into `DEFAULT_GITHUB_CLIENT_ID` in
+      `src/core/github/client-id.ts` (or set `WEFT_GITHUB_CLIENT_ID`). Until then
+      the gh/env/unauthenticated paths work and sign-in reports "not configured".
