@@ -58,16 +58,19 @@ export function formatUsd(n: number): string {
   return `$${n.toFixed(2)}`
 }
 
-/** The status-bar label, e.g. `$0.42 · 128k tokens`. */
+/**
+ * The status-bar label, e.g. `128k tokens`. Cost is intentionally omitted — on a
+ * subscription plan a dollar estimate isn't meaningful; token volume is.
+ */
 export function formatUsageLabel(summary: UsageSummary): string {
-  return `${formatUsd(summary.costUsd)} · ${formatTokens(summary.totalTokens)} tokens`
+  return `${formatTokens(summary.totalTokens)} tokens`
 }
 
-/** The hover tooltip breakdown. */
+/** The hover tooltip breakdown (subscription plan — no dollar estimate). */
 export function formatUsageTooltip(summary: UsageSummary): string {
   const sessions = `${summary.sessionCount} Claude session${summary.sessionCount === 1 ? '' : 's'}`
   return (
-    `Claude Code usage across ${sessions} — estimated ${formatUsd(summary.costUsd)}\n` +
+    `Claude Code usage across ${sessions}\n` +
     `${formatTokens(summary.inputTokens)} in · ${formatTokens(summary.outputTokens)} out · ` +
     `${formatTokens(summary.cacheReadTokens)} cache read · ${formatTokens(summary.cacheWriteTokens)} cache write`
   )

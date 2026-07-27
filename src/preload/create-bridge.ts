@@ -11,7 +11,10 @@ import type {
   UsagePanelData,
   SessionInfo,
   IssuesPanelData,
-  GithubSignInResult
+  GithubSignInResult,
+  GitRepoStatus,
+  GitDiffSide,
+  SpreadsheetData
 } from '@shared/ipc/api-contract'
 
 /** The ipcRenderer surface the bridge needs — satisfied by electron and a fake. */
@@ -67,8 +70,19 @@ export function createWeftApi(ipc: IpcRendererLike): WeftBridge {
     loadWorkspace: () => ipc.invoke(CH.loadWorkspace) as Promise<WorkspaceState>,
     saveWorkspace: (state) => ipc.invoke(CH.saveWorkspace, state) as Promise<void>,
     readFileText: (path) => ipc.invoke(CH.readFileText, path) as Promise<string>,
+    readSpreadsheet: (path) => ipc.invoke(CH.readSpreadsheet, path) as Promise<SpreadsheetData>,
     getDiff: (path) => ipc.invoke(CH.getDiff, path) as Promise<DiffPayload>,
     getGitBranch: (cwd) => ipc.invoke(CH.getGitBranch, cwd) as Promise<string | null>,
+    getGitStatus: (cwd) => ipc.invoke(CH.getGitStatus, cwd) as Promise<GitRepoStatus>,
+    stageFiles: (cwd, paths) => ipc.invoke(CH.stageFiles, cwd, paths) as Promise<void>,
+    unstageFiles: (cwd, paths) => ipc.invoke(CH.unstageFiles, cwd, paths) as Promise<void>,
+    discardChanges: (cwd, paths, untracked) =>
+      ipc.invoke(CH.discardChanges, cwd, paths, untracked) as Promise<void>,
+    gitCommit: (cwd, message) => ipc.invoke(CH.gitCommit, cwd, message) as Promise<void>,
+    gitPush: (cwd) => ipc.invoke(CH.gitPush, cwd) as Promise<void>,
+    gitPull: (cwd) => ipc.invoke(CH.gitPull, cwd) as Promise<void>,
+    getGitFileDiff: (path, side: GitDiffSide) =>
+      ipc.invoke(CH.getGitFileDiff, path, side) as Promise<DiffPayload>,
     saveFile: (path, content) => ipc.invoke(CH.saveFile, path, content) as Promise<void>,
     getUsage: () => ipc.invoke(CH.getUsage) as Promise<UsageSummary>,
     getUsagePanel: () => ipc.invoke(CH.getUsagePanel) as Promise<UsagePanelData>,

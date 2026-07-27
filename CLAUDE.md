@@ -10,10 +10,11 @@ layout).
 A cross-platform (Windows-first) Electron desktop app: a VS Code-style shell
 around **browser-style tabs of Claude Code CLI sessions** — one tab per project,
 each a live interactive `claude` process in its own pseudo-terminal
-(node-pty + xterm.js). Adds a file explorer, a Monaco read-only + diff + edit
-viewer (syntax-highlighted via `basic-languages`, theme-following, with a
-rendered Markdown preview), tear-off tabs into separate OS windows, workspace
-persistence, and the
+(node-pty + xterm.js). Adds a VS Code-style activity bar with swappable sidebar
+panels — **Explorer**, **Source Control** (git), **GitHub Issues**, **Usage** —
+a format-aware Monaco read-only + diff + edit viewer (syntax-highlighted via
+`basic-languages`, theme-following, with a rendered Markdown preview),
+tear-off tabs into separate OS windows, workspace persistence, and the
 defining differentiator: **per-tab Claude session status (working / waiting /
 done / error) driven by Claude Code's own lifecycle hooks — not output
 scraping** — plus app-owned OS notifications that focus the right tab.
@@ -28,11 +29,14 @@ Dependencies point inward only.
 - `src/core/` — **pure, framework-free logic**, fully unit-tested via injected
   fakes: status mapping (`status/status-mapper.ts`), correlation, persistence
   schema/migrations/validation, frame parser, ring buffer, throttles, keybinding
-  router, fs helpers. No Electron, no `node:*` side effects.
+  router, fs helpers, git-status parsing (`scm/porcelain.ts`), viewer kind/URL/
+  delimited/workbook logic (`viewer/*`), GitHub parsers (`github/*`). No Electron,
+  no `node:*` side effects.
 - `src/main/` — thin Electron adapters over core: `services/` (pty-manager,
-  status-server, watch/diff/git/fs/notification), `ipc/` (channel registration),
-  `platform/` (named-pipe vs UDS seam), `container.ts` (DI). **The PTY and all
-  authoritative session state live here.**
+  status-server, watch/diff/git/fs/notification, spreadsheet, file-protocol,
+  github/github-auth), `ipc/` (channel registration), `platform/` (named-pipe vs
+  UDS seam), `container.ts` (DI). **The PTY and all authoritative session state
+  live here.**
 - `src/preload/` — the typed `window.api` bridge (a `Pick` of `WeftApi`, so it
   can't drift from the contract). `contextIsolation` is on.
 - `src/renderer/` — React 19 + zustand view. **A view over main's truth** — it
@@ -62,6 +66,55 @@ Path aliases (tsconfig + vitest): `@shared/*` → `src/shared/*`,
   `prefers-reduced-motion`.
 - **No WebGL xterm renderer** — it removes terminal text from the DOM, breaking
   a11y and all text-based E2E. DOM renderer only (see STEINER_LOG leap 25).
+- **The viewer is format-aware** (`documents/rich-file-viewer.md`).
+  `core/viewer/file-kind.ts` maps a filename to a `ViewerKind`
+  (`text|image|pdf|spreadsheet|csv|audio|video|binary`); unknown → `text`, so
+  text viewing never regresses. `ViewerPane` renders text in Monaco and every
+  other kind on its own surface (`ImageView`/`PdfView`/`MediaView`/`CsvView`/
+  `SpreadsheetView`/`UnsupportedView`, the latter offering "open with default
+  app"/"reveal" instead of dumping bytes). Image/PDF/audio/video bytes stream
+  from the **`weft-file://` custom scheme** (registered privileged in `index.ts`;
+  request logic is the pure, unit-tested `handleFileRequest` in
+  `services/file-protocol.ts`, wired via `protocol.handle` in `container.ts`) —
+  **path-guarded to open project roots** (`isInsideAnyRoot`), never `bypassCSP`;
+  the CSP in `index.html` allows it for `img/media/frame/object-src`. URL
+  build/decode lives in `core/viewer/file-url.ts`. **Parsing splits by kind:**
+  spreadsheets (xlsx/xls/xlsm/xlsb) parse in **main** (`SpreadsheetService` +
+  `core/viewer/workbook.ts` caps, 25 MB guard) over the `readSpreadsheet` IPC
+  channel — SheetJS is **optional, dynamically imported only in `container.ts`**
+  (absent → `readSpreadsheet` rejects with an actionable message; every other
+  kind still works); CSV/TSV parse in the **renderer** (pure
+  `core/viewer/delimited.ts` over the existing `readFileText`). Never route
+  binary bytes through Monaco.
+- **Source control is shelled-out git, guarded per root**
+  (`documents/completed/source-control-panel.md`). The `scm` sidebar panel shows
+  the active tab's working-tree changes (staged/unstaged/untracked/conflict
+  groups, commit, push/pull, discard). All git runs through `GitService` over an
+  **injected `ExecFn`** — no libgit2/isomorphic-git. `git status --porcelain=v2
+  -z` parsing lives only in the pure `core/scm/porcelain.ts` (`parseStatus`,
+  `changeCount`); `main/ipc/register-scm.ts` owns the `scm:*` channels.
+  **Two error contracts by design:** reads degrade (a non-repo cwd resolves
+  `{ isRepo: false }`, never rejects) so the panel renders an empty state;
+  **mutations reject with git's stderr** and every mutating channel confines
+  `cwd` and each affected path to an open project root (`isInsideAnyRoot` /
+  `isPathInside`, same guard as `saveFile`). Per-side diffs come from
+  `DiffService.gitFileDiff(path, side)` (`unstaged`→index-vs-working,
+  `staged`→HEAD-vs-index, `untracked`→empty-vs-disk). Status is polled while the
+  panel is active plus an eager refresh after each mutation (no git watcher);
+  single-root only. **Discard is irreversible — gate it behind `ConfirmDialog`.**
+- **GitHub Issues + device-flow OAuth keep the token in main only**
+  (`documents/completed/github-issues-panel.md`). The `issues` panel lists the
+  active repo's issues (repo detected from the `origin` remote). Sign-in runs the
+  **entire device flow in the main process** (`GithubAuthService`): it opens
+  github.com via `shell.openExternal`, background-polls for the token, persists
+  it in electron-store (`githubToken`), and pushes a `github:auth` event to the
+  renderer — **the token is never sent over IPC**. Auth resolves `gh auth token`
+  → `GITHUB_TOKEN` env → stored OAuth token → unauthenticated. The OAuth **client
+  id is public and committed** (`core/github/client-id.ts`; device grant carries
+  no secret, so shipping it is expected) and overridable via
+  `WEFT_GITHUB_CLIENT_ID`. All GitHub JSON goes through defensive pure parsers
+  (`core/github/*`) that skip malformed entries and never throw; `openExternal`
+  is restricted to `http(s)` via `isSafeExternalUrl`.
 - **Never touch the user's `~/.claude/settings.json`** — hooks are registered
   per-session via inline `--settings` on the `claude` launch.
 

@@ -62,7 +62,44 @@ export interface WorkspaceState {
 }
 
 /** The sidebar panels selectable from the activity bar. */
-export type SidebarPanel = 'explorer' | 'usage' | 'issues'
+export type SidebarPanel = 'explorer' | 'usage' | 'issues' | 'scm'
+
+/** Which change group a working-tree change belongs to (mirrors VS Code's SCM groups). */
+export type ScmGroup = 'staged' | 'unstaged' | 'untracked' | 'conflict'
+
+/** Single-letter git status of a change (porcelain XY letters + untracked `?`). */
+export type GitFileStatus = 'M' | 'A' | 'D' | 'R' | 'C' | 'T' | 'U' | '?'
+
+/** One changed file in the Source Control panel. A file changed in both the
+ *  index and the worktree appears twice — once `staged`, once `unstaged`. */
+export interface GitFileChange {
+  /** Absolute OS path (used to open its diff). */
+  path: string
+  /** Repo-relative path (forward slashes), the stable identity for git commands. */
+  rel: string
+  /** Rename/copy source (repo-relative), when `status` is `R`/`C`. */
+  origRel?: string
+  group: ScmGroup
+  status: GitFileStatus
+}
+
+/** Everything the Source Control panel renders for the active repo. */
+export interface GitRepoStatus {
+  /** False when the cwd is null or not inside a git repo. */
+  isRepo: boolean
+  /** Branch name, `(detached)`, or null. */
+  branch: string | null
+  /** Upstream ref (e.g. `origin/main`), or null when none is set. */
+  upstream: string | null
+  ahead: number
+  behind: number
+  changes: GitFileChange[]
+  /** Human-readable error (e.g. a failed refresh), or null. */
+  error: string | null
+}
+
+/** Which baseline/target pair a change's diff compares (see DiffService.gitFileDiff). */
+export type GitDiffSide = 'staged' | 'unstaged' | 'untracked'
 
 export interface CreateSessionOpts {
   cwd: string
@@ -75,6 +112,19 @@ export interface CreateSessionOpts {
 export interface DiffPayload {
   original: string
   modified: string
+}
+
+/** One worksheet from a parsed workbook: a name and a grid of string cells. */
+export interface Sheet {
+  name: string
+  rows: string[][]
+}
+
+/** A parsed spreadsheet returned by {@link WeftApi.readSpreadsheet}. */
+export interface SpreadsheetData {
+  sheets: Sheet[]
+  /** True when row/column/sheet caps were hit (the table is a prefix). */
+  truncated: boolean
 }
 
 export interface LiveSession {
@@ -256,11 +306,46 @@ export interface WeftApi {
   revealInOs(path: string): Promise<void>
   openWithDefault(path: string): Promise<void>
   readFileText(path: string): Promise<string>
+  /**
+   * Parse a spreadsheet (xlsx/xlsm/xlsb/xls) into structured JSON for the table
+   * viewer. Rejects for paths outside an open project root, oversize workbooks,
+   * or when spreadsheet support isn't installed.
+   */
+  readSpreadsheet(path: string): Promise<SpreadsheetData>
   getDiff(path: string): Promise<DiffPayload>
   /** Save edited text to a file INSIDE an open project root (viewer Edit mode). */
   saveFile(path: string, content: string): Promise<void>
   /** Current git branch for a directory, or null when not a repo. */
   getGitBranch(cwd: string): Promise<string | null>
+
+  // Source control (git working-tree changes for the SCM sidebar panel)
+  /**
+   * Full working-tree status for the repo at `cwd`. Resolves `{ isRepo: false }`
+   * (not a rejection) when `cwd` is null or not a git repo, so the panel can
+   * render an empty state.
+   */
+  getGitStatus(cwd: string | null): Promise<GitRepoStatus>
+  /** Stage the given paths (`git add`). Rejects with git's stderr on failure. */
+  stageFiles(cwd: string, paths: string[]): Promise<void>
+  /** Unstage the given paths (`git reset HEAD`). Rejects with stderr on failure. */
+  unstageFiles(cwd: string, paths: string[]): Promise<void>
+  /**
+   * Discard changes to the given paths — irreversible. `untracked: true` deletes
+   * them (`git clean`); otherwise reverts them (`git checkout --`). Rejects with
+   * stderr on failure. (Callers confirm first; see ConfirmDialog.)
+   */
+  discardChanges(cwd: string, paths: string[], untracked: boolean): Promise<void>
+  /** Commit the staged changes with `message`. Rejects with stderr on failure. */
+  gitCommit(cwd: string, message: string): Promise<void>
+  /** Push the current branch (`git push`). Rejects with stderr on failure. */
+  gitPush(cwd: string): Promise<void>
+  /** Pull the current branch (`git pull`). Rejects with stderr on failure. */
+  gitPull(cwd: string): Promise<void>
+  /**
+   * Diff payload for one changed file, per side: `unstaged` → working-tree vs
+   * index, `staged` → index vs HEAD, `untracked` → empty baseline vs on-disk.
+   */
+  getGitFileDiff(path: string, side: GitDiffSide): Promise<DiffPayload>
 
   // App actions
   /**
@@ -338,8 +423,17 @@ export type WeftBridge = Pick<
   | 'loadWorkspace'
   | 'saveWorkspace'
   | 'readFileText'
+  | 'readSpreadsheet'
   | 'getDiff'
   | 'getGitBranch'
+  | 'getGitStatus'
+  | 'stageFiles'
+  | 'unstageFiles'
+  | 'discardChanges'
+  | 'gitCommit'
+  | 'gitPush'
+  | 'gitPull'
+  | 'getGitFileDiff'
   | 'saveFile'
   | 'getUsage'
   | 'getUsagePanel'

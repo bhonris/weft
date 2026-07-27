@@ -77,14 +77,16 @@ describe('formatUsd', () => {
 })
 
 describe('formatUsageLabel / formatUsageTooltip', () => {
-  it('renders the compact label', () => {
+  it('renders the compact label without a dollar cost', () => {
     const s = { ...emptySummary(), costUsd: 0.42, totalTokens: 128_000 }
-    expect(formatUsageLabel(s)).toBe('$0.42 · 128k tokens')
+    // Subscription plan: cost is intentionally omitted, only token volume shown.
+    expect(formatUsageLabel(s)).toBe('128k tokens')
+    expect(formatUsageLabel(s)).not.toContain('$')
   })
 
-  it('renders a breakdown tooltip and pluralizes sessions', () => {
+  it('renders a breakdown tooltip, pluralizes sessions, and omits cost', () => {
     const one = formatUsageTooltip({ ...emptySummary(), sessionCount: 1 })
-    expect(one).toContain('1 Claude session ')
+    expect(one).toContain('1 Claude session\n')
     const many = formatUsageTooltip({
       ...emptySummary(),
       sessionCount: 3,
@@ -96,5 +98,6 @@ describe('formatUsageLabel / formatUsageTooltip', () => {
     })
     expect(many).toContain('3 Claude sessions')
     expect(many).toContain('10 in · 20 out · 30 cache read · 40 cache write')
+    expect(many).not.toContain('$')
   })
 })

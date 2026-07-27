@@ -26,10 +26,14 @@ const makeDeps = () => ({
   diffService: {
     readFileText: async () => 'x',
     getDiff: async () => ({ original: '', modified: '' }),
+    gitFileDiff: vi.fn(async () => ({ original: 'idx', modified: 'wt' })),
     saveFileText: vi.fn(async () => {})
   } as never,
   watchService: { watch: () => ({ watchId: 'w' }), unwatch: async () => {} } as never,
   gitService: { currentBranch: async () => null } as never,
+  spreadsheetService: {
+    read: vi.fn(async () => ({ sheets: [{ name: 'S', rows: [['a']] }], truncated: false }))
+  } as never,
   getWritableRoots: () => ['C:/proj']
 })
 
@@ -39,6 +43,26 @@ describe('registerFsIpc', () => {
     registerFsIpc({ ipcMain, fsService, reveal: () => {}, open: () => {}, ...makeDeps() })
     const out = await ipcMain.invoke(CH.listDir, '/proj')
     expect(out).toEqual([{ name: 'src', path: join('/proj', 'src'), kind: 'dir' }])
+  })
+
+  it('getGitFileDiff delegates to the diff service for a valid side', async () => {
+    const ipcMain = new FakeIpcMain()
+    const deps = makeDeps()
+    registerFsIpc({ ipcMain, fsService, reveal: () => {}, open: () => {}, ...deps })
+    const out = await ipcMain.invoke(CH.getGitFileDiff, 'C:/proj/a.ts', 'unstaged')
+    expect(out).toEqual({ original: 'idx', modified: 'wt' })
+    expect(deps.diffService.gitFileDiff).toHaveBeenCalledWith('C:/proj/a.ts', 'unstaged')
+  })
+
+  it('getGitFileDiff rejects an invalid side or path', async () => {
+    const ipcMain = new FakeIpcMain()
+    registerFsIpc({ ipcMain, fsService, reveal: () => {}, open: () => {}, ...makeDeps() })
+    await expect(ipcMain.invoke(CH.getGitFileDiff, 'C:/proj/a.ts', 'bogus')).rejects.toThrow(
+      /invalid getGitFileDiff/
+    )
+    await expect(ipcMain.invoke(CH.getGitFileDiff, 123, 'staged')).rejects.toThrow(
+      /invalid getGitFileDiff/
+    )
   })
 
   it('listFilesDeep returns the walk, confined to open project roots', async () => {
@@ -80,6 +104,25 @@ describe('registerFsIpc', () => {
 
     expect(reveal).toHaveBeenCalledWith('C:/a/b.txt')
     expect(open).toHaveBeenCalledWith('C:/a/b.txt')
+  })
+
+  it('readSpreadsheet delegates inside a root and refuses outside / bad args', async () => {
+    const ipcMain = new FakeIpcMain()
+    const deps = makeDeps()
+    registerFsIpc({ ipcMain, fsService, reveal: () => {}, open: () => {}, ...deps })
+
+    const out = await ipcMain.invoke(CH.readSpreadsheet, 'C:/proj/book.xlsx')
+    expect(out).toEqual({ sheets: [{ name: 'S', rows: [['a']] }], truncated: false })
+    expect(
+      (deps.spreadsheetService as { read: ReturnType<typeof vi.fn> }).read
+    ).toHaveBeenCalledWith('C:/proj/book.xlsx')
+
+    await expect(
+      ipcMain.invoke(CH.readSpreadsheet, 'C:/elsewhere/book.xlsx')
+    ).rejects.toThrow(/outside an open project/)
+    await expect(ipcMain.invoke(CH.readSpreadsheet, 123 as never)).rejects.toThrow(
+      /invalid readSpreadsheet/
+    )
   })
 
   it('saveFile writes inside an open root and refuses everything else', async () => {

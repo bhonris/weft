@@ -80,16 +80,36 @@ body,
   margin-right: 4px;
   /* --st is the current session-state color (set by .tab--<status>); it tints
      the whole tab so Claude Code's state reads at a glance, not just the glyph. */
-  background: color-mix(in srgb, var(--st, transparent) 12%, #2d2d2d);
+  background: color-mix(in srgb, var(--st, transparent) 8%, var(--panel));
   border: 1px solid var(--border);
-  border-top: 2px solid var(--st, var(--border));
+  border-top: 2px solid transparent;
   border-radius: 6px 6px 0 0;
   font-size: 12px;
+  /* Inactive tabs recede so the active one stands out. */
+  opacity: 0.62;
+  transition:
+    opacity 0.12s ease,
+    background 0.12s ease;
+}
+
+.tab:not(.tab--active):hover {
+  opacity: 0.85;
 }
 
 .tab--active {
-  background: color-mix(in srgb, var(--st, transparent) 22%, #37373d);
-  border-bottom-color: var(--st, var(--accent));
+  opacity: 1;
+  background: color-mix(in srgb, var(--st, var(--accent)) 30%, var(--bg));
+  border-color: var(--st, var(--accent));
+  border-top: 2px solid var(--st, var(--accent));
+  border-bottom-color: transparent;
+  /* Ring + upward glow lifts the active tab off the strip. */
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--st, var(--accent)) 45%, transparent),
+    0 -2px 12px -4px var(--st, var(--accent));
+}
+
+.tab--active .tab__label {
+  font-weight: 600;
 }
 
 /* Per-status tint. `unknown` stays neutral so a fresh tab looks ordinary. */
@@ -800,6 +820,167 @@ body,
 
 .viewer__dirty {
   color: #e8b339;
+}
+
+/* --- Rich file views (image / pdf / media / table / placeholder) ---------- */
+.viewer__empty {
+  padding: 16px;
+  color: var(--fg);
+  opacity: 0.7;
+}
+
+.viewer__media-pane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.viewer__media-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.viewer__media-meta {
+  font-size: 12px;
+  opacity: 0.7;
+}
+.viewer__media-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 12px;
+}
+/* Checkerboard so transparent images read clearly in either theme. */
+.viewer__media-body--checker {
+  background-image:
+    linear-gradient(45deg, rgba(128, 128, 128, 0.18) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(128, 128, 128, 0.18) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(128, 128, 128, 0.18) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(128, 128, 128, 0.18) 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+}
+.viewer__image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.viewer__image--actual {
+  max-width: none;
+  max-height: none;
+  object-fit: none;
+}
+.viewer__audio {
+  width: 80%;
+  max-width: 640px;
+}
+.viewer__video {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.viewer__pdf {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border: 0;
+  background: #fff;
+}
+
+/* --- Table (CSV / spreadsheet) -------------------------------------------- */
+.viewer__sheet-pane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.viewer__sheet-tabs {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.viewer__sheet-tab {
+  padding: 4px 12px;
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--border);
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+  white-space: nowrap;
+}
+.viewer__sheet-tab--active {
+  background: var(--bg);
+  border-top: 2px solid var(--accent);
+}
+.viewer__truncated {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #e8b339;
+  border-bottom: 1px solid var(--border);
+}
+.viewer__table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.viewer__table {
+  border-collapse: collapse;
+  font: 12px/1.5 var(--mono, monospace);
+  white-space: pre;
+}
+.viewer__table th,
+.viewer__table td {
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.viewer__table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  z-index: 1;
+}
+.viewer__table-gutter {
+  position: sticky;
+  left: 0;
+  background: var(--panel);
+  color: var(--fg);
+  opacity: 0.6;
+  text-align: right;
+  user-select: none;
+}
+
+/* --- Unsupported-file placeholder ----------------------------------------- */
+.viewer__unsupported {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+}
+.viewer__unsupported-title {
+  font-size: 14px;
+}
+.viewer__unsupported-name {
+  opacity: 0.7;
+  word-break: break-all;
+}
+.viewer__unsupported-actions {
+  display: flex;
+  gap: 8px;
 }
 
 /* --- Rendered Markdown preview -------------------------------------------- */
@@ -2000,4 +2181,323 @@ body,
 
 .issue-row__comments {
   font-variant-numeric: tabular-nums;
+}
+
+/* --- Source Control panel ------------------------------------------------- */
+
+/* Activity-bar change-count badge (VS Code's number bubble). */
+.activity-bar__item {
+  position: relative;
+}
+
+.activity-bar__badge {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 9px;
+  line-height: 15px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.scm-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  font-size: 13px;
+}
+
+.scm-panel__empty {
+  padding: 12px;
+  opacity: 0.5;
+}
+
+.scm-empty {
+  padding: 12px;
+}
+
+.scm-empty p {
+  margin: 0 0 6px;
+}
+
+.scm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.scm-branch {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.scm-branch__glyph {
+  opacity: 0.7;
+}
+
+.scm-branch__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scm-branch__ab {
+  display: inline-flex;
+  gap: 4px;
+  font-weight: 400;
+  font-size: 11px;
+  opacity: 0.8;
+  font-variant-numeric: tabular-nums;
+}
+
+.scm-header__actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.scm-icon-btn {
+  font: inherit;
+  line-height: 1;
+  color: var(--fg);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  padding: 3px 6px;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.scm-icon-btn:hover {
+  opacity: 1;
+  background: var(--panel);
+}
+
+.scm-icon-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.scm-icon-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.scm-commit {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.scm-commit__msg {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  font: inherit;
+  font-size: 12px;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 6px 8px;
+}
+
+.scm-commit__msg:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.scm-commit__actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.scm-commit__btn {
+  flex: 1;
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 8px;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.scm-commit__btn--secondary {
+  flex: 0 1 auto;
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+
+.scm-commit__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.scm-note {
+  font-size: 12px;
+  opacity: 0.7;
+  line-height: 1.4;
+  padding: 8px 12px;
+}
+
+.scm-note--error {
+  color: #e0533d;
+  opacity: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.scm-groups {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.scm-group__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+
+.scm-group__title {
+  font-weight: 700;
+}
+
+.scm-group__count {
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 0 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.scm-group__actions {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+}
+
+.scm-group__head:hover .scm-group__actions {
+  opacity: 1;
+}
+
+.scm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.scm-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+}
+
+.scm-row:hover {
+  background: var(--panel);
+}
+
+.scm-row__open {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font: inherit;
+  color: var(--fg);
+  background: none;
+  border: none;
+  padding: 3px 0;
+  cursor: pointer;
+}
+
+.scm-row__open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.scm-row__name {
+  white-space: nowrap;
+}
+
+.scm-row__dir {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+.scm-row__actions {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.scm-row:hover .scm-row__actions {
+  opacity: 1;
+}
+
+/* Status decoration — colour + the letter itself (never colour-only; a11y). */
+.scm-status {
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.scm-status--M,
+.scm-status--T {
+  color: #e2b93d;
+}
+
+.scm-status--A,
+.scm-status--untracked {
+  color: #4ec94e;
+}
+
+.scm-status--D {
+  color: #e0533d;
+}
+
+.scm-status--R,
+.scm-status--C {
+  color: #4a9eff;
+}
+
+.scm-status--U {
+  color: #d18616;
 }

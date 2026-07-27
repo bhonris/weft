@@ -75,6 +75,15 @@ beforeEach(() => {
       moveTabToWindow: vi.fn(async () => {}),
       openProject: vi.fn(async () => null),
       getGitBranch: vi.fn(async () => null),
+      getGitStatus: vi.fn(async () => ({
+        isRepo: false,
+        branch: null,
+        upstream: null,
+        ahead: 0,
+        behind: 0,
+        changes: [],
+        error: null
+      })),
       getUsage: vi.fn(async () => ({
         costUsd: 0,
         totalTokens: 0,
@@ -644,5 +653,35 @@ describe('App status-bar 5-hour plan readout (always on)', () => {
       })
     )
     await waitFor(() => expect(screen.queryByTestId('status-plan-5h')).toBeNull())
+    expect(screen.queryByTestId('status-plan-7d')).toBeNull()
+  })
+
+  it('shows the weekly (7-day) utilization with its own severity level', async () => {
+    render(<App />)
+    act(() =>
+      useUsageStore.getState().setPanel({
+        planLimits: {
+          fiveHour: { utilization: 10, resetsAt: null },
+          sevenDay: { utilization: 92, resetsAt: null },
+          sevenDayOpus: null,
+          fetchedAt: '2026-07-20T00:00:00.000Z',
+          stale: false
+        },
+        weekly: {
+          costUsd: 0,
+          totalTokens: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
+          sessionCount: 0
+        },
+        sessions: []
+      })
+    )
+    const weekly = await screen.findByTestId('status-plan-7d')
+    expect(weekly.textContent).toContain('7d 92%')
+    expect(weekly.dataset['level']).toBe('crit')
+    expect(weekly.getAttribute('title')).toContain('Weekly plan limit')
   })
 })

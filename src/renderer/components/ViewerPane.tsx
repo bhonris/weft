@@ -3,8 +3,16 @@ import { useViewerStore } from '../store/viewer-store'
 import { useSessionStore } from '../store/session-store'
 import { useFontStore } from '../store/font-store'
 import { languageIdForFile, isMarkdown } from '@core/viewer/file-language'
+import { viewerKindForFile } from '@core/viewer/file-kind'
 import { monacoThemeForApp } from '@core/viewer/monaco-theme'
 import { MarkdownPreview } from './MarkdownPreview'
+import { ImageView } from './ImageView'
+import { PdfView } from './PdfView'
+import { MediaView } from './MediaView'
+import { CsvView } from './CsvView'
+import { SpreadsheetView } from './SpreadsheetView'
+import { UnsupportedView } from './UnsupportedView'
+import type { OpenFile } from '@core/workspace/open-files'
 import type { monaco as MonacoNs } from '../monaco-setup'
 
 type Editor = ReturnType<typeof MonacoNs.editor.create>
@@ -19,8 +27,35 @@ function resolveMonacoTheme(appTheme: Parameters<typeof monacoThemeForApp>[0]): 
 }
 
 /**
+ * Render a non-text file (image/pdf/spreadsheet/csv/media/binary) with the
+ * surface for its kind. Text returns null — the caller keeps the Monaco path.
+ */
+function renderRichView(file: OpenFile): React.ReactElement | null {
+  switch (viewerKindForFile(file.name)) {
+    case 'image':
+      return <ImageView file={file} />
+    case 'pdf':
+      return <PdfView file={file} />
+    case 'audio':
+      return <MediaView file={file} kind="audio" />
+    case 'video':
+      return <MediaView file={file} kind="video" />
+    case 'csv':
+      return <CsvView file={file} />
+    case 'spreadsheet':
+      return <SpreadsheetView file={file} />
+    case 'binary':
+      return <UnsupportedView file={file} />
+    default:
+      return null
+  }
+}
+
+/**
  * Monaco viewer: read-only View, side-by-side Diff vs HEAD, and a light Edit
  * mode (type + Ctrl+S save; dirty ● indicator). No LSP — full authoring is v2.
+ * Non-text files (images, PDF, spreadsheets, CSV, media) render on their own
+ * surface via {@link renderRichView}; the toolbar collapses to Reveal + Close.
  * DOM/Monaco-bound; verified by the Playwright-Electron E2E, not units.
  */
 export function ViewerPane(): React.ReactElement | null {
@@ -43,6 +78,10 @@ export function ViewerPane(): React.ReactElement | null {
   const [error, setError] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+
+  // Only text files use Monaco (view/edit/diff/preview); every other kind gets
+  // its own rendering surface and a collapsed toolbar.
+  const isText = !!file && viewerKindForFile(file.name) === 'text'
 
   // Latest save routine, kept in a ref so the saveTick effect stays stable.
   const doSaveRef = useRef<() => void>(() => {})
@@ -71,10 +110,10 @@ export function ViewerPane(): React.ReactElement | null {
   }, [file, mode])
 
   // Rendered Markdown preview replaces the Monaco surface (view mode only).
-  const showPreview = !!file && mode === 'view' && preview && isMarkdown(file.name)
+  const showPreview = !!file && isText && mode === 'view' && preview && isMarkdown(file.name)
 
   useEffect(() => {
-    if (!file || showPreview) return
+    if (!file || !isText || showPreview) return
     const host = hostRef.current
     if (!host) return
 
@@ -97,7 +136,11 @@ export function ViewerPane(): React.ReactElement | null {
           fontSize: useFontStore.getState().editorFontSize
         }
         if (mode === 'diff') {
-          const { original, modified } = await window.api.getDiff(file.path)
+          // A Source Control row stamps a git side on the tab (working-vs-index,
+          // index-vs-HEAD, or untracked); an explorer file diffs vs HEAD.
+          const { original, modified } = file.git
+            ? await window.api.getGitFileDiff(file.path, file.git)
+            : await window.api.getDiff(file.path)
           if (disposed) return
           const editor = monaco.editor.createDiffEditor(host, {
             ...common,
@@ -144,7 +187,7 @@ export function ViewerPane(): React.ReactElement | null {
     }
     // `theme` is intentionally not a dep: the setTheme effect below applies it
     // globally without recreating the editor (which would drop unsaved edits).
-  }, [file, mode, editing, showPreview])
+  }, [file, isText, mode, editing, showPreview])
 
   // Follow the app theme without tearing down the editor: setTheme is global.
   // Guarded on `file` so we never load the (large) Monaco chunk — or touch
@@ -152,7 +195,7 @@ export function ViewerPane(): React.ReactElement | null {
   // the import resolves after a test env is torn down (App renders a fileless
   // ViewerPane) and throws "window is not defined".
   useEffect(() => {
-    if (!file) return
+    if (!file || !isText) return
     let cancelled = false
     void import('../monaco-setup').then(({ monaco }) => {
       if (!cancelled) monaco.editor.setTheme(resolveMonacoTheme(theme))
@@ -160,7 +203,7 @@ export function ViewerPane(): React.ReactElement | null {
     return () => {
       cancelled = true
     }
-  }, [file, theme])
+  }, [file, isText, theme])
 
   // Apply a live editor font-size change without re-creating the editor (which
   // would drop scroll position / selection). Covers both the plain and diff
@@ -220,53 +263,57 @@ export function ViewerPane(): React.ReactElement | null {
           >
             Reveal
           </button>
-          <button
-            type="button"
-            className={`viewer__mode${
-              mode === 'view' && !editing && !showPreview ? ' viewer__mode--on' : ''
-            }`}
-            onClick={() => {
-              setMode('view')
-              setEditing(false)
-            }}
-          >
-            View
-          </button>
-          {isMarkdown(file.name) && (
-            <button
-              type="button"
-              className={`viewer__mode${showPreview ? ' viewer__mode--on' : ''}`}
-              data-testid="viewer-preview-toggle"
-              title="Render this Markdown file"
-              onClick={() => {
-                setMode('view')
-                setEditing(false)
-                setPreview(true)
-              }}
-            >
-              Preview
-            </button>
+          {isText && (
+            <>
+              <button
+                type="button"
+                className={`viewer__mode${
+                  mode === 'view' && !editing && !showPreview ? ' viewer__mode--on' : ''
+                }`}
+                onClick={() => {
+                  setMode('view')
+                  setEditing(false)
+                }}
+              >
+                View
+              </button>
+              {isMarkdown(file.name) && (
+                <button
+                  type="button"
+                  className={`viewer__mode${showPreview ? ' viewer__mode--on' : ''}`}
+                  data-testid="viewer-preview-toggle"
+                  title="Render this Markdown file"
+                  onClick={() => {
+                    setMode('view')
+                    setEditing(false)
+                    setPreview(true)
+                  }}
+                >
+                  Preview
+                </button>
+              )}
+              <button
+                type="button"
+                className={`viewer__mode${mode === 'view' && editing ? ' viewer__mode--on' : ''}`}
+                data-testid="viewer-edit-toggle"
+                title="Edit this file (Ctrl+S saves)"
+                onClick={() => {
+                  setMode('view')
+                  setEditing(true)
+                }}
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                className={`viewer__mode${mode === 'diff' ? ' viewer__mode--on' : ''}`}
+                onClick={() => setMode('diff')}
+                data-testid="viewer-diff-toggle"
+              >
+                Diff vs HEAD
+              </button>
+            </>
           )}
-          <button
-            type="button"
-            className={`viewer__mode${mode === 'view' && editing ? ' viewer__mode--on' : ''}`}
-            data-testid="viewer-edit-toggle"
-            title="Edit this file (Ctrl+S saves)"
-            onClick={() => {
-              setMode('view')
-              setEditing(true)
-            }}
-          >
-            Edit
-          </button>
-          <button
-            type="button"
-            className={`viewer__mode${mode === 'diff' ? ' viewer__mode--on' : ''}`}
-            onClick={() => setMode('diff')}
-            data-testid="viewer-diff-toggle"
-          >
-            Diff vs HEAD
-          </button>
           <button
             type="button"
             className="viewer__close"
@@ -282,7 +329,9 @@ export function ViewerPane(): React.ReactElement | null {
           Save failed: {saveError}
         </div>
       )}
-      {error ? (
+      {!isText ? (
+        renderRichView(file)
+      ) : error ? (
         <div className="viewer__error">Cannot open file: {error}</div>
       ) : showPreview ? (
         <MarkdownPreview file={file} />

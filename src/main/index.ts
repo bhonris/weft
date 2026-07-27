@@ -1,9 +1,21 @@
 import { join } from 'node:path'
-import { app, BrowserWindow, Menu, screen } from 'electron'
+import { app, BrowserWindow, Menu, screen, protocol } from 'electron'
 import { wireApp } from './container'
 import { clampBoundsToDisplays } from '@core/persistence/clamp-bounds'
 
 const isDev = !!process.env['ELECTRON_RENDERER_URL']
+
+// The viewer's byte scheme must be registered as privileged BEFORE app-ready:
+// `standard` so URLs parse/normalise (collapsing `..`), `secure` so it counts
+// as a trusted origin under the renderer CSP, `stream`/`supportFetchAPI` so
+// large media/PDF stream instead of buffering. Bytes are served (path-guarded)
+// by the handler wired in container.ts. Not `bypassCSP` — the CSP still applies.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'weft-file',
+    privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true }
+  }
+])
 
 // A stray exception in main must never surface as a blocking error dialog —
 // log and keep serving the windows/PTYs that are still healthy.
