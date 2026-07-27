@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, writeFileSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { test, expect, type ElectronApplication, type Page } from '@playwright/test'
@@ -12,7 +12,11 @@ let projectDir: string
 test.beforeEach(async () => {
   // Git fixture: a committed baseline, then a modified file + an untracked file,
   // so the Source Control panel shows both a "Changes" and an "Untracked" group.
-  projectDir = mkdtempSync(join(tmpdir(), 'weft-scm-'))
+  // realpath the temp dir: on Windows CI `os.tmpdir()` can be an 8.3 short path
+  // (e.g. RUNNER~1) while git's `--show-toplevel` returns the long canonical
+  // form, so the two spellings wouldn't match the write-guard when staging.
+  // (In production the OS dir picker already yields the canonical path.)
+  projectDir = realpathSync(mkdtempSync(join(tmpdir(), 'weft-scm-')))
   const git = (...args: string[]): void => {
     execFileSync('git', args, { cwd: projectDir })
   }
