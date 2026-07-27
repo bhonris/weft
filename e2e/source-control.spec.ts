@@ -24,8 +24,14 @@ test.beforeEach(async () => {
   }
   writeFileSync(join(projectDir, 'story.txt'), 'line one\nline two\n')
   git('init', '-q')
-  git('-c', 'user.email=lab@weft.test', '-c', 'user.name=Weft Lab', 'add', '.')
-  git('-c', 'user.email=lab@weft.test', '-c', 'user.name=Weft Lab', 'commit', '-q', '-m', 'baseline')
+  // Persist the identity in the repo's LOCAL config (not just inline for the
+  // baseline commit) so the commit the app itself makes — which runs a plain
+  // `git commit` with no -c — succeeds on CI runners that have no global
+  // committer identity configured.
+  git('config', 'user.email', 'lab@weft.test')
+  git('config', 'user.name', 'Weft Lab')
+  git('add', '.')
+  git('commit', '-q', '-m', 'baseline')
   // Now dirty the tree: modify the tracked file and add an untracked one.
   writeFileSync(join(projectDir, 'story.txt'), 'line one\nline two CHANGED\nline three\n')
   writeFileSync(join(projectDir, 'notes.md'), '# scratch\n')
