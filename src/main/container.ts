@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { tmpdir, homedir } from 'node:os'
 import { basename } from 'node:path'
-import { app, ipcMain, dialog, shell, BrowserWindow, Notification } from 'electron'
+import { app, ipcMain, dialog, shell, BrowserWindow, Notification, protocol } from 'electron'
 import { PtyManager } from './services/pty-manager'
 import { NodePtyFactory } from './services/pty-factory'
 import { FsService } from './services/fs-service'
@@ -19,6 +19,8 @@ import { WorkspaceStore } from './services/workspace-store'
 import { DiffService } from './services/diff-service'
 import { WatchService } from './services/watch-service'
 import { GitService } from './services/git-service'
+import { SpreadsheetService, type WorkbookParse } from './services/spreadsheet-service'
+import { handleFileRequest } from './services/file-protocol'
 import { resolveBinary } from './services/resolve-binary'
 import { watch as chokidarWatch } from 'chokidar'
 import { UsageService } from './services/usage-service'
@@ -26,11 +28,13 @@ import { UsageHistoryService } from './services/usage-history-service'
 import { PlanLimitsService } from './services/plan-limits-service'
 import { GithubService, type GithubFetchLike } from './services/github-service'
 import { GithubAuthService } from './services/github-auth-service'
+import { resolveGithubClientId } from '@core/github/client-id'
 import { registerSessionIpc } from './ipc/register'
 import { registerFsIpc } from './ipc/register-fs'
 import { registerWorkspaceIpc } from './ipc/register-workspace'
 import { registerUsageIpc } from './ipc/register-usage'
 import { registerGithubIpc } from './ipc/register-github'
+import { registerScmIpc } from './ipc/register-scm'
 import { CH } from '@shared/ipc/channels'
 
 /**
@@ -213,6 +217,60 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
     (path, err) => console.warn(`[weft-watch] error watching ${path}:`, err)
   )
   const gitService = new GitService((file, args, opts) => execFileAsync(file, args, opts))
+
+  // SheetJS is loaded HERE and only here, behind a dynamic import cast to a
+  // local shape, so the build/typecheck/unit tests never depend on the package.
+  // Absent (not installed) → readSpreadsheet rejects with an actionable message;
+  // every other viewer kind still works.
+  type XlsxLike = {
+    read(
+      data: Uint8Array,
+      opts: { type: 'buffer' }
+    ): { SheetNames: string[]; Sheets: Record<string, unknown> }
+    utils: {
+      sheet_to_json(
+        sheet: unknown,
+        opts: { header: 1; raw: false; defval: string; blankrows: false }
+      ): unknown[][]
+    }
+  }
+  let xlsx: XlsxLike | null = null
+  try {
+    xlsx = (await import('xlsx' as string)) as unknown as XlsxLike
+  } catch {
+    xlsx = null
+  }
+  const parseWorkbook: WorkbookParse = (bytes) => {
+    if (!xlsx) {
+      throw new Error(
+        'spreadsheet support needs the "xlsx" package — run: pnpm add https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz'
+      )
+    }
+    const wb = xlsx.read(bytes, { type: 'buffer' })
+    return wb.SheetNames.map((name) => ({
+      name,
+      rows: xlsx!.utils.sheet_to_json(wb.Sheets[name], {
+        header: 1,
+        raw: false,
+        defval: '',
+        blankrows: false
+      })
+    }))
+  }
+  const spreadsheetService = new SpreadsheetService(
+    { readFile: (p) => fsPromises.readFile(p), stat: (p) => fsPromises.stat(p) },
+    parseWorkbook
+  )
+
+  // The viewer's byte scheme: images/PDF/media stream from disk, guarded to open
+  // project roots. Registered privileged in index.ts before app-ready.
+  protocol.handle('weft-file', (request) =>
+    handleFileRequest(request.url, {
+      getRoots: () => pty.tabRefs().map((r) => r.cwd),
+      readFile: (p) => fsPromises.readFile(p)
+    })
+  )
+
   registerFsIpc({
     ipcMain,
     fsService: new FsService(fsPromises),
@@ -221,11 +279,21 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
       execFileAsync(file, args, opts)
     ),
     gitService,
+    spreadsheetService,
     getWritableRoots: () => pty.tabRefs().map((r) => r.cwd),
     reveal: (path) => shell.showItemInFolder(path),
     open: async (path) => {
       await shell.openPath(path)
     }
+  })
+
+  // Source control: git working-tree status + staging/commit/sync for the SCM
+  // sidebar panel. Mutations are confined to open project roots (same writable-
+  // roots guard as fs writes).
+  registerScmIpc({
+    ipcMain,
+    gitService,
+    getWritableRoots: () => pty.tabRefs().map((r) => r.cwd)
   })
 
   registerWorkspaceIpc({ ipcMain, store: workspaceStore })
@@ -305,9 +373,11 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
     now: () => Date.now(),
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     // A registered GitHub OAuth App client id enables in-app sign-in. Public by
-    // design (device flow uses no client secret). Until provided, sign-in reports
-    // "not configured" and the gh/env/unauthenticated paths still work.
-    clientId: process.env['WEFT_GITHUB_CLIENT_ID'] ?? null
+    // design (device flow uses no client secret). The WEFT_GITHUB_CLIENT_ID env
+    // var overrides the shipped DEFAULT_GITHUB_CLIENT_ID constant; when neither is
+    // set, sign-in reports "not configured" and the gh/env/unauthenticated paths
+    // still work. See src/core/github/client-id.ts to drop in the id.
+    clientId: resolveGithubClientId((name) => process.env[name])
   })
   const githubService = new GithubService({
     fetch: githubFetch,

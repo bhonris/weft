@@ -77,7 +77,7 @@ const BASENAME_TO_LANGUAGE: Record<string, string> = {
 }
 
 /** The final extension of a filename, lower-cased, or '' when there is none. */
-function extensionOf(name: string): string {
+export function extensionOf(name: string): string {
   const base = name.slice(name.replace(/\\/g, '/').lastIndexOf('/') + 1)
   const dot = base.lastIndexOf('.')
   // A leading dot (dotfile) or no dot at all means "no extension".

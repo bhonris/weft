@@ -1,4 +1,6 @@
 import { useActivityStore } from '../store/activity-store'
+import { useScmStore } from '../store/scm-store'
+import { changeCount } from '@core/scm/porcelain'
 import type { SidebarPanel } from '@shared/ipc/api-contract'
 
 interface ActivityItem {
@@ -12,6 +14,7 @@ interface ActivityItem {
 // VS Code-style: primary panels at the top, utility panels pinned bottom.
 const ITEMS: ActivityItem[] = [
   { id: 'explorer', label: 'Explorer', glyph: '🗂', place: 'top' },
+  { id: 'scm', label: 'Source Control', glyph: '⑂', place: 'top' },
   { id: 'issues', label: 'GitHub Issues', glyph: '🐙', place: 'top' },
   { id: 'usage', label: 'Usage', glyph: '📊', place: 'bottom' }
 ]
@@ -24,25 +27,35 @@ const ITEMS: ActivityItem[] = [
 export function ActivityBar(): React.ReactElement {
   const active = useActivityStore((s) => s.active)
   const setActive = useActivityStore((s) => s.setActive)
+  const scmStatus = useScmStore((s) => s.status)
+  const scmCount = scmStatus?.isRepo ? changeCount(scmStatus.changes) : 0
   const top = ITEMS.filter((i) => i.place === 'top')
   const bottom = ITEMS.filter((i) => i.place === 'bottom')
 
-  const button = (item: ActivityItem): React.ReactElement => (
-    <button
-      key={item.id}
-      type="button"
-      role="tab"
-      aria-selected={active === item.id}
-      aria-label={item.label}
-      title={item.label}
-      tabIndex={active === item.id ? 0 : -1}
-      data-testid={`activity-${item.id}`}
-      className={`activity-bar__item${active === item.id ? ' activity-bar__item--active' : ''}`}
-      onClick={() => setActive(item.id)}
-    >
-      <span aria-hidden="true">{item.glyph}</span>
-    </button>
-  )
+  const button = (item: ActivityItem): React.ReactElement => {
+    const badge = item.id === 'scm' && scmCount > 0 ? scmCount : null
+    return (
+      <button
+        key={item.id}
+        type="button"
+        role="tab"
+        aria-selected={active === item.id}
+        aria-label={badge ? `${item.label} (${badge} changes)` : item.label}
+        title={item.label}
+        tabIndex={active === item.id ? 0 : -1}
+        data-testid={`activity-${item.id}`}
+        className={`activity-bar__item${active === item.id ? ' activity-bar__item--active' : ''}`}
+        onClick={() => setActive(item.id)}
+      >
+        <span aria-hidden="true">{item.glyph}</span>
+        {badge !== null && (
+          <span className="activity-bar__badge" data-testid="activity-scm-badge" aria-hidden="true">
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
+      </button>
+    )
+  }
 
   return (
     <nav

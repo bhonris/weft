@@ -36,8 +36,9 @@ export const workspaceStateSchema = z.object({
     // .finite() rejects NaN/Infinity; the store re-clamps the range on restore.
     size: z.number().finite()
   }),
-  // Widened with 'issues' (see documents/github-issues-panel.md).
-  activePanel: z.enum(['explorer', 'usage', 'issues']),
+  // Widened with 'issues' (github-issues-panel.md) and 'scm' (source-control-panel.md).
+  // Backward-compatible enum widening — no schema-version bump needed.
+  activePanel: z.enum(['explorer', 'usage', 'issues', 'scm']),
   // v7: user-adjustable text sizing. The store re-clamps each on restore, so a
   // corrupt/hand-edited value can never yield an unreadable UI — .finite() only
   // rejects NaN/Infinity here.

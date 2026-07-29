@@ -4,6 +4,7 @@ import type { FsService } from '../services/fs-service'
 import type { DiffService } from '../services/diff-service'
 import type { WatchService } from '../services/watch-service'
 import type { GitService } from '../services/git-service'
+import type { SpreadsheetService } from '../services/spreadsheet-service'
 import { isInsideAnyRoot } from '@core/fs/path-guard'
 
 export interface FsRegisterDeps {
@@ -12,6 +13,7 @@ export interface FsRegisterDeps {
   diffService: DiffService
   watchService: WatchService
   gitService: GitService
+  spreadsheetService: SpreadsheetService
   /** Open project roots — the only directories the renderer may write into. */
   getWritableRoots: () => string[]
   /** Reveal a path in the OS file manager (electron shell.showItemInFolder). */
@@ -46,7 +48,24 @@ export function registerFsIpc(deps: FsRegisterDeps): void {
 
   ipcMain.handle(CH.readFileText, (_event, path) => deps.diffService.readFileText(path as string))
 
+  ipcMain.handle(CH.readSpreadsheet, async (_event, path) => {
+    if (typeof path !== 'string') throw new Error('invalid readSpreadsheet arguments')
+    // Reading arbitrary bytes off disk: confine to open project roots, exactly
+    // like the deep walk and file writes.
+    if (!isInsideAnyRoot(deps.getWritableRoots(), path)) {
+      throw new Error('refusing to read outside an open project')
+    }
+    return deps.spreadsheetService.read(path)
+  })
+
   ipcMain.handle(CH.getDiff, (_event, path) => deps.diffService.getDiff(path as string))
+
+  ipcMain.handle(CH.getGitFileDiff, async (_event, path, side) => {
+    if (typeof path !== 'string' || (side !== 'staged' && side !== 'unstaged' && side !== 'untracked')) {
+      throw new Error('invalid getGitFileDiff arguments')
+    }
+    return deps.diffService.gitFileDiff(path, side)
+  })
 
   ipcMain.handle(CH.getGitBranch, (_event, cwd) =>
     typeof cwd === 'string' ? deps.gitService.currentBranch(cwd) : null

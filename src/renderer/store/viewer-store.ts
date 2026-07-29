@@ -8,6 +8,19 @@ import {
   type OpenFile,
   type OpenFilesState
 } from '@core/workspace/open-files'
+import type { GitDiffSide } from '@shared/ipc/api-contract'
+
+/** Set (or clear) the git-diff side on a specific open file's tab. */
+function stampGit(
+  open: OpenFilesState,
+  path: string,
+  side: GitDiffSide | undefined
+): OpenFilesState {
+  return {
+    ...open,
+    files: open.files.map((f) => (f.path === path ? { ...f, git: side } : f))
+  }
+}
 
 export type ViewerMode = 'view' | 'diff'
 
@@ -36,6 +49,11 @@ export interface ViewerState {
   dropProject: (projectId: string) => void
   /** Open a file as a tab (re-activates it if already open) and show it. */
   openFile: (path: string, name: string) => void
+  /**
+   * Open a file's git diff for `side` in diff mode (Source Control panel). Stamps
+   * the side on the tab so the viewer fetches the right baseline/target pair.
+   */
+  openGitDiff: (path: string, name: string, side: GitDiffSide) => void
   /** Close a file's tab, activating a neighbour (or clearing when none remain). */
   closeFile: (path: string) => void
   /** Activate the tab at `index`. */
@@ -120,7 +138,23 @@ export const useViewerStore = create<ViewerState>((set) => {
         }
         return { byProject }
       }),
-    openFile: (path, name) => set((s) => mutate(s, (open) => coreOpenFile(open, { path, name }))),
+    // A plain (explorer) open clears any git-diff side left on that tab, so the
+    // file reverts to normal view / diff-vs-HEAD behaviour.
+    openFile: (path, name) =>
+      set((s) => mutate(s, (open) => stampGit(coreOpenFile(open, { path, name }), path, undefined))),
+    openGitDiff: (path, name, side) =>
+      set((s) => {
+        const key = keyOf(s.projectId)
+        const opened = stampGit(coreOpenFile(s.byProject[key] ?? emptyOpenFiles, { path, name }), path, side)
+        return {
+          byProject: { ...s.byProject, [key]: opened },
+          openFiles: opened,
+          file: activeFile(opened),
+          mode: 'diff',
+          editing: false,
+          preview: false
+        }
+      }),
     closeFile: (path) => set((s) => mutate(s, (open) => coreCloseFile(open, path))),
     setActiveFile: (index) => set((s) => mutate(s, (open) => coreSetActive(open, index))),
     // Diff is read-only, so switching to it drops edit mode. Changing mode always

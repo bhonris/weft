@@ -1,3 +1,5 @@
+import type { GitDiffSide } from '@shared/ipc/api-contract'
+
 /**
  * Pure reducer for the set of files open as editor tabs within a project. The
  * renderer holds one of these per project; the active file drives the Monaco
@@ -6,6 +8,12 @@
 export interface OpenFile {
   path: string
   name: string
+  /**
+   * When set, the viewer opens a git diff for this side (Source Control panel)
+   * rather than a plain view / diff-vs-HEAD. Undefined for files opened from the
+   * explorer.
+   */
+  git?: GitDiffSide
 }
 
 export interface OpenFilesState {

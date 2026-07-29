@@ -35,9 +35,22 @@ export const CH = {
   revealInOs: 'fs:reveal',
   openWithDefault: 'fs:open',
   readFileText: 'fs:read-text',
+  // Parse a spreadsheet (xlsx/xls) to structured JSON for the table viewer.
+  readSpreadsheet: 'fs:read-spreadsheet',
   getDiff: 'fs:get-diff',
   getGitBranch: 'fs:git-branch',
   saveFile: 'fs:save-file',
+  // Per-side git diff for a changed file (read-only; rides with the fs group).
+  getGitFileDiff: 'fs:git-file-diff',
+
+  // Source control (renderer -> main, invoke)
+  getGitStatus: 'scm:status',
+  stageFiles: 'scm:stage',
+  unstageFiles: 'scm:unstage',
+  discardChanges: 'scm:discard',
+  gitCommit: 'scm:commit',
+  gitPush: 'scm:push',
+  gitPull: 'scm:pull',
 
   // Persistence
   loadWorkspace: 'workspace:load',

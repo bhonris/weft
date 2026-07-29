@@ -72,3 +72,86 @@ describe('DiffService', () => {
     })
   })
 })
+
+describe('DiffService.gitFileDiff', () => {
+  it('untracked: empty baseline vs on-disk (no git needed)', async () => {
+    const exec = vi.fn()
+    const svc = new DiffService(fakeFs('fresh'), exec as unknown as ExecFn)
+    expect(await svc.gitFileDiff('/repo/new.txt', 'untracked')).toEqual({
+      original: '',
+      modified: 'fresh'
+    })
+    expect(exec).not.toHaveBeenCalled()
+  })
+
+  it('staged: HEAD blob vs index blob', async () => {
+    const exec: ExecFn = vi.fn(async (_f, args) => {
+      if (args.includes('ls-files')) return { stdout: 'src/a.ts\n' }
+      if (args.includes('show') && args.includes('HEAD:src/a.ts')) return { stdout: 'head' }
+      if (args.includes('show') && args.includes(':src/a.ts')) return { stdout: 'index' }
+      throw new Error(`unexpected ${args.join(' ')}`)
+    })
+    const svc = new DiffService(fakeFs('working'), exec)
+    expect(await svc.gitFileDiff('/repo/src/a.ts', 'staged')).toEqual({
+      original: 'head',
+      modified: 'index'
+    })
+  })
+
+  it('unstaged: index blob vs on-disk working copy', async () => {
+    const exec: ExecFn = vi.fn(async (_f, args) => {
+      if (args.includes('ls-files')) return { stdout: 'src/a.ts\n' }
+      if (args.includes('show') && args.includes(':src/a.ts')) return { stdout: 'index' }
+      throw new Error(`unexpected ${args.join(' ')}`)
+    })
+    const svc = new DiffService(fakeFs('working'), exec)
+    expect(await svc.gitFileDiff('/repo/src/a.ts', 'unstaged')).toEqual({
+      original: 'index',
+      modified: 'working'
+    })
+  })
+
+  it('unstaged deletion: on-disk read ENOENT yields an empty modified side', async () => {
+    const exec: ExecFn = vi.fn(async (_f, args) => {
+      if (args.includes('ls-files')) return { stdout: 'gone.ts\n' }
+      if (args.includes('show')) return { stdout: 'was here' }
+      throw new Error('unexpected')
+    })
+    const enoent = Object.assign(new Error('missing'), { code: 'ENOENT' })
+    const fsx = {
+      readFile: vi.fn(async () => {
+        throw enoent
+      }),
+      writeFile: vi.fn(async () => {}),
+      stat: vi.fn(async () => {
+        throw enoent
+      })
+    }
+    const svc = new DiffService(fsx, exec)
+    expect(await svc.gitFileDiff('/repo/gone.ts', 'unstaged')).toEqual({
+      original: 'was here',
+      modified: ''
+    })
+  })
+
+  it('staged new file (no HEAD/index blob): both sides empty', async () => {
+    const exec: ExecFn = vi.fn(async (_f, args) => {
+      if (args.includes('ls-files')) return { stdout: '' } // not tracked yet
+      throw new Error('should not reach git show')
+    })
+    const svc = new DiffService(fakeFs('x'), exec)
+    expect(await svc.gitFileDiff('/repo/added.ts', 'staged')).toEqual({
+      original: '',
+      modified: ''
+    })
+  })
+
+  it('propagates a too-large error on the on-disk side', async () => {
+    const exec: ExecFn = vi.fn(async (_f, args) => {
+      if (args.includes('ls-files')) return { stdout: 'big.ts\n' }
+      return { stdout: 'index' }
+    })
+    const svc = new DiffService(fakeFs('irrelevant', MAX_VIEWER_FILE_BYTES + 1), exec)
+    await expect(svc.gitFileDiff('/repo/big.ts', 'unstaged')).rejects.toThrow(/too large/)
+  })
+})

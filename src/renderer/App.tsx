@@ -5,6 +5,7 @@ import { useTerminalStore } from './store/terminal-store'
 import { useDockStore } from './store/dock-store'
 import { useUsageStore } from './store/usage-store'
 import { useIssuesStore } from './store/issues-store'
+import { useScmStore } from './store/scm-store'
 import { useActivityStore } from './store/activity-store'
 import { useFontStore } from './store/font-store'
 import { formatUsageLabel, formatUsageTooltip } from '@core/usage/summary'
@@ -17,6 +18,7 @@ import { Explorer } from './components/Explorer'
 import { ActivityBar } from './components/ActivityBar'
 import { UsagePanel } from './components/UsagePanel'
 import { IssuesPanel } from './components/IssuesPanel'
+import { SourceControlPanel } from './components/SourceControlPanel'
 import { ViewerPane } from './components/ViewerPane'
 import { WorkbenchErrorBoundary } from './components/WorkbenchErrorBoundary'
 import { CommandPalette } from './components/CommandPalette'
@@ -92,6 +94,16 @@ function refreshIssues(cwd: string | null): void {
   void window.api
     .getIssues(cwd)
     .then((p) => useIssuesStore.getState().setPanel(p))
+    .catch(() => {
+      /* transient read failure — keep the last value. */
+    })
+}
+
+/** Pull the git working-tree status for `cwd` into the Source Control store. */
+function refreshScm(cwd: string | null): void {
+  void window.api
+    .getGitStatus(cwd)
+    .then((s) => useScmStore.getState().setStatus(s))
     .catch(() => {
       /* transient read failure — keep the last value. */
     })
@@ -279,8 +291,10 @@ export function App(): React.ReactElement {
   const usage = useUsageStore((s) => s.usage)
   // The active claude tab's model + reasoning effort, for the status-bar readout.
   const sessionInfo = useUsageStore((s) => s.sessionInfo)
-  // The 5-hour plan-limit window, shown in the status bar at all times.
+  // The 5-hour and weekly (7-day) plan-limit windows, shown in the status bar
+  // at all times.
   const fiveHour = useUsageStore((s) => s.panel?.planLimits?.fiveHour ?? null)
+  const sevenDay = useUsageStore((s) => s.panel?.planLimits?.sevenDay ?? null)
   const planStale = useUsageStore((s) => s.panel?.planLimits?.stale ?? false)
   const activePanel = useActivityStore((s) => s.active)
   const spawnFailure = useSessionStore((s) => s.spawnFailure)
@@ -637,6 +651,16 @@ export function App(): React.ReactElement {
     return () => window.clearInterval(id)
   }, [activePanel, activeTab?.cwd])
 
+  // Source control: poll the active tab's git status so the activity-bar badge
+  // stays live even when another panel is showing; speed up while the Source
+  // Control panel itself is active. (Mutations also refresh eagerly from the panel.)
+  useEffect(() => {
+    const cwd = activeTab?.cwd ?? null
+    refreshScm(cwd)
+    const id = window.setInterval(() => refreshScm(cwd), activePanel === 'scm' ? 4000 : 20000)
+    return () => window.clearInterval(id)
+  }, [activePanel, activeTab?.cwd])
+
   // Device-flow sign-in outcome (pushed from main): on approval, clear the code
   // prompt and re-fetch as authenticated; on failure, surface the message.
   useEffect(() => {
@@ -907,13 +931,17 @@ export function App(): React.ReactElement {
                 ? 'Usage'
                 : activePanel === 'issues'
                   ? 'GitHub Issues'
-                  : 'File explorer'
+                  : activePanel === 'scm'
+                    ? 'Source Control'
+                    : 'File explorer'
             }
           >
             {activePanel === 'usage' ? (
               <UsagePanel />
             ) : activePanel === 'issues' ? (
               <IssuesPanel cwd={activeTab?.cwd ?? null} />
+            ) : activePanel === 'scm' ? (
+              <SourceControlPanel cwd={activeTab?.cwd ?? null} />
             ) : (
               <Explorer root={activeTab?.cwd ?? null} />
             )}
@@ -992,6 +1020,25 @@ export function App(): React.ReactElement {
               }
             >
               ⏱ 5h {formatUtilization(fiveHour.utilization)}
+              {planStale ? ' •' : ''}
+            </span>
+          )}
+          {sevenDay && (
+            <span
+              className="status-bar__plan"
+              data-testid="status-plan-7d"
+              data-level={
+                sevenDay.utilization >= 90 ? 'crit' : sevenDay.utilization >= 75 ? 'warn' : 'ok'
+              }
+              title={
+                `Weekly plan limit: ${formatUtilization(sevenDay.utilization)} used` +
+                (formatResetIn(sevenDay.resetsAt, Date.now())
+                  ? ` — ${formatResetIn(sevenDay.resetsAt, Date.now())}`
+                  : '') +
+                (planStale ? ' (last known)' : '')
+              }
+            >
+              ⏳ 7d {formatUtilization(sevenDay.utilization)}
               {planStale ? ' •' : ''}
             </span>
           )}

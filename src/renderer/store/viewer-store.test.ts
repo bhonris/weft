@@ -23,6 +23,32 @@ describe('useViewerStore', () => {
     expect(s.mode).toBe('view')
   })
 
+  it('openGitDiff opens the file in diff mode with the git side stamped', () => {
+    useViewerStore.getState().openGitDiff('/p/a.txt', 'a.txt', 'unstaged')
+    const s = useViewerStore.getState()
+    expect(s.file).toEqual({ path: '/p/a.txt', name: 'a.txt', git: 'unstaged' })
+    expect(s.mode).toBe('diff')
+    expect(s.editing).toBe(false)
+  })
+
+  it('re-opening a git-diff tab from the explorer clears the git side', () => {
+    const s = useViewerStore.getState()
+    s.openGitDiff('/p/a.txt', 'a.txt', 'staged')
+    expect(useViewerStore.getState().file?.git).toBe('staged')
+    // A plain open of the same path strips the git side so a subsequent diff
+    // toggle compares vs HEAD rather than the staged/unstaged blob.
+    s.openFile('/p/a.txt', 'a.txt')
+    expect(useViewerStore.getState().file?.git).toBeUndefined()
+  })
+
+  it('opening a DIFFERENT file after a git diff resets mode to view', () => {
+    const s = useViewerStore.getState()
+    s.openGitDiff('/p/a.txt', 'a.txt', 'staged')
+    s.openFile('/p/b.txt', 'b.txt')
+    expect(useViewerStore.getState().mode).toBe('view')
+    expect(useViewerStore.getState().file?.git).toBeUndefined()
+  })
+
   it('opening a new file resets diff mode back to view', () => {
     const s = useViewerStore.getState()
     s.openFile('/p/a.txt', 'a.txt')
