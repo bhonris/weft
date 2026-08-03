@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { parseIssues, filterIssues, collectLabels, type IssueFilter } from './issues'
+import {
+  parseIssues,
+  parseCreatedIssue,
+  filterIssues,
+  collectLabels,
+  type IssueFilter
+} from './issues'
 import type { GithubIssue } from '@shared/ipc/api-contract'
 
 const rawIssue = {
@@ -61,6 +67,32 @@ describe('parseIssues', () => {
   it('defaults a label with no color', () => {
     const [issue] = parseIssues([{ ...rawIssue, labels: [{ name: 'x' }, 'bad', null] }])
     expect(issue!.labels).toEqual([{ name: 'x', color: '888888' }])
+  })
+})
+
+describe('parseCreatedIssue', () => {
+  it('parses a single created issue object', () => {
+    expect(parseCreatedIssue(rawIssue)).toEqual<GithubIssue>({
+      number: 42,
+      title: 'Fix crash on startup',
+      state: 'open',
+      author: 'alice',
+      labels: [{ name: 'bug', color: 'd73a4a' }],
+      comments: 3,
+      htmlUrl: 'https://github.com/o/r/issues/42',
+      updatedAt: '2026-07-20T10:00:00Z'
+    })
+  })
+
+  it('returns null for a malformed / non-object body', () => {
+    expect(parseCreatedIssue({ number: 1 })).toBeNull()
+    expect(parseCreatedIssue({ title: 'x' })).toBeNull()
+    expect(parseCreatedIssue(null)).toBeNull()
+    expect(parseCreatedIssue('nope')).toBeNull()
+  })
+
+  it('returns null when the body is a pull request', () => {
+    expect(parseCreatedIssue({ ...rawIssue, pull_request: { url: '…' } })).toBeNull()
   })
 })
 

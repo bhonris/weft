@@ -35,6 +35,8 @@ export const CH = {
   revealInOs: 'fs:reveal',
   openWithDefault: 'fs:open',
   readFileText: 'fs:read-text',
+  // Existence check for a terminal file link (root-guarded; returns a boolean).
+  pathExists: 'fs:path-exists',
   // Parse a spreadsheet (xlsx/xls) to structured JSON for the table viewer.
   readSpreadsheet: 'fs:read-spreadsheet',
   getDiff: 'fs:get-diff',
@@ -63,6 +65,7 @@ export const CH = {
 
   // GitHub Issues (renderer -> main, invoke)
   getIssues: 'github:get',
+  createIssue: 'github:create',
   githubSignIn: 'github:sign-in',
   githubSignOut: 'github:sign-out',
   // Device-flow progress + result (main -> renderer, event)

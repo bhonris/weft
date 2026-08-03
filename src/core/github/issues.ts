@@ -25,24 +25,42 @@ export function parseIssues(body: unknown): GithubIssue[] {
   if (!Array.isArray(body)) return []
   const out: GithubIssue[] = []
   for (const raw of body) {
-    if (typeof raw !== 'object' || raw === null) continue
-    const r = raw as Record<string, unknown>
-    if ('pull_request' in r) continue // it's a PR, not an issue
-    const number = r['number']
-    const title = r['title']
-    if (typeof number !== 'number' || typeof title !== 'string') continue
-    out.push({
-      number,
-      title,
-      state: r['state'] === 'closed' ? 'closed' : 'open',
-      author: readAuthor(r['user']),
-      labels: readLabels(r['labels']),
-      comments: typeof r['comments'] === 'number' ? r['comments'] : 0,
-      htmlUrl: typeof r['html_url'] === 'string' ? r['html_url'] : '',
-      updatedAt: typeof r['updated_at'] === 'string' ? r['updated_at'] : ''
-    })
+    const issue = parseOneIssue(raw)
+    if (issue) out.push(issue)
   }
   return out
+}
+
+/**
+ * Parse a single issue object into a {@link GithubIssue}, or null when it's a
+ * pull request or malformed (missing/typed-wrong `number`/`title`). Shared by
+ * {@link parseIssues} and {@link parseCreatedIssue}.
+ */
+function parseOneIssue(raw: unknown): GithubIssue | null {
+  if (typeof raw !== 'object' || raw === null) return null
+  const r = raw as Record<string, unknown>
+  if ('pull_request' in r) return null // it's a PR, not an issue
+  const number = r['number']
+  const title = r['title']
+  if (typeof number !== 'number' || typeof title !== 'string') return null
+  return {
+    number,
+    title,
+    state: r['state'] === 'closed' ? 'closed' : 'open',
+    author: readAuthor(r['user']),
+    labels: readLabels(r['labels']),
+    comments: typeof r['comments'] === 'number' ? r['comments'] : 0,
+    htmlUrl: typeof r['html_url'] === 'string' ? r['html_url'] : '',
+    updatedAt: typeof r['updated_at'] === 'string' ? r['updated_at'] : ''
+  }
+}
+
+/**
+ * Parse the body of `POST /repos/{owner}/{repo}/issues` (a single issue object)
+ * into a {@link GithubIssue}, or null when malformed. Never throws.
+ */
+export function parseCreatedIssue(body: unknown): GithubIssue | null {
+  return parseOneIssue(body)
 }
 
 function readAuthor(user: unknown): string {

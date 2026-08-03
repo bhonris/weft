@@ -93,11 +93,16 @@ test('multi-tab order, renamed titles, and the theme override all survive a rest
   await page1.getByLabel('rename tab').fill('beta-project')
   await page1.getByLabel('rename tab').press('Enter')
 
-  // cyberpunk (default) → system → light → dark
-  await page1.getByRole('button', { name: /^theme:/ }).click()
-  await page1.getByRole('button', { name: /^theme:/ }).click()
-  await page1.getByRole('button', { name: /^theme:/ }).click()
-  await expect(page1.getByRole('button', { name: /^theme:/ })).toContainText('dark')
+  // cyberpunk (default) → system → light → dark, via the command palette
+  // (the status-bar theme button was removed to declutter the footer).
+  for (let i = 0; i < 3; i++) {
+    await page1.keyboard.press('Control+Shift+P')
+    await page1.keyboard.type('cycle theme')
+    await page1.keyboard.press('Enter')
+  }
+  await expect
+    .poll(() => page1.evaluate(() => document.documentElement.dataset['theme']))
+    .toBe('dark')
 
   // Enable conversation resume (v0.2.0 daily-driver toggle).
   await page1.getByRole('button', { name: /^resume:/ }).click()

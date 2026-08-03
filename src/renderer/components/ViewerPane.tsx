@@ -26,6 +26,13 @@ function resolveMonacoTheme(appTheme: Parameters<typeof monacoThemeForApp>[0]): 
   return monacoThemeForApp(appTheme, prefersDark)
 }
 
+/** Scroll to and place the cursor on a 1-based line/column (terminal file link). */
+function revealPosition(editor: Editor, line: number, column: number): void {
+  editor.revealLineInCenter(line)
+  editor.setPosition({ lineNumber: line, column })
+  editor.focus()
+}
+
 /**
  * Render a non-text file (image/pdf/spreadsheet/csv/media/binary) with the
  * surface for its kind. Text returns null — the caller keeps the Monaco path.
@@ -67,6 +74,7 @@ export function ViewerPane(): React.ReactElement | null {
   const editing = useViewerStore((s) => s.editing)
   const preview = useViewerStore((s) => s.preview)
   const saveTick = useViewerStore((s) => s.saveTick)
+  const reveal = useViewerStore((s) => s.reveal)
   const setMode = useViewerStore((s) => s.setMode)
   const setEditing = useViewerStore((s) => s.setEditing)
   const setPreview = useViewerStore((s) => s.setPreview)
@@ -163,6 +171,13 @@ export function ViewerPane(): React.ReactElement | null {
           const model = monaco.editor.createModel(content, language)
           const editor = monaco.editor.create(host, { ...common, model })
           editorRef.current = editor
+          // A file opened via a terminal Ctrl+Click carries a pending jump — apply
+          // it as soon as its editor exists (the effect below handles re-jumps to
+          // an already-open file).
+          const pending = useViewerStore.getState().reveal
+          if (pending && pending.path === file.path) {
+            revealPosition(editor, pending.line, pending.column)
+          }
           const changeSub = model.onDidChangeContent(() => setDirty(true))
           // Ctrl+S while the editor is focused saves through the shared routine
           // (the app-level viewer-region Ctrl+S uses the same path via saveTick).
@@ -213,6 +228,16 @@ export function ViewerPane(): React.ReactElement | null {
     editorRef.current?.updateOptions({ fontSize: editorFontSize })
     diffEditorRef.current?.updateOptions({ fontSize: editorFontSize })
   }, [editorFontSize])
+
+  // Re-jump when a new reveal target lands for the file already showing in Monaco
+  // (e.g. Ctrl+Click a second `file:line` for the current file — no editor
+  // re-create, so the mount effect above wouldn't fire).
+  useEffect(() => {
+    const ed = editorRef.current
+    if (!ed || !reveal || !file || reveal.path !== file.path) return
+    if (!isText || mode !== 'view' || showPreview) return
+    revealPosition(ed, reveal.line, reveal.column)
+  }, [reveal, file, isText, mode, showPreview])
 
   if (!file) return null
 

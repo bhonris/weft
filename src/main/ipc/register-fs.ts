@@ -20,6 +20,8 @@ export interface FsRegisterDeps {
   reveal: (path: string) => void
   /** Open a path with its default OS handler (electron shell.openPath). */
   open: (path: string) => Promise<void> | void
+  /** Whether a path is an existing file (fs.stat isFile); for terminal links. */
+  exists: (path: string) => Promise<boolean>
 }
 
 /** Wire the filesystem IPC channels used by the explorer. */
@@ -47,6 +49,15 @@ export function registerFsIpc(deps: FsRegisterDeps): void {
   })
 
   ipcMain.handle(CH.readFileText, (_event, path) => deps.diffService.readFileText(path as string))
+
+  ipcMain.handle(CH.pathExists, async (_event, path) => {
+    // A predicate for terminal file links: never throws. A non-string, a path
+    // outside every open root, or a missing file all resolve to `false` — the
+    // renderer only wants to know whether to underline a project file.
+    if (typeof path !== 'string') return false
+    if (!isInsideAnyRoot(deps.getWritableRoots(), path)) return false
+    return deps.exists(path)
+  })
 
   ipcMain.handle(CH.readSpreadsheet, async (_event, path) => {
     if (typeof path !== 'string') throw new Error('invalid readSpreadsheet arguments')

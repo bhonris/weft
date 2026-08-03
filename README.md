@@ -1,5 +1,7 @@
 # Weft
 
+> *Doom scrolling has never felt this productive.*
+
 **A VS Code-style desktop workspace for running many Claude Code sessions at once — one browser-style tab per project, with live "which session needs me?" status driven by Claude Code's own hooks.**
 
 Weft is an open-source Electron app (Windows-first, cross-platform-clean). Each tab hosts a real, interactive `claude` CLI session in its own ConPTY pseudo-terminal. Around the terminals: a live file explorer, a Monaco read-only + git-diff viewer, tear-off tabs into separate OS windows, workspace persistence, app-owned OS notifications that focus the exact tab that needs you, and **fully mouseless keyboard navigation** — a command palette (`Ctrl+Shift+P`), a shortcuts overlay (`Ctrl+?`), and keyboard focus across every region — while your terminal keys always reach the shell.

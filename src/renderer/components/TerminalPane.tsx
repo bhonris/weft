@@ -1,18 +1,35 @@
 import { useEffect, useRef, useState } from 'react'
-import { Terminal } from '@xterm/xterm'
+import { Terminal, type ILink } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { SearchAddon } from '@xterm/addon-search'
 import { UnicodeGraphemesAddon } from '@xterm/addon-unicode-graphemes'
 import { routeKey } from '@core/keybindings/keybinding-router'
 import { buildKeymap } from '@core/keybindings/effective-keymap'
 import { TERMINAL_FONT_FAMILY, TERMINAL_LINE_HEIGHT } from '@core/terminal/font-stack'
+import { parseFileLinks } from '@core/terminal/file-link'
+import { resolveClickedPath } from '@core/fs/path-resolve'
+import { isPathInside } from '@core/fs/path-guard'
 import { useTerminalStore } from '../store/terminal-store'
 import { useSessionStore } from '../store/session-store'
+import { useViewerStore } from '../store/viewer-store'
 import { useFontStore } from '../store/font-store'
 import '@xterm/xterm/css/xterm.css'
 
+/** Last path segment (basename) without pulling in node:path in the renderer. */
+function basename(path: string): string {
+  const segs = path.split(/[\\/]/)
+  return segs[segs.length - 1] || path
+}
+
 interface Props {
   tabId: string
+  /**
+   * Whether this tab is the one on screen. Every tab's terminal stays MOUNTED
+   * (so switching tabs never tears down xterm and rebuilds it from a lossy
+   * ring-buffer replay — see App.tsx); inactive panes are hidden via `hidden`.
+   * Defaults to `true` for single-terminal contexts (tear-off window).
+   */
+  active?: boolean
 }
 
 /**
@@ -27,7 +44,7 @@ interface Props {
  * behaviour is DOM/xterm/IPC-bound and is verified by the Playwright-for-Electron
  * E2E suite (including the reload-recovery scenario).
  */
-export function TerminalPane({ tabId }: Props): React.ReactElement {
+export function TerminalPane({ tabId, active = true }: Props): React.ReactElement {
   const hostRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
@@ -112,8 +129,85 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
 
     let disposed = false
 
+    // VS Code-style Ctrl+Click file links. A link provider offers matches only
+    // while Ctrl/⌘ is held (so ordinary click-to-select is untouched), and only
+    // for tokens that resolve to a real file inside THIS tab's project root
+    // (existence + root guarded — random words never light up). Ctrl+Click opens
+    // the file in the viewer and jumps to any `:line:col`. `parseFileLinks` /
+    // `resolveClickedPath` are the pure, unit-tested core; this stays a thin
+    // adapter (E2E-covered).
+    let modifierHeld = false
+    let lastMouse: { x: number; y: number } | null = null
+
+    const onHostMouseMove = (e: MouseEvent): void => {
+      lastMouse = { x: e.clientX, y: e.clientY }
+    }
+    host.addEventListener('mousemove', onHostMouseMove)
+
+    // Track Ctrl/⌘ and, on a change, nudge xterm to re-query the provider under
+    // the pointer so the underline appears/disappears without moving the mouse.
+    const onModifier = (e: KeyboardEvent): void => {
+      const held = e.ctrlKey || e.metaKey
+      if (held === modifierHeld) return
+      modifierHeld = held
+      if (!lastMouse) return
+      const target = document.elementFromPoint(lastMouse.x, lastMouse.y)
+      target?.dispatchEvent(
+        new MouseEvent('mousemove', { clientX: lastMouse.x, clientY: lastMouse.y, bubbles: true })
+      )
+    }
+    window.addEventListener('keydown', onModifier)
+    window.addEventListener('keyup', onModifier)
+
+    const linkProvider = term.registerLinkProvider({
+      provideLinks(bufferLineNumber, callback) {
+        if (!modifierHeld) return callback(undefined)
+        const cwd = useSessionStore.getState().tabs.find((t) => t.tabId === tabId)?.cwd
+        const text = term.buffer.active.getLine(bufferLineNumber - 1)?.translateToString(true)
+        if (!cwd || !text) return callback(undefined)
+        const matches = parseFileLinks(text)
+        if (matches.length === 0) return callback(undefined)
+
+        void Promise.all(
+          matches.map(async (mt): Promise<ILink | null> => {
+            const resolved = resolveClickedPath(cwd, mt.path)
+            if (!isPathInside(cwd, resolved)) return null
+            let ok = false
+            try {
+              ok = await window.api.pathExists(resolved)
+            } catch {
+              ok = false
+            }
+            if (!ok) return null
+            return {
+              text: mt.path,
+              // xterm coords are 1-based; end.x is the last cell (inclusive).
+              range: {
+                start: { x: mt.start + 1, y: bufferLineNumber },
+                end: { x: mt.end, y: bufferLineNumber }
+              },
+              decorations: { pointerCursor: true, underline: true },
+              activate: (event) => {
+                // Require the modifier so a plain click never hijacks selection.
+                if (!event.ctrlKey && !event.metaKey) return
+                useViewerStore.getState().openFileAt(resolved, basename(resolved), mt.line, mt.column)
+              }
+            }
+          })
+        ).then((links) => {
+          if (disposed) return
+          const real = links.filter((l): l is ILink => l !== null)
+          callback(real.length > 0 ? real : undefined)
+        })
+      }
+    })
+
     const applyFit = (): void => {
       if (disposed) return
+      // xterm can't measure a hidden (display:none) host: fit() would compute
+      // 0 cols/rows and resize the PTY to garbage. Skip while hidden; the
+      // activation effect below re-fits when this tab is shown.
+      if (host.clientWidth === 0 || host.clientHeight === 0) return
       fit.fit()
       window.api.resizeSession(tabId, term.cols, term.rows)
     }
@@ -149,6 +243,10 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
       offData()
       offExit()
       keyListener.dispose()
+      linkProvider.dispose()
+      host.removeEventListener('mousemove', onHostMouseMove)
+      window.removeEventListener('keydown', onModifier)
+      window.removeEventListener('keyup', onModifier)
       void window.api.detachSession(tabId) // leaves the PTY running
       termRef.current = null
       fitRef.current = null
@@ -171,6 +269,21 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
     window.api.resizeSession(tabId, term.cols, term.rows)
   }, [terminalFontSize, tabId])
 
+  // When this tab becomes the active one, its host goes from hidden (0-sized,
+  // unmeasurable) to visible — so re-fit now and tell the PTY the real cols/rows.
+  // This is what keeps every tab's live xterm intact across tab switches instead
+  // of rebuilding it from a ring-buffer snapshot on every switch.
+  useEffect(() => {
+    if (!active) return
+    const term = termRef.current
+    const fit = fitRef.current
+    const host = hostRef.current
+    if (!term || !fit || !host) return
+    if (host.clientWidth === 0 || host.clientHeight === 0) return
+    fit.fit()
+    window.api.resizeSession(tabId, term.cols, term.rows)
+  }, [active, tabId])
+
   const closeSearch = (): void => {
     setSearchOpen(false)
     setQuery('')
@@ -178,7 +291,7 @@ export function TerminalPane({ tabId }: Props): React.ReactElement {
   }
 
   return (
-    <div className="terminal-pane" data-testid="terminal-pane">
+    <div className="terminal-pane" data-testid="terminal-pane" hidden={!active}>
       {searchOpen && (
         <div className="terminal-search" data-testid="terminal-search">
           <input

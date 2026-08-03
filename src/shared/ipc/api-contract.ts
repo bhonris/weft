@@ -240,6 +240,19 @@ export interface IssuesPanelData {
   error: string | null
 }
 
+/** Fields for a new GitHub issue created from the Issues panel. */
+export interface CreateIssueInput {
+  /** Issue title (required; the service rejects an empty/whitespace title). */
+  title: string
+  /** Markdown body — may be empty. */
+  body: string
+  /** Label names to apply (a subset of the repo's existing labels). */
+  labels: string[]
+}
+
+/** Outcome of {@link WeftApi.createIssue} — the created issue, or a human error. */
+export type CreateIssueResult = { issue: GithubIssue } | { error: string }
+
 /** Result of starting the GitHub device-flow sign-in. */
 export type GithubSignInResult =
   | { userCode: string; verificationUri: string; expiresInSec: number }
@@ -306,6 +319,12 @@ export interface WeftApi {
   revealInOs(path: string): Promise<void>
   openWithDefault(path: string): Promise<void>
   readFileText(path: string): Promise<string>
+  /**
+   * Whether `path` is an existing file inside an open project root. Used to
+   * decide whether a terminal token becomes a clickable file link. Resolves
+   * `false` (never rejects) for a missing path or one outside every root.
+   */
+  pathExists(path: string): Promise<boolean>
   /**
    * Parse a spreadsheet (xlsx/xlsm/xlsb/xls) into structured JSON for the table
    * viewer. Rejects for paths outside an open project root, oversize workbooks,
@@ -379,6 +398,13 @@ export interface WeftApi {
    */
   getIssues(cwd: string | null): Promise<IssuesPanelData>
   /**
+   * Create a new issue on the GitHub repo at `cwd` (its `origin` remote).
+   * Requires an authenticated token; resolves `{ error }` (never rejects) when
+   * `cwd` isn't a GitHub repo, the title is blank, no token is available, or the
+   * request fails, and `{ issue }` with the created issue on success.
+   */
+  createIssue(cwd: string | null, input: CreateIssueInput): Promise<CreateIssueResult>
+  /**
    * Start the GitHub OAuth device flow: opens the browser to the verification
    * URI and returns the user code to display. Main polls in the background and
    * pushes the outcome via {@link WeftApi.onGithubAuth}.
@@ -423,6 +449,7 @@ export type WeftBridge = Pick<
   | 'loadWorkspace'
   | 'saveWorkspace'
   | 'readFileText'
+  | 'pathExists'
   | 'readSpreadsheet'
   | 'getDiff'
   | 'getGitBranch'
@@ -439,6 +466,7 @@ export type WeftBridge = Pick<
   | 'getUsagePanel'
   | 'getSessionInfo'
   | 'getIssues'
+  | 'createIssue'
   | 'githubSignIn'
   | 'githubSignOut'
   | 'onGithubAuth'

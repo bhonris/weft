@@ -1,6 +1,12 @@
 import { parseRepoSlug } from '@core/github/repo-url'
-import { parseIssues } from '@core/github/issues'
-import type { GithubAuthSource, GithubIssue, IssuesPanelData } from '@shared/ipc/api-contract'
+import { parseIssues, parseCreatedIssue } from '@core/github/issues'
+import type {
+  CreateIssueInput,
+  CreateIssueResult,
+  GithubAuthSource,
+  GithubIssue,
+  IssuesPanelData
+} from '@shared/ipc/api-contract'
 
 /** Minimal fetch surface the service needs — satisfied by global fetch and a fake. */
 export interface GithubFetchResponse {
@@ -96,6 +102,46 @@ export class GithubService {
       return { repo: slug, issues, authSource: auth.source, fetchedAt: iso, stale: false, error: null }
     } catch {
       return this.fail(slug, auth.source, iso, 'Could not reach GitHub. Check your connection.')
+    }
+  }
+
+  /**
+   * Create an issue on the repo at `cwd`. Requires a token (unauthenticated
+   * create is impossible). Returns `{ issue }` on success or `{ error }` with a
+   * human message — never throws. On success the repo's cached issue list is
+   * invalidated so the next {@link panel} poll shows the new issue immediately.
+   */
+  async createIssue(cwd: string | null, input: CreateIssueInput): Promise<CreateIssueResult> {
+    const slug = cwd ? parseRepoSlug((await this.deps.getRemoteUrl(cwd)) ?? '') : null
+    if (!slug) return { error: 'Not a GitHub repository.' }
+
+    const title = input.title.trim()
+    if (!title) return { error: 'Issue title is required.' }
+
+    const auth = await this.deps.getAuth().catch(() => ({ token: null, source: 'none' as const }))
+    if (!auth.token) return { error: 'Sign in to GitHub to create an issue.' }
+
+    const base = this.deps.apiBase ?? DEFAULT_API_BASE
+    const url = `${base}/repos/${slug.owner}/${slug.repo}/issues`
+    const headers: Record<string, string> = {
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'weft',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${auth.token}`
+    }
+    const body = JSON.stringify({ title, body: input.body, labels: input.labels })
+
+    try {
+      const res = await this.deps.fetch(url, { method: 'POST', headers, body })
+      if (!res.ok) return { error: this.httpError(res, auth.source) }
+      const issue = parseCreatedIssue(await res.json())
+      if (!issue) return { error: 'GitHub returned an unexpected response.' }
+      // Drop the stale list so a fresh poll includes the new issue.
+      this.cache.delete(`${slug.owner}/${slug.repo}`)
+      return { issue }
+    } catch {
+      return { error: 'Could not reach GitHub. Check your connection.' }
     }
   }
 

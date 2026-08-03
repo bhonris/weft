@@ -28,7 +28,10 @@ const wire = (over: Partial<Parameters<typeof registerGithubIpc>[0]> = {}) => {
   const ipcMain = new FakeIpcMain()
   const deps = {
     ipcMain,
-    githubService: { panel: vi.fn(async () => panel) },
+    githubService: {
+      panel: vi.fn(async () => panel),
+      createIssue: vi.fn(async () => ({ error: 'x' }))
+    },
     authService: { beginDeviceFlow: vi.fn(async () => ({ error: 'x' })), signOut: vi.fn() },
     openExternal: vi.fn(),
     ...over
@@ -49,6 +52,28 @@ describe('registerGithubIpc', () => {
     const { ipcMain, deps } = wire()
     await ipcMain.invoke(CH.getIssues, undefined)
     expect(deps.githubService.panel).toHaveBeenCalledWith(null)
+  })
+
+  it('forwards cwd + input to createIssue on github:create', async () => {
+    const created = { issue: { number: 5, htmlUrl: 'https://github.com/octo/hello/issues/5' } }
+    const createIssue = vi.fn(async () => created)
+    const { ipcMain, deps } = wire({
+      githubService: { panel: vi.fn(async () => panel), createIssue }
+    })
+    const input = { title: 'Bug', body: 'boom', labels: ['bug'] }
+    const out = await ipcMain.invoke(CH.createIssue, 'C:/repo', input)
+    expect(deps.githubService.createIssue).toHaveBeenCalledWith('C:/repo', input)
+    expect(out).toBe(created)
+  })
+
+  it('passes null cwd through to createIssue when undefined', async () => {
+    const { ipcMain, deps } = wire()
+    await ipcMain.invoke(CH.createIssue, undefined, { title: 't', body: '', labels: [] })
+    expect(deps.githubService.createIssue).toHaveBeenCalledWith(null, {
+      title: 't',
+      body: '',
+      labels: []
+    })
   })
 
   it('starts the device flow on github:sign-in', async () => {

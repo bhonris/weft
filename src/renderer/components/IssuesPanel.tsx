@@ -97,6 +97,13 @@ export function IssuesPanel({ cwd }: { cwd: string | null }): React.ReactElement
   const [state, setState] = useState<'open' | 'closed' | 'all'>('open')
   const [label, setLabel] = useState('')
   const [query, setQuery] = useState('')
+  // "New issue" inline form.
+  const [creating, setCreating] = useState(false)
+  const [newTitle, setNewTitle] = useState('')
+  const [newBody, setNewBody] = useState('')
+  const [newLabels, setNewLabels] = useState<string[]>([])
+  const [submitting, setSubmitting] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
   const now = Date.now()
 
   const refresh = (): void => {
@@ -106,6 +113,41 @@ export function IssuesPanel({ cwd }: { cwd: string | null }): React.ReactElement
       .catch(() => {
         /* keep last value */
       })
+  }
+
+  const closeForm = (): void => {
+    setCreating(false)
+    setNewTitle('')
+    setNewBody('')
+    setNewLabels([])
+    setCreateError(null)
+  }
+
+  const toggleNewLabel = (name: string): void => {
+    setNewLabels((prev) =>
+      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
+    )
+  }
+
+  const submitNewIssue = (e: React.FormEvent): void => {
+    e.preventDefault()
+    const title = newTitle.trim()
+    if (!title || submitting) return
+    setSubmitting(true)
+    setCreateError(null)
+    void window.api
+      .createIssue(cwd, { title, body: newBody, labels: newLabels })
+      .then((res) => {
+        if ('error' in res) {
+          setCreateError(res.error)
+          return
+        }
+        closeForm()
+        refresh()
+        if (res.issue.htmlUrl) void window.api.openExternal(res.issue.htmlUrl)
+      })
+      .catch(() => setCreateError('Could not create the issue. Please try again.'))
+      .finally(() => setSubmitting(false))
   }
 
   const startSignIn = (): void => {
@@ -155,6 +197,20 @@ export function IssuesPanel({ cwd }: { cwd: string | null }): React.ReactElement
         <span className="issues-repo__slug">
           {panel.repo.owner}/{panel.repo.repo}
         </span>
+        <button
+          type="button"
+          className="issues-new__btn"
+          data-testid="issues-new"
+          onClick={() => (creating ? closeForm() : setCreating(true))}
+          disabled={panel.authSource === 'none'}
+          title={
+            panel.authSource === 'none'
+              ? 'Sign in to GitHub to create issues'
+              : 'Create a new issue'
+          }
+        >
+          {creating ? 'Cancel' : '+ New issue'}
+        </button>
       </div>
 
       <div className="issues-auth" data-testid="issues-auth">
@@ -174,6 +230,66 @@ export function IssuesPanel({ cwd }: { cwd: string | null }): React.ReactElement
           </button>
         ) : null}
       </div>
+
+      {creating && (
+        <form className="issue-form" data-testid="issue-form" onSubmit={submitNewIssue}>
+          <input
+            type="text"
+            className="issue-form__title"
+            placeholder="Issue title"
+            aria-label="Issue title"
+            data-testid="issue-form-title"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            autoFocus
+          />
+          <textarea
+            className="issue-form__body"
+            placeholder="Describe the issue (optional)…"
+            aria-label="Issue body"
+            data-testid="issue-form-body"
+            rows={4}
+            value={newBody}
+            onChange={(e) => setNewBody(e.target.value)}
+          />
+          {labels.length > 0 && (
+            <div className="issue-form__labels" role="group" aria-label="Apply labels">
+              {labels.map((name) => {
+                const selected = newLabels.includes(name)
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    className={`issue-form__label${selected ? ' issue-form__label--on' : ''}`}
+                    aria-pressed={selected}
+                    onClick={() => toggleNewLabel(name)}
+                  >
+                    {name}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          {createError && (
+            <div className="issues-note issues-note--error" data-testid="issue-form-error">
+              {createError}
+            </div>
+          )}
+          <div className="issue-form__actions">
+            <button
+              type="submit"
+              className="issue-form__submit"
+              data-testid="issue-form-submit"
+              disabled={!newTitle.trim() || submitting}
+            >
+              {submitting ? 'Creating…' : 'Create issue'}
+            </button>
+            <button type="button" className="issue-form__cancel" onClick={closeForm}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       {signIn && (
         <div className="issues-signin" data-testid="issues-signin">

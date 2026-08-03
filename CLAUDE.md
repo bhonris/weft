@@ -54,6 +54,13 @@ Path aliases (tsconfig + vitest): `@shared/*` → `src/shared/*`,
 - **Renderer reload must never kill a PTY.** Terminals `attachSession` /
   `detachSession`; `closeSession` is the only thing that kills a process. See
   spec §4.7 and the reload E2E.
+- **Every tab's terminal stays mounted; switching tabs only toggles visibility.**
+  `App.tsx` renders one `TerminalPane` per tab (not `key={activeTabId}`) and hides
+  the inactive ones via the `hidden` attribute (`.terminal-pane[hidden]`), so a
+  tab switch never disposes+rebuilds xterm from the lossy ring-buffer snapshot —
+  that replay path is reserved for genuine reload/HMR recovery. `applyFit` no-ops
+  while a host is hidden (0-sized) and an activation effect re-fits + `resizeSession`
+  when a tab becomes visible. Guarded by `e2e/terminal-keepalive.spec.ts`.
 - **Status is hook-driven.** Flow: Claude Code hook → `forward.cjs` →
   `status-server` (named pipe on Windows / UDS on POSIX — **never TCP**) →
   `session-correlator` (by `session_id`, then `tabId`, then `cwd`) →
@@ -66,6 +73,19 @@ Path aliases (tsconfig + vitest): `@shared/*` → `src/shared/*`,
   `prefers-reduced-motion`.
 - **No WebGL xterm renderer** — it removes terminal text from the DOM, breaking
   a11y and all text-based E2E. DOM renderer only (see STEINER_LOG leap 25).
+- **Terminal file links are Ctrl+Click, existence- and root-guarded**
+  (`documents/completed/terminal-file-links.md`). `TerminalPane` registers an
+  xterm `registerLinkProvider` that offers links **only while Ctrl/⌘ is held**
+  and **only** for tokens that resolve to a real file **inside the active tab's
+  cwd**. Detection/resolution are the pure, unit-tested
+  `core/terminal/file-link.ts` (`parseFileLinks`) + `core/fs/path-resolve.ts`
+  (`resolveClickedPath`); existence is the root-guarded `fs:path-exists` channel
+  (an injected `exists` fn in `container.ts`, like `reveal`/`open`, returns
+  `false` — never throws — outside a root). Ctrl+Click calls
+  `viewer-store.openFileAt(path, name, line?, col?)`, which opens the file and
+  sets a transient `reveal` target that `ViewerPane` applies to Monaco
+  (`revealLineInCenter` + `setPosition`) for `file:line:col` jumps. The wiring is
+  E2E-only (`e2e/terminal-links.spec.ts`), like the rest of `TerminalPane`.
 - **The viewer is format-aware** (`documents/rich-file-viewer.md`).
   `core/viewer/file-kind.ts` maps a filename to a `ViewerKind`
   (`text|image|pdf|spreadsheet|csv|audio|video|binary`); unknown → `text`, so
@@ -104,7 +124,12 @@ Path aliases (tsconfig + vitest): `@shared/*` → `src/shared/*`,
   single-root only. **Discard is irreversible — gate it behind `ConfirmDialog`.**
 - **GitHub Issues + device-flow OAuth keep the token in main only**
   (`documents/completed/github-issues-panel.md`). The `issues` panel lists the
-  active repo's issues (repo detected from the `origin` remote). Sign-in runs the
+  active repo's issues (repo detected from the `origin` remote) and can **create
+  a new issue** (title/body/labels) via a `POST /repos/{owner}/{repo}/issues`
+  from `GithubService.createIssue` over the `github:create` channel
+  (`documents/completed/create-github-issue.md`) — auth-required, returns
+  `{ issue } | { error }` (never throws, like the rest of the service), and
+  invalidates the per-repo cache on success. Sign-in runs the
   **entire device flow in the main process** (`GithubAuthService`): it opens
   github.com via `shell.openExternal`, background-polls for the token, persists
   it in electron-store (`githubToken`), and pushes a `github:auth` event to the

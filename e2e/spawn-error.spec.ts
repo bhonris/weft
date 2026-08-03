@@ -47,13 +47,21 @@ test('the theme toggle cycles cyberpunk → system → light → dark and applie
   const themeAttr = (): Promise<string | undefined> =>
     page.evaluate(() => document.documentElement.dataset['theme'])
 
+  // Cycle the theme from the command palette (the status-bar theme button was
+  // removed to declutter the footer).
+  const cycleTheme = async (): Promise<void> => {
+    await page.keyboard.press('Control+Shift+P')
+    await page.keyboard.type('cycle theme')
+    await page.keyboard.press('Enter')
+  }
+
   // Cyberpunk is the out-of-the-box default.
   await expect.poll(themeAttr).toBe('cyberpunk')
 
-  await page.getByRole('button', { name: /^theme:/ }).click()
+  await cycleTheme()
   await expect.poll(themeAttr).toBe('system')
 
-  await page.getByRole('button', { name: /^theme:/ }).click()
+  await cycleTheme()
   await expect.poll(themeAttr).toBe('light')
   // Light vars actually applied.
   const bgLight = await page.evaluate(() =>
@@ -61,7 +69,7 @@ test('the theme toggle cycles cyberpunk → system → light → dark and applie
   )
   expect(bgLight).toBe('#ffffff')
 
-  await page.getByRole('button', { name: /^theme:/ }).click()
+  await cycleTheme()
   await expect.poll(themeAttr).toBe('dark')
 
   await app.close()

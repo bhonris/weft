@@ -11,7 +11,8 @@ beforeEach(() => {
     mode: 'view',
     editing: false,
     preview: false,
-    saveTick: 0
+    saveTick: 0,
+    reveal: null
   })
 })
 
@@ -39,6 +40,37 @@ describe('useViewerStore', () => {
     // toggle compares vs HEAD rather than the staged/unstaged blob.
     s.openFile('/p/a.txt', 'a.txt')
     expect(useViewerStore.getState().file?.git).toBeUndefined()
+  })
+
+  it('openFileAt opens the file and sets a reveal target for the position', () => {
+    useViewerStore.getState().openFileAt('/p/a.ts', 'a.ts', 42, 7)
+    const s = useViewerStore.getState()
+    expect(s.file).toEqual({ path: '/p/a.ts', name: 'a.ts' })
+    expect(s.reveal).toEqual({ path: '/p/a.ts', line: 42, column: 7, tick: 1 })
+  })
+
+  it('openFileAt defaults the column to 1 when omitted', () => {
+    useViewerStore.getState().openFileAt('/p/a.ts', 'a.ts', 10)
+    expect(useViewerStore.getState().reveal).toEqual({
+      path: '/p/a.ts',
+      line: 10,
+      column: 1,
+      tick: 1
+    })
+  })
+
+  it('openFileAt without a line opens the file and leaves reveal untouched', () => {
+    useViewerStore.getState().openFileAt('/p/a.ts', 'a.ts')
+    const s = useViewerStore.getState()
+    expect(s.file).toEqual({ path: '/p/a.ts', name: 'a.ts' })
+    expect(s.reveal).toBeNull()
+  })
+
+  it('openFileAt increments the reveal tick on repeat jumps', () => {
+    const s = useViewerStore.getState()
+    s.openFileAt('/p/a.ts', 'a.ts', 1)
+    s.openFileAt('/p/a.ts', 'a.ts', 5)
+    expect(useViewerStore.getState().reveal).toMatchObject({ line: 5, tick: 2 })
   })
 
   it('opening a DIFFERENT file after a git diff resets mode to view', () => {

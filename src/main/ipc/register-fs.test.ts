@@ -34,6 +34,7 @@ const makeDeps = () => ({
   spreadsheetService: {
     read: vi.fn(async () => ({ sheets: [{ name: 'S', rows: [['a']] }], truncated: false }))
   } as never,
+  exists: vi.fn(async () => true),
   getWritableRoots: () => ['C:/proj']
 })
 
@@ -123,6 +124,35 @@ describe('registerFsIpc', () => {
     await expect(ipcMain.invoke(CH.readSpreadsheet, 123 as never)).rejects.toThrow(
       /invalid readSpreadsheet/
     )
+  })
+
+  it('pathExists returns the injected result inside a root', async () => {
+    const ipcMain = new FakeIpcMain()
+    const deps = makeDeps()
+    registerFsIpc({ ipcMain, fsService, reveal: () => {}, open: () => {}, ...deps })
+
+    const out = await ipcMain.invoke(CH.pathExists, 'C:/proj/src/x.ts')
+    expect(out).toBe(true)
+    expect(deps.exists).toHaveBeenCalledWith('C:/proj/src/x.ts')
+  })
+
+  it('pathExists resolves false (no throw) outside a root or for a bad arg', async () => {
+    const ipcMain = new FakeIpcMain()
+    const deps = makeDeps()
+    registerFsIpc({ ipcMain, fsService, reveal: () => {}, open: () => {}, ...deps })
+
+    await expect(ipcMain.invoke(CH.pathExists, 'C:/elsewhere/x.ts')).resolves.toBe(false)
+    await expect(ipcMain.invoke(CH.pathExists, 123 as never)).resolves.toBe(false)
+    // The guard short-circuits: the injected checker is never consulted.
+    expect(deps.exists).not.toHaveBeenCalled()
+  })
+
+  it('pathExists surfaces a false from the injected checker (missing file)', async () => {
+    const ipcMain = new FakeIpcMain()
+    const deps = { ...makeDeps(), exists: vi.fn(async () => false) }
+    registerFsIpc({ ipcMain, fsService, reveal: () => {}, open: () => {}, ...deps })
+
+    await expect(ipcMain.invoke(CH.pathExists, 'C:/proj/gone.ts')).resolves.toBe(false)
   })
 
   it('saveFile writes inside an open root and refuses everything else', async () => {

@@ -11,6 +11,8 @@ import type {
   UsagePanelData,
   SessionInfo,
   IssuesPanelData,
+  CreateIssueInput,
+  CreateIssueResult,
   GithubSignInResult,
   GitRepoStatus,
   GitDiffSide,
@@ -70,6 +72,7 @@ export function createWeftApi(ipc: IpcRendererLike): WeftBridge {
     loadWorkspace: () => ipc.invoke(CH.loadWorkspace) as Promise<WorkspaceState>,
     saveWorkspace: (state) => ipc.invoke(CH.saveWorkspace, state) as Promise<void>,
     readFileText: (path) => ipc.invoke(CH.readFileText, path) as Promise<string>,
+    pathExists: (path) => ipc.invoke(CH.pathExists, path) as Promise<boolean>,
     readSpreadsheet: (path) => ipc.invoke(CH.readSpreadsheet, path) as Promise<SpreadsheetData>,
     getDiff: (path) => ipc.invoke(CH.getDiff, path) as Promise<DiffPayload>,
     getGitBranch: (cwd) => ipc.invoke(CH.getGitBranch, cwd) as Promise<string | null>,
@@ -89,6 +92,8 @@ export function createWeftApi(ipc: IpcRendererLike): WeftBridge {
     getSessionInfo: (cwd, sessionId) =>
       ipc.invoke(CH.getSessionInfo, cwd, sessionId) as Promise<SessionInfo | null>,
     getIssues: (cwd) => ipc.invoke(CH.getIssues, cwd) as Promise<IssuesPanelData>,
+    createIssue: (cwd, input: CreateIssueInput) =>
+      ipc.invoke(CH.createIssue, cwd, input) as Promise<CreateIssueResult>,
     githubSignIn: () => ipc.invoke(CH.githubSignIn) as Promise<GithubSignInResult>,
     githubSignOut: () => ipc.invoke(CH.githubSignOut) as Promise<void>,
     onGithubAuth: (cb) => subscribe(CH.githubAuth, cb),

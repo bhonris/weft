@@ -867,8 +867,13 @@ export function App(): React.ReactElement {
       aria-label="Terminal"
       style={showEditor ? { flex: `0 0 ${Math.round(dockSize * 100)}%` } : { flex: '1 1 auto' }}
     >
-      {activeTabId ? (
-        <TerminalPane key={activeTabId} tabId={activeTabId} />
+      {tabs.length > 0 ? (
+        // Keep EVERY tab's terminal mounted; hide the inactive ones. Switching
+        // tabs must not dispose+rebuild xterm from a ring-buffer replay (lossy
+        // for a full-screen TUI like Claude) — it only mirrors main's live PTY.
+        tabs.map((t) => (
+          <TerminalPane key={t.tabId} tabId={t.tabId} active={t.tabId === activeTabId} />
+        ))
       ) : (
         <div className="terminal-host__placeholder">No active session</div>
       )}
@@ -969,7 +974,6 @@ export function App(): React.ReactElement {
           </section>
         </main>
         <footer className="status-bar" data-testid="status-bar" ref={statusRef}>
-          <span>Weft</span>
           {activeTab && (
             <span className="status-bar__cwd" title={activeTab.cwd}>
               {activeTab.title}
@@ -1131,22 +1135,6 @@ export function App(): React.ReactElement {
             onClick={() => setResumeEnabled(!resumeEnabled)}
           >
             ↻ resume {resumeEnabled ? 'on' : 'off'}
-          </button>
-          <button
-            type="button"
-            className="status-bar__theme"
-            aria-label={`theme: ${theme}`}
-            title="Cycle theme (system → light → dark → cyberpunk)"
-            onClick={() => setTheme(nextTheme(theme))}
-          >
-            {theme === 'system'
-              ? '◐'
-              : theme === 'light'
-                ? '☀'
-                : theme === 'dark'
-                  ? '☾'
-                  : '⚡'}{' '}
-            {theme}
           </button>
           <span>
             {tabs.length} session{tabs.length === 1 ? '' : 's'}

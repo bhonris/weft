@@ -20,7 +20,7 @@ vi.mock('./components/ViewerPane', () => ({
 }))
 
 import { App } from './App'
-import { useSessionStore } from './store/session-store'
+import { useSessionStore, nextTheme } from './store/session-store'
 import { useViewerStore } from './store/viewer-store'
 import { emptyOpenFiles } from '@core/workspace/open-files'
 import { useDockStore } from './store/dock-store'
@@ -570,20 +570,19 @@ describe('App maximize CLI (full-pane focus mode)', () => {
   })
 })
 
-describe('App theme toggle', () => {
+describe('App theme', () => {
   it('cycles system → light → dark → cyberpunk → system and reflects it on <html>', async () => {
+    // The status-bar theme button was removed to reduce footer clutter; theme
+    // cycling now lives in the command palette (general.cycleTheme). This
+    // verifies the store cycle + the effect that mirrors it onto <html>.
     act(() => useSessionStore.getState().setTheme('system'))
     render(<App />)
-    const btn = await screen.findByRole('button', { name: /^theme:/ })
     await waitFor(() => expect(document.documentElement.dataset['theme']).toBe('system'))
 
     for (const expected of ['light', 'dark', 'cyberpunk', 'system']) {
-      fireEvent.click(btn)
+      act(() => useSessionStore.getState().setTheme(nextTheme(useSessionStore.getState().theme)))
       await waitFor(() => expect(document.documentElement.dataset['theme']).toBe(expected))
     }
-
-    // Back at the start; the toggle advertises the active theme for a11y.
-    expect(screen.getByRole('button', { name: 'theme: system' })).toBeTruthy()
   })
 })
 

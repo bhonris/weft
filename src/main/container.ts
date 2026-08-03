@@ -284,7 +284,8 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
     reveal: (path) => shell.showItemInFolder(path),
     open: async (path) => {
       await shell.openPath(path)
-    }
+    },
+    exists: (path) => fsPromises.stat(path).then((s) => s.isFile(), () => false)
   })
 
   // Source control: git working-tree status + staging/commit/sync for the SCM

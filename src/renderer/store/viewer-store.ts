@@ -43,12 +43,25 @@ export interface ViewerState {
   preview: boolean
   /** Bumped by requestSave(); ViewerPane saves the current model on change. */
   saveTick: number
+  /**
+   * A pending "jump to position" for the active text file, set by
+   * {@link ViewerState.openFileAt} (e.g. a Ctrl+Click on `file:line:col` in the
+   * terminal). ViewerPane consumes it once the matching file's Monaco editor is
+   * mounted. `tick` distinguishes repeat jumps to the same file; null when none.
+   */
+  reveal: { path: string; line: number; column: number; tick: number } | null
   /** Switch the viewer to a project's file set (e.g. when the active tab changes). */
   setProject: (projectId: string | null) => void
   /** Forget a project's open files (when its tab closes / tears off). */
   dropProject: (projectId: string) => void
   /** Open a file as a tab (re-activates it if already open) and show it. */
   openFile: (path: string, name: string) => void
+  /**
+   * Open a file (like {@link ViewerState.openFile}) and, when `line` is given,
+   * request the viewer scroll to and place the cursor at `line`/`column`
+   * (1-based). Used by the terminal's Ctrl+Click file links.
+   */
+  openFileAt: (path: string, name: string, line?: number, column?: number) => void
   /**
    * Open a file's git diff for `side` in diff mode (Source Control panel). Stamps
    * the side on the tab so the viewer fetches the right baseline/target pair.
@@ -105,6 +118,7 @@ export const useViewerStore = create<ViewerState>((set) => {
     editing: false,
     preview: false,
     saveTick: 0,
+    reveal: null,
     setProject: (projectId) =>
       set((s) => {
         if (projectId === s.projectId) return s
@@ -142,6 +156,15 @@ export const useViewerStore = create<ViewerState>((set) => {
     // file reverts to normal view / diff-vs-HEAD behaviour.
     openFile: (path, name) =>
       set((s) => mutate(s, (open) => stampGit(coreOpenFile(open, { path, name }), path, undefined))),
+    openFileAt: (path, name, line, column) =>
+      set((s) => {
+        const base = mutate(s, (open) => stampGit(coreOpenFile(open, { path, name }), path, undefined))
+        if (line === undefined) return base
+        return {
+          ...base,
+          reveal: { path, line, column: column ?? 1, tick: (s.reveal?.tick ?? 0) + 1 }
+        }
+      }),
     openGitDiff: (path, name, side) =>
       set((s) => {
         const key = keyOf(s.projectId)

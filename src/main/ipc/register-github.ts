@@ -1,12 +1,20 @@
 import { CH } from '@shared/ipc/channels'
 import { isSafeExternalUrl } from '@core/net/external-url'
 import type { IpcMainLike } from './register'
-import type { IssuesPanelData, GithubSignInResult } from '@shared/ipc/api-contract'
+import type {
+  CreateIssueInput,
+  CreateIssueResult,
+  IssuesPanelData,
+  GithubSignInResult
+} from '@shared/ipc/api-contract'
 
 /** The service surface these handlers need (kept minimal for testing). */
 export interface GithubRegisterDeps {
   ipcMain: IpcMainLike
-  githubService: { panel(cwd: string | null): Promise<IssuesPanelData> }
+  githubService: {
+    panel(cwd: string | null): Promise<IssuesPanelData>
+    createIssue(cwd: string | null, input: CreateIssueInput): Promise<CreateIssueResult>
+  }
   authService: { beginDeviceFlow(): Promise<GithubSignInResult>; signOut(): void }
   /** Open an http(s) URL in the OS browser (shell.openExternal). */
   openExternal: (url: string) => Promise<void> | void
@@ -16,6 +24,9 @@ export interface GithubRegisterDeps {
 export function registerGithubIpc(deps: GithubRegisterDeps): void {
   deps.ipcMain.handle(CH.getIssues, (_event, cwd) =>
     deps.githubService.panel((cwd as string | null) ?? null)
+  )
+  deps.ipcMain.handle(CH.createIssue, (_event, cwd, input) =>
+    deps.githubService.createIssue((cwd as string | null) ?? null, input as CreateIssueInput)
   )
   deps.ipcMain.handle(CH.githubSignIn, () => deps.authService.beginDeviceFlow())
   deps.ipcMain.handle(CH.githubSignOut, () => {

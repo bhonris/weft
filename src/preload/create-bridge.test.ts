@@ -77,6 +77,7 @@ describe('createWeftApi', () => {
     await api.revealInOs('/p/a')
     await api.openWithDefault('/p/a')
     await api.readFileText('/p/a')
+    await api.pathExists('/p/a')
     await api.readSpreadsheet('/p/book.xlsx')
     await api.getDiff('/p/a')
     await api.loadWorkspace()
@@ -99,6 +100,8 @@ describe('createWeftApi', () => {
     await api.gitPush('C:/p')
     await api.gitPull('C:/p')
     await api.getGitFileDiff('C:/p/a', 'staged')
+    await api.getIssues('C:/p')
+    await api.createIssue('C:/p', { title: 'Bug', body: 'boom', labels: ['bug'] })
 
     expect(invoke).toHaveBeenCalledWith(CH.listDir, '/p')
     expect(invoke).toHaveBeenCalledWith(CH.listFilesDeep, '/p')
@@ -110,6 +113,7 @@ describe('createWeftApi', () => {
     expect(invoke).toHaveBeenCalledWith(CH.revealInOs, '/p/a')
     expect(invoke).toHaveBeenCalledWith(CH.openWithDefault, '/p/a')
     expect(invoke).toHaveBeenCalledWith(CH.readFileText, '/p/a')
+    expect(invoke).toHaveBeenCalledWith(CH.pathExists, '/p/a')
     expect(invoke).toHaveBeenCalledWith(CH.readSpreadsheet, '/p/book.xlsx')
     expect(invoke).toHaveBeenCalledWith(CH.getDiff, '/p/a')
     expect(invoke).toHaveBeenCalledWith(CH.loadWorkspace)
@@ -123,6 +127,12 @@ describe('createWeftApi', () => {
     expect(invoke).toHaveBeenCalledWith(CH.gitPush, 'C:/p')
     expect(invoke).toHaveBeenCalledWith(CH.gitPull, 'C:/p')
     expect(invoke).toHaveBeenCalledWith(CH.getGitFileDiff, 'C:/p/a', 'staged')
+    expect(invoke).toHaveBeenCalledWith(CH.getIssues, 'C:/p')
+    expect(invoke).toHaveBeenCalledWith(CH.createIssue, 'C:/p', {
+      title: 'Bug',
+      body: 'boom',
+      labels: ['bug']
+    })
 
     api.onFsChange(() => {})
     api.onActivateTab(() => {})

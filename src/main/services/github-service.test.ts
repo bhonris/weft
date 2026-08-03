@@ -172,3 +172,154 @@ describe('GithubService.panel', () => {
     expect(p.issues.map((i) => i.number)).toEqual([42])
   })
 })
+
+const createdBody = {
+  number: 101,
+  title: 'New bug',
+  state: 'open',
+  user: { login: 'alice' },
+  labels: [{ name: 'bug', color: 'd73a4a' }],
+  comments: 0,
+  html_url: 'https://github.com/octo/hello/issues/101',
+  updated_at: '2026-07-20T12:00:00Z'
+}
+
+const authed = (over: Partial<GithubServiceDeps> = {}): GithubServiceDeps =>
+  deps({
+    fetch: okFetch(createdBody),
+    getAuth: async () => ({ token: 'gho_x', source: 'gh' }),
+    ...over
+  })
+
+describe('GithubService.createIssue', () => {
+  it('POSTs the issue and returns the created issue', async () => {
+    const fetch = okFetch(createdBody)
+    const svc = new GithubService(authed({ fetch }))
+    const res = await svc.createIssue('C:/repo', { title: 'New bug', body: 'boom', labels: ['bug'] })
+    expect('issue' in res && res.issue.number).toBe(101)
+    const [url, init] = (
+      fetch as unknown as {
+        mock: { calls: [string, { method?: string; headers: Record<string, string>; body?: string }][] }
+      }
+    ).mock.calls[0]!
+    expect(url).toBe('https://api.github.com/repos/octo/hello/issues')
+    expect(init.method).toBe('POST')
+    expect(init.headers['Authorization']).toBe('Bearer gho_x')
+    expect(init.headers['Content-Type']).toBe('application/json')
+    expect(JSON.parse(init.body!)).toEqual({ title: 'New bug', body: 'boom', labels: ['bug'] })
+  })
+
+  it('trims the title before sending', async () => {
+    const fetch = okFetch(createdBody)
+    await new GithubService(authed({ fetch })).createIssue('C:/repo', {
+      title: '  New bug  ',
+      body: '',
+      labels: []
+    })
+    const [, init] = (
+      fetch as unknown as { mock: { calls: [string, { body?: string }][] } }
+    ).mock.calls[0]!
+    expect(JSON.parse(init.body!).title).toBe('New bug')
+  })
+
+  it('invalidates the cache so the next panel poll re-fetches', async () => {
+    const fetch: GithubFetchLike = vi.fn(async (_url, init) => ({
+      ok: true,
+      status: 200,
+      json: async () => (init.method === 'POST' ? createdBody : issueBody)
+    }))
+    const svc = new GithubService(
+      authed({ fetch, now: () => NOW, cacheMs: 60_000 })
+    )
+    await svc.panel('C:/repo') // primes the cache (fetch #1)
+    await svc.createIssue('C:/repo', { title: 'x', body: '', labels: [] }) // fetch #2
+    await svc.panel('C:/repo') // cache dropped → fetch #3, not served stale
+    expect(fetch).toHaveBeenCalledTimes(3)
+  })
+
+  it('errors when the cwd is not a GitHub repo', async () => {
+    const res = await new GithubService(
+      authed({ getRemoteUrl: async () => 'https://gitlab.com/o/r.git' })
+    ).createIssue('C:/repo', { title: 'x', body: '', labels: [] })
+    expect(res).toEqual({ error: expect.stringMatching(/not a github repository/i) })
+  })
+
+  it('errors when the cwd is null', async () => {
+    const res = await new GithubService(authed()).createIssue(null, {
+      title: 'x',
+      body: '',
+      labels: []
+    })
+    expect(res).toEqual({ error: expect.stringMatching(/not a github repository/i) })
+  })
+
+  it('errors when the title is blank', async () => {
+    const res = await new GithubService(authed()).createIssue('C:/repo', {
+      title: '   ',
+      body: '',
+      labels: []
+    })
+    expect(res).toEqual({ error: expect.stringMatching(/title is required/i) })
+  })
+
+  it('errors (without fetching) when unauthenticated', async () => {
+    const fetch = okFetch(createdBody)
+    const res = await new GithubService(
+      authed({ fetch, getAuth: async () => ({ token: null, source: 'none' }) })
+    ).createIssue('C:/repo', { title: 'x', body: '', labels: [] })
+    expect(res).toEqual({ error: expect.stringMatching(/sign in/i) })
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('surfaces a friendly message on a non-2xx response', async () => {
+    const err: GithubFetchResponse = { ok: false, status: 422, json: async () => ({}) }
+    const res = await new GithubService(authed({ fetch: vi.fn(async () => err) })).createIssue(
+      'C:/repo',
+      { title: 'x', body: '', labels: [] }
+    )
+    expect(res).toEqual({ error: expect.stringMatching(/HTTP 422/) })
+  })
+
+  it('explains a 404 as a missing repo / lack of access (authenticated)', async () => {
+    const notFound: GithubFetchResponse = { ok: false, status: 404, json: async () => ({}) }
+    const res = await new GithubService(authed({ fetch: vi.fn(async () => notFound) })).createIssue(
+      'C:/repo',
+      { title: 'x', body: '', labels: [] }
+    )
+    expect(res).toEqual({ error: expect.stringMatching(/lacks access/i) })
+  })
+
+  it('errors when GitHub returns an unexpected body', async () => {
+    const res = await new GithubService(authed({ fetch: okFetch({ not: 'an issue' }) })).createIssue(
+      'C:/repo',
+      { title: 'x', body: '', labels: [] }
+    )
+    expect(res).toEqual({ error: expect.stringMatching(/unexpected response/i) })
+  })
+
+  it('errors on a network failure', async () => {
+    const fetch: GithubFetchLike = vi.fn(async () => {
+      throw new Error('ECONNREFUSED')
+    })
+    const res = await new GithubService(authed({ fetch })).createIssue('C:/repo', {
+      title: 'x',
+      body: '',
+      labels: []
+    })
+    expect(res).toEqual({ error: expect.stringMatching(/connection/i) })
+  })
+
+  it('degrades to source "none" (blocking the create) when getAuth throws', async () => {
+    const fetch = okFetch(createdBody)
+    const res = await new GithubService(
+      authed({
+        fetch,
+        getAuth: async () => {
+          throw new Error('locked')
+        }
+      })
+    ).createIssue('C:/repo', { title: 'x', body: '', labels: [] })
+    expect(res).toEqual({ error: expect.stringMatching(/sign in/i) })
+    expect(fetch).not.toHaveBeenCalled()
+  })
+})
