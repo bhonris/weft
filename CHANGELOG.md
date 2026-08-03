@@ -1,7 +1,18 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 — 2026-08-03
 
+First public release (source + Windows installer).
+
+- **Create GitHub issues from the Issues panel.** The panel can now open a new
+  issue (title/body/labels) via `GithubService.createIssue`
+  (`POST /repos/{owner}/{repo}/issues`) over the `github:create` channel —
+  auth-required, and the per-repo cache is invalidated on success. The OAuth
+  token stays in the main process and is never sent over IPC.
+- **Terminal file links.** `Ctrl`/`⌘`+Click a `path` or `file:line:col` token in
+  the terminal to open it in the viewer (jumping to the line/column). Links are
+  offered only while the modifier is held and only for tokens that resolve to a
+  real file inside the active tab's project root.
 - **Model & effort in the status bar.** A Claude Code tab now shows which model
   and reasoning-effort tier the session is running — e.g. `✦ Opus 4.8 · High` —
   read from the session's own transcript (authoritative, not scraped). It
