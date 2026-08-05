@@ -48,6 +48,15 @@ PTYs live in the **main process**; the renderer is a detachable view. A UI reloa
 
 See [USAGE.md](USAGE.md) for the full manual and [DOSSIER.md](DOSSIER.md) for project status/decisions. The build spec lives in `documents/steiner-spec.md`.
 
+## Autonomous issue-driven development
+
+This repo can be driven by opening a GitHub issue: Claude Code implements the change, opens a PR, and self-reviews before merge (see `documents/ai-managed-repo.md`). Progress is tracked via labels:
+
+- `ai:working` — an autonomous implement run is in progress.
+- `ai:pr-open` — the autonomous run opened a PR.
+- `needs-human` — the loop stopped and a person needs to look.
+- `ai:gave-up` — the loop exhausted its retry budget.
+
 ## License
 
 MIT
