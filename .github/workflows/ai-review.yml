@@ -1,0 +1,90 @@
+name: AI review
+
+# Self-review pass over an autonomous PR (documents/ai-managed-repo.md).
+#
+# This is a CHEAP FILTER, not the merge gate. A model reviewing a diff produced
+# by the same model has a self-approval bias, so ci.yml + branch protection stay
+# the real gate; this job only catches obviously-wrong or unsafe diffs and arms
+# auto-merge. It runs in a fresh context with no memory of the implementation.
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    name: self-review
+    # Only autonomous PRs. Human PRs are reviewed by humans.
+    if: startsWith(github.head_ref, 'ai/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so the agent can diff against the base
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Review the diff
+        id: review
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ steps.app-token.outputs.token }}
+          claude_args: "--max-turns 15"
+          prompt: |
+            Review PR #${{ github.event.pull_request.number }} in this repository.
+            You did not write this diff. Review it adversarially.
+
+            Read the diff with:
+              git diff origin/${{ github.base_ref }}...HEAD
+
+            Judge it against CLAUDE.md, specifically:
+            - The layer boundary: no Electron imports in src/core/, no business
+              rules baked into IPC handlers, decisions pure and unit-tested.
+            - The listed invariants (renderer reload must not kill a PTY, status
+              is hook-driven not scraped, no WebGL xterm renderer, path guards on
+              every mutating channel, etc.).
+            - Tests accompany the change; a bug fix has a regression test.
+            - Nothing under `.github/` was modified.
+
+            Then post ONE review comment on the PR whose FIRST line is exactly
+            one of:
+              VERDICT: APPROVE
+              VERDICT: REQUEST_CHANGES
+            followed by your reasoning.
+
+            Post it as a COMMENT review, not an approval — the App that opened
+            this PR cannot formally approve it.
+
+            Default to REQUEST_CHANGES when uncertain.
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+      # Arm auto-merge only on an APPROVE verdict. GitHub holds the merge until
+      # the required status checks from ci.yml are green, so a passing verdict
+      # alone can never merge a red PR.
+      - name: Arm auto-merge on approval
+        if: steps.review.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          verdict=$(gh pr view "$PR" --json comments \
+            --jq '[.comments[] | select(.body | startswith("VERDICT:"))] | last | .body // ""' \
+            | head -n 1)
+          echo "verdict line: $verdict"
+          if [ "$verdict" = "VERDICT: APPROVE" ]; then
+            gh pr merge "$PR" --auto --squash
+            echo "auto-merge armed"
+          else
+            gh pr edit "$PR" --add-label "needs-human"
+            echo "not approved — auto-merge not armed"
+          fi

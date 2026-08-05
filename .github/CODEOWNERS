@@ -1,0 +1,4 @@
+# The autonomous implement/review loop's GitHub App is deliberately not
+# granted "Workflows: write", so it cannot push changes under .github/ at all —
+# this file is a second line of defense for human-authored changes here.
+/.github/ @bhonris

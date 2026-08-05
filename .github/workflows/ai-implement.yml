@@ -1,0 +1,104 @@
+name: AI implement
+
+# Issue-driven autonomous development (documents/ai-managed-repo.md).
+# An owner-opened issue triggers Claude Code headless, which implements the
+# change per CLAUDE.md and opens a PR. ci.yml is the merge gate, not this job.
+
+on:
+  issues:
+    types: [opened]
+
+# Least privilege: the job reads the repo with GITHUB_TOKEN and does all writes
+# with the scoped App token, which is what makes ci.yml run on the bot's commits.
+permissions:
+  contents: read
+
+jobs:
+  implement:
+    name: implement issue
+    # The owner gate is load-bearing. It keeps a third party from triggering a
+    # run, and keeps the subscription credential in the secret spendable only by
+    # the account holder. Do not relax it without re-reading the Security
+    # section of documents/ai-managed-repo.md.
+    if: github.event.issue.user.login == github.repository_owner
+    runs-on: windows-latest
+    # Bounds a runaway run's burn on the shared weekly quota.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # A dedicated App (not GITHUB_TOKEN) so pushes from this job DO trigger
+      # ci.yml on the resulting PR. GITHUB_TOKEN-authored commits do not.
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      # Mirrors ci.yml so the agent's local gate matches the one that judges it.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Mark issue as in progress
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: gh issue edit ${{ github.event.issue.number }} --add-label "ai:working"
+
+      - name: Implement
+        id: implement
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ steps.app-token.outputs.token }}
+          claude_args: "--max-turns 30"
+          prompt: |
+            Implement GitHub issue #${{ github.event.issue.number }} in this repository.
+
+            Title: ${{ github.event.issue.title }}
+
+            Body:
+            ${{ github.event.issue.body }}
+
+            Requirements:
+            - Follow CLAUDE.md exactly, especially the layer boundary
+              (decisions go in src/core/ as pure, tested logic; src/main/ stays a
+              thin adapter) and the listed invariants.
+            - Add tests with the change. For a bug fix, add a regression test that
+              fails without the fix.
+            - Run `pnpm typecheck` and `pnpm test:cov` and get them passing before
+              opening a PR. The coverage gate is 95% statements/functions/lines
+              and 90% branches.
+            - Work on a branch named `ai/issue-${{ github.event.issue.number }}-<short-slug>`.
+            - Open a PR whose body contains exactly `Closes #${{ github.event.issue.number }}`.
+            - Do not modify anything under `.github/`.
+            - If the issue is too vague to implement without guessing, do NOT open
+              a PR. Post a comment on the issue asking the specific question that
+              blocks you, and stop.
+        env:
+          # Subscription auth. Deliberately NOT ANTHROPIC_API_KEY — see
+          # documents/ai-managed-repo.md.
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+      # Reflect the outcome in labels so issue state is visible at a glance.
+      - name: Label outcome
+        if: always()
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          NUMBER: ${{ github.event.issue.number }}
+          OUTCOME: ${{ steps.implement.outcome }}
+        shell: bash
+        run: |
+          gh issue edit "$NUMBER" --remove-label "ai:working" || true
+          if [ "$OUTCOME" = "success" ]; then
+            gh issue edit "$NUMBER" --add-label "ai:pr-open" || true
+          else
+            gh issue edit "$NUMBER" --add-label "needs-human" || true
+            gh issue comment "$NUMBER" --body \
+              "The autonomous implement run did not complete. See the [run log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}). Labeled \`needs-human\`; no further automatic attempts."
+          fi

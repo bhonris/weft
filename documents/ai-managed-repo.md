@@ -1,36 +1,47 @@
 # AI-Managed Repository — Issue-Driven Autonomous Development
 
+> **Revision (2026-08-05).** This doc originally specified a local model
+> (Qwen2.5-Coder-32B on Ollama) driven by OpenCode on a self-hosted runner,
+> chosen to avoid per-token cost. That design is superseded: the official
+> `anthropics/claude-code-action@v1` **is Claude Code**, it authenticates from a
+> Claude subscription via `CLAUDE_CODE_OAUTH_TOKEN`, and it reads the existing
+> `CLAUDE.md` directly. That removes the model, the GPU, the self-hosted runner,
+> and `AGENTS.md` from the design at no cost. The superseded local-model plan is
+> preserved in git history at `1d10b73`.
+
 ## Feature specification
 
-Turn weft into a **fully AI-managed repository**. The human's *only* interface is
-opening a GitHub issue. Everything else — reading the issue, branching,
-implementing per `CLAUDE.md`, running the test/typecheck/E2E gate, opening a PR,
-self-reviewing the diff, and merging — is done autonomously by a **local AI
-model** driven by the [OpenCode](https://opencode.ai) agent, running on a
-**self-hosted GitHub Actions runner** on the maintainer's own machine.
+Turn weft into a **fully AI-managed repository**. The maintainer's *only*
+interface is opening a GitHub issue. Everything else — reading the issue,
+branching, implementing per `CLAUDE.md`, running the test/typecheck gate, opening
+a PR, self-reviewing the diff, and merging — is done autonomously by **Claude Code
+running headless** in GitHub Actions via `anthropics/claude-code-action@v1`,
+authenticated from the maintainer's **existing Claude subscription — no API key**.
 
 The existing CI (`.github/workflows/ci.yml`: typecheck + unit on Windows/Ubuntu,
-Electron E2E on Windows) is the **arbiter of correctness** — it is model-agnostic
-and unchanged. Branch protection guarantees nothing reaches `main` unless CI is
-green, so a weak model can waste compute but can never merge broken code.
+Electron E2E on `windows-latest`) is the **arbiter of correctness** — unchanged.
+Branch protection guarantees nothing reaches `main` unless CI is green, so a bad
+autonomous run can waste quota but can never merge broken code.
 
 ## Scope & out of scope
 
 **In scope**
-- Issue-open triggers an autonomous implement → PR loop.
-- Local-model harness (OpenCode) invoked headless on a self-hosted runner.
-- A self-review pass (second model pass over the diff) that must approve before merge.
+- Issue-open (owner-authored) triggers an autonomous implement → PR loop.
+- Claude Code headless via `claude-code-action@v1` on GitHub-hosted runners.
+- Subscription authentication via `CLAUDE_CODE_OAUTH_TOKEN`; **no `ANTHROPIC_API_KEY`**.
+- A self-review pass over the diff that must approve before merge.
 - Auto-merge (`gh pr merge --auto --squash`) armed only after self-review + green CI.
 - Branch protection + repo settings that make the loop safe.
-- An `AGENTS.md` mirroring the `CLAUDE.md` conventions for OpenCode.
-- Setup docs: self-hosted runner registration, model runtime install, secrets.
+- Quota discipline: turn caps, timeouts, and a retry bound, since the loop spends
+  the same weekly limit the maintainer uses interactively.
 
-**Out of scope (initially)**
+**Out of scope**
 - Multi-issue planning / dependency ordering (each issue handled independently).
-- Autonomous changes to CI, workflows, or branch-protection settings by the bot
-  (the GitHub App/token deliberately **cannot** modify `.github/workflows/**`).
+- Autonomous changes to CI, workflows, or branch-protection settings by the bot.
 - Cross-repo work.
-- Replacing the `/dmail` "Steiner" loop — this is a separate, issue-driven path.
+- Replacing the `/dmail` "Steiner" loop — that stays a separate, human-initiated path.
+- Non-owner triggers. Issues opened by anyone other than the repo owner do **not**
+  start a run (see Security).
 - Human-quality guarantees: CI gates *correctness*, not *progress* or taste.
 
 ## User stories
@@ -41,62 +52,67 @@ green, so a weak model can waste compute but can never merge broken code.
   change can never reach `main` even fully unattended.
 - As the maintainer, I want a **self-review step**, so obviously-wrong or unsafe
   diffs are caught before auto-merge even when CI is green.
-- As the maintainer, I want the **whole loop to run on my own hardware/model**,
-  so no code or tokens leave my machine.
+- As the maintainer, I want the loop to **run on my existing subscription**, so it
+  costs nothing beyond what I already pay.
+- As the maintainer, I want the loop to **never exhaust my own quota**, so my
+  interactive work is not blocked by my automation.
 
 ## Acceptance criteria
 
-- [ ] Opening any issue triggers a workflow on the self-hosted runner within ~1 min.
+- [ ] Opening an issue **as the repo owner** triggers a workflow within ~1 min;
+      an issue opened by anyone else does not.
+- [ ] The run authenticates with `CLAUDE_CODE_OAUTH_TOKEN`; no `ANTHROPIC_API_KEY`
+      secret exists in the repo.
 - [ ] The agent creates a branch `ai/issue-<n>-<slug>`, implements a change, and
       opens a PR whose body contains `Closes #<n>`.
-- [ ] The agent runs `pnpm typecheck` and `pnpm test:cov` locally and does not
-      open a PR if they fail hard (it iterates up to a turn/retry cap first).
+- [ ] The agent runs `pnpm typecheck` and `pnpm test:cov` before opening the PR.
 - [ ] The PR triggers the existing CI (typecheck + unit + E2E) — status checks
       run on the bot's commits (requires a GitHub App token, see Security).
-- [ ] A self-review job posts an approval or a "changes requested" review; merge
-      is armed only on approval.
+- [ ] A self-review job posts a `VERDICT: APPROVE` / `VERDICT: REQUEST_CHANGES`
+      comment; merge is armed only on approve. **Not a formal GitHub approval** —
+      the App that opened the PR cannot approve its own PR, so the verdict is
+      carried in a comment review and read back by the workflow.
 - [ ] `main` is branch-protected: required checks = CI jobs; direct pushes blocked;
-      human review **not** required (so the bot isn't blocked); stale branches auto-delete.
-- [ ] On green CI + self-review approval, the PR auto-merges (squash) and the issue closes.
-- [ ] On red CI, the agent gets N retry attempts; after N it labels the PR
-      `needs-human` and stops (no infinite loop / compute burn).
+      human review **not** required; stale branches auto-delete.
+- [ ] On green CI + approval, the PR auto-merges (squash) and the issue closes.
+- [ ] On red CI, the agent gets N retries; after N it labels `needs-human` and stops.
+- [ ] Both jobs carry `timeout-minutes` and `--max-turns`, so a runaway run can't
+      drain the weekly quota.
 - [ ] The bot cannot modify `.github/workflows/**` or branch-protection settings.
-- [ ] Issue-body prompt-injection cannot exfiltrate secrets or run out-of-repo commands.
+- [ ] Issue-body prompt-injection cannot exfiltrate secrets or reach outside the repo.
 
 ## Architecture & technical design
 
 ```
-Human opens issue
-      │  on: issues:[opened]
+Owner opens issue
+      │  on: issues:[opened]  +  if: author == repository_owner
       ▼
-Self-hosted runner (maintainer's Windows box)
-  ├─ checkout, pnpm install --frozen-lockfile, pnpm rebuild:native
-  ├─ OpenCode headless run, model = local (Ollama OpenAI-compatible endpoint)
-  │     reads AGENTS.md; implements; runs pnpm typecheck / test:cov locally
-  ├─ git branch ai/issue-N-slug, commit, push
-  └─ gh pr create --body "Closes #N"
+GitHub-hosted runner (windows-latest)
+  └─ anthropics/claude-code-action@v1
+       auth: CLAUDE_CODE_OAUTH_TOKEN (subscription)
+       reads CLAUDE.md natively; implements; runs pnpm typecheck / test:cov
+       branches, commits, opens PR "Closes #N"
       │
       ▼
-GitHub-hosted CI (ci.yml, unchanged) runs on the PR
+ci.yml (unchanged) runs on the PR
       │
-      ├─ self-review job: OpenCode reviews the diff → approve / request-changes
+      ├─ ai-review.yml: Claude Code reviews the diff → approve / request-changes
       │
 green + approved ──► gh pr merge --auto --squash ──► issue closes
-red ──► agent retries (≤N) ──► else label needs-human, stop
+red ──► retry (≤N) ──► else label needs-human, stop
 ```
 
 **Components**
-- **Harness — OpenCode.** Open-source, provider-agnostic, local-model capable
-  (OpenAI-compatible endpoints incl. Ollama), headless `run` mode, reads
-  `AGENTS.md`. Chosen over Claude Code (Anthropic-model-first; local needs a
-  LiteLLM Anthropic-compat proxy) and over Aider/OpenHands for provider-agnostic
-  simplicity. Fallback: if OpenCode's local-model tool-calling proves too weak,
-  swap the harness without changing the surrounding plumbing.
-- **Model runtime — Ollama** serving **Qwen2.5-Coder-32B-Instruct** (4-bit,
-  ~20–24 GB VRAM). Endpoint `http://localhost:11434/v1`. vLLM is the upgrade path.
-- **Host — self-hosted GitHub Actions runner** on the maintainer's Windows
-  machine (also where node-pty rebuilds and E2E can run). Registered as a repo
-  runner with a restricted label (e.g. `self-hosted, weft-local`).
+- **Harness — Claude Code itself**, via `anthropics/claude-code-action@v1`. Same
+  binary as the CLI, same tool loop, and it reads the repo's `CLAUDE.md` with no
+  translation layer. `claude_args` passes through any CLI flag (`--max-turns`,
+  `--model`, `--allowedTools`).
+- **Auth — `CLAUDE_CODE_OAUTH_TOKEN`**, generated by `claude setup-token` and
+  stored as a repo secret. The action accepts it in place of `anthropic_api_key`.
+  No model provider account, no metered billing.
+- **Host — GitHub-hosted runners.** `ci.yml` already runs `windows-latest` and an
+  OS matrix, so no self-hosted runner is needed. This removes the fork-PR
+  code-execution risk and the one-job-at-a-time queueing limit entirely.
 - **Identity — a dedicated GitHub App** (not the default `GITHUB_TOKEN`) so that
   (a) PRs the bot opens **do** trigger CI, and (b) permissions are scoped
   (Contents/Issues/PRs RW; **no** Workflows write).
@@ -105,86 +121,115 @@ red ──► agent retries (≤N) ──► else label needs-human, stop
   (PR → self-review → arm auto-merge).
 
 **Repo-specific integration**
-- `AGENTS.md` restates the `CLAUDE.md` layer-boundary rules, the 95/90 coverage
-  gate, pnpm, and the invariants so the local model has them in-context.
-- The implement job must `pnpm rebuild:native` before E2E-relevant work (Windows
+- **No `AGENTS.md`.** `CLAUDE.md` is read directly, so the layer-boundary rules,
+  the 95/90 coverage gate, pnpm, and the invariants are already in context. This
+  also removes the "two files must not drift" problem from the original design.
+- The implement job runs `pnpm rebuild:native` before E2E-relevant work (Windows
   node-pty), matching `ci.yml`.
+
+**Sketch — `ai-implement.yml`**
+
+```yaml
+on:
+  issues:
+    types: [opened]
+jobs:
+  implement:
+    if: github.event.issue.user.login == github.repository_owner
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      - uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ steps.app-token.outputs.token }}
+          claude_args: "--max-turns 30"
+          prompt: |
+            Implement issue #${{ github.event.issue.number }}.
+            Follow CLAUDE.md. Run pnpm typecheck and pnpm test:cov before
+            opening a PR whose body contains "Closes #${{ github.event.issue.number }}".
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+```
 
 ## API contract / Database changes
 
-N/A — no application API or schema changes. All new surface is GitHub
-Actions workflows, repo settings, and an `AGENTS.md`.
+N/A — no application API or schema changes. All new surface is GitHub Actions
+workflows and repo settings.
 
 ## UI/UX considerations
 
 - **The issue is the UI.** Existing issue templates (`bug_report.yml`,
-  `feature_request.yml`) stay; a good template = a good prompt. Consider adding a
-  short "Acceptance criteria" field to sharpen autonomous runs.
-- **Labels as state:** `ai:working`, `ai:pr-open`, `needs-human`, `ai:gave-up`
-  give at-a-glance status without a custom UI.
+  `feature_request.yml`) stay; a good template = a good prompt. Consider adding an
+  "Acceptance criteria" field to sharpen autonomous runs.
+- **Labels as state:** `ai:working`, `ai:pr-open`, `needs-human`, `ai:gave-up`.
 - **Empty/failure states:** a `needs-human` label + a bot comment explaining why
   (CI log link, last error) whenever the loop stops without merging.
 
 ## Security considerations
 
-- **Prompt injection from issue bodies is the primary threat.** Issue text is
-  untrusted input fed to a model with shell/git access. Mitigations: run in the
-  isolated runner workspace only; restrict the App token to this repo; forbid the
-  agent from reading secrets/env or making network calls beyond git/gh; never
-  echo secrets into logs; keep the model's tool allowlist tight (pnpm, git, gh,
-  file ops within the workspace).
+- **The owner-only gate is load-bearing for two reasons.** It stops a third party
+  from triggering a run at all, and it keeps a subscription-derived credential in
+  a repo secret from being spendable by anyone but the account holder. Keep the
+  `if:` condition on every workflow that invokes Claude Code, and keep the repo
+  private.
+- **Subscription credential in a repo secret.** `CLAUDE_CODE_OAUTH_TOKEN` is a
+  personal credential, unlike a scoped API key: it can't be budget-capped or
+  rotated per-service. Anyone with Actions write on the repo can effectively spend
+  it. **Revisit this design the moment a collaborator is added** — that is the
+  point at which a metered API key becomes the correct answer.
+- **Prompt injection from issue bodies is the primary code-level threat.** Issue
+  text is untrusted input fed to an agent with shell/git access. Mitigations: the
+  owner-only gate (the author is you), the isolated runner workspace, a scoped App
+  token, a tight `--allowedTools` list, and never echoing secrets into logs.
 - **Bot cannot self-modify its guardrails:** App permissions exclude Workflows
-  write; branch protection + a CODEOWNERS on `.github/**` block edits to CI and
-  workflow files.
-- **Self-hosted runner risk:** self-hosted runners on a private repo are the
-  supported pattern; **do not** make the repo public with an always-on
-  self-hosted runner (fork PRs could execute code on your machine). Keep the repo
-  private, or gate the trigger to issues opened by the owner only.
-- **Secrets:** `APP_ID` + `APP_PRIVATE_KEY` in repo secrets; the model runs
-  locally so no model-provider key is needed. `gh` uses the App token, not a PAT.
+  write; a `CODEOWNERS` on `.github/**` blocks edits to CI and workflow files.
+- **No self-hosted runner.** The original design's largest risk — fork PRs
+  executing code on the maintainer's machine — does not exist here.
 - **Merge gate:** required status checks + self-review approval are the only paths
   to `main`; direct pushes disabled.
 - **Self-review is not an independent reviewer.** A model reviewing its own diff
-  has a strong self-approval bias, so the self-review pass is a *cheap filter*,
-  not a real gate — **CI remains the primary gate.** Mitigations to consider:
-  run the review with a different (or larger) model than the implementer, use a
-  fresh context with no memory of the implementation, and/or keep auto-merge
-  gated on CI even if self-review is skipped.
-- **Commit signing:** the App/runner commits are unsigned by default. If signed
-  commits are required on `main`, enable GitHub API commit signing (or provide an
-  SSH signing key on the runner) — otherwise branch protection's "require signed
-  commits" would block every autonomous merge.
+  has a self-approval bias, so treat the self-review pass as a *cheap filter*, not
+  a real gate — **CI remains the primary gate.** Run the review in a fresh context
+  with no memory of the implementation.
+- **Commit signing:** App/runner commits are unsigned by default. If signed commits
+  are required on `main`, configure signing before enabling branch protection —
+  otherwise "require signed commits" blocks every autonomous merge.
 
-## Performance considerations
+## Performance & quota considerations
 
-- **Local model throughput** is the bottleneck. A 32B model at 4-bit on one
-  24 GB GPU does agentic loops slowly (minutes–tens of minutes per issue). This is
-  acceptable for async issue work; set generous job timeouts.
-- **CI cost:** Electron E2E on Windows is the slow leg (~minutes). Runs once per
-  PR update, so cap retries (N≈2–3) to bound total CI time.
-- **Retry bound:** N failed CI iterations → stop and label `needs-human`, to
-  prevent unbounded compute/CI burn on issues the model can't solve.
-- **Runner concurrency:** a self-hosted runner executes **one job at a time** by
-  default, so multiple issues opened at once **queue** rather than run in
-  parallel. Acceptable for async issue work; register additional runners (or a
-  runner group) only if throughput becomes a problem. Set explicit job
-  `timeout-minutes` so a stuck local-model run can't hold the queue indefinitely.
-- **Context window:** local models often have a smaller usable context than
-  hosted frontier models. On a repo this size a broad change (many files / large
-  diff) can exceed it, degrading quality or truncating. Prefer narrowly-scoped
-  issues; rely on OpenCode's file-targeting rather than whole-repo dumps; treat
-  "too large for one pass" as a `needs-human` case.
+The bottleneck is no longer model throughput — it is **the maintainer's weekly
+subscription limit, which the bot shares.** This is the central operational
+constraint of the subscription-only design.
+
+- **The loop competes with interactive work.** A few retry cycles on a stubborn
+  issue can rate-limit the maintainer out of their own editor. Cap aggressively:
+  `--max-turns`, `timeout-minutes`, and a low retry bound.
+- **Retry bound:** N failed CI iterations (N≈2) → stop and label `needs-human`.
+- **CI cost:** Electron E2E on Windows is the slow leg (~minutes), once per PR
+  update, which bounds total CI time via the same retry cap.
+- **Concurrency:** GitHub-hosted runners parallelize, so multiple issues no longer
+  queue behind one another — but parallel runs multiply quota burn. Consider a
+  `concurrency` group to serialize deliberately.
+- **Context window** is a frontier-model window, so the original design's
+  "local models truncate on large diffs" concern no longer applies.
 
 ## Edge cases & error handling
 
-- **Model can't converge** → after N tries, `needs-human`, stop.
+- **Agent can't converge** → after N tries, `needs-human`, stop.
+- **Quota exhausted mid-run** → the run fails; label `needs-human` and surface the
+  reason in the bot comment so it isn't mistaken for a code failure.
 - **Merge conflict with main** (concurrent issues) → agent rebases once; if it
   can't, `needs-human`.
 - **Flaky E2E** → allow one automatic re-run before counting a CI failure.
 - **Vague/underspecified issue** → agent posts a clarifying comment and labels
-  `needs-human` rather than guessing (guards against wasted runs — matters since
-  *every* opened issue triggers a run).
-- **Runner offline** → issue sits until the runner returns; document a health note.
+  `needs-human` rather than guessing.
+- **Non-owner issue** → no run, by design. No comment, no quota spent.
 - **Two issues touch the same files** → independent branches; second PR resolves
   conflicts at merge time or escalates.
 
@@ -192,66 +237,58 @@ Actions workflows, repo settings, and an `AGENTS.md`.
 
 - **The app's own gate is unchanged** — `pnpm test:cov` (95/90) + `pnpm typecheck`
   + `pnpm test:e2e` remain the correctness bar for any autonomous change.
-- **Workflow testing:** validate YAML with `act` locally where possible; do a
-  dry-run on a throwaway issue in a scratch branch before enabling auto-merge.
-- **Self-review prompt:** unit-style eval by feeding it known-good and known-bad
-  diffs and checking approve/request-changes verdicts.
-- **Staged rollout:** first run with auto-merge OFF (human clicks merge) to
-  observe quality, then enable auto-merge once trustworthy.
+- **Workflow testing:** dry-run on a throwaway issue in a scratch branch before
+  enabling auto-merge.
+- **Gate testing:** open an issue from a non-owner account and confirm no run starts.
+- **Self-review prompt:** feed it known-good and known-bad diffs, check verdicts.
+- **Staged rollout:** first run with auto-merge OFF (human clicks merge) to observe
+  quality, then enable auto-merge once trustworthy.
 
 ## Dependencies
 
-- **OpenCode** (agent harness) installed on the runner.
-- **Ollama** (or vLLM) + a coding model (Qwen2.5-Coder-32B-Instruct suggested).
-- **A self-hosted GitHub Actions runner** registered to the repo.
+- **A Claude subscription** and `claude setup-token` to mint `CLAUDE_CODE_OAUTH_TOKEN`.
 - **A dedicated GitHub App** (App ID + private key) with Contents/Issues/PRs RW.
-- **`gh` CLI** on the runner (already present locally).
-- Hardware: a GPU with ≥24 GB VRAM for the 32B model (or accept a smaller/weaker
-  model, or the hybrid-escalation option).
+- `anthropics/claude-code-action@v1`.
+
+That is the entire list. No OpenCode, no Ollama, no model download, no GPU, no
+self-hosted runner, no `AGENTS.md`, no API key.
 
 ## Migration & rollback plan
 
-- **Deploy:** land `AGENTS.md` + the two workflows with auto-merge disabled →
-  enable branch protection → register runner + model → test on a scratch issue →
+- **Deploy:** mint the OAuth token → create the GitHub App → land the two workflows
+  with auto-merge disabled → enable branch protection → test on a scratch issue →
   flip auto-merge on.
-- **Rollback:** disable/delete `ai-implement.yml` + `ai-review.yml` (or turn the
-  runner off). Branch protection and CI stay; the repo reverts to manual PRs with
-  zero code changes. Fully reversible — nothing in `src/` is touched.
+- **Rollback:** disable/delete `ai-implement.yml` + `ai-review.yml`. Branch
+  protection and CI stay; the repo reverts to manual PRs with zero code changes.
+  Fully reversible — nothing in `src/` is touched.
 
 ## Open questions
 
-- **Model & hardware:** what GPU/VRAM is available? Determines 32B vs 14B vs the
-  hybrid (local-first, hosted-escalation) path. (Maintainer to confirm.)
-- **OpenCode exact invocation:** confirm the headless `run` flags, config file
-  shape, and local-provider config against current OpenCode docs at wiring time.
-- **Trigger throttle:** truly *every* issue, or exclude issues labeled `discussion`
-  / opened by non-owners? (Recommended: owner-only while repo is private.)
-- **Hybrid escalation:** wire the hosted-model fallback now or add later once the
-  local-only success rate is known?
-- **Review model:** run self-review with the *same* local model (cheapest, weak),
-  a *different/larger* local model (better, more VRAM), or lean entirely on CI and
-  treat self-review as advisory? (See self-approval-bias note in Security.)
-- **Signed commits on `main`:** required or not? Decides whether commit signing
-  must be configured on the runner/App before enabling branch protection.
-- **Keeping `AGENTS.md` and `CLAUDE.md` in sync:** duplicate, symlink, or generate
-  one from the other? They must not drift.
+- **Terms check:** using a subscription-derived `CLAUDE_CODE_OAUTH_TOKEN` for
+  workflow-triggered runs is not clearly documented either way. The action accepts
+  it and the owner-only gate keeps it a single-user credential, but worth a
+  five-minute confirmation with Anthropic before relying on it long-term.
+- **Quota headroom:** how much weekly limit is left over after normal interactive
+  use? Decides the retry cap N and whether to serialize runs.
+- **Review model:** same model as the implementer (cheapest, self-approval bias) or
+  a different one? See the bias note in Security.
+- **Signed commits on `main`:** required or not? Decides whether signing must be
+  configured before branch protection.
+- **Trigger breadth:** owner-opened issues only, or also `@claude` mentions on
+  existing issues/PRs? The latter is more controllable but less hands-off.
 
 ## Todo list
 
-- [ ] Confirm GPU/VRAM → finalize model choice (32B / 14B / hybrid).
+- [ ] Run `claude setup-token`; store `CLAUDE_CODE_OAUTH_TOKEN` as a repo secret.
 - [ ] Create a dedicated GitHub App; store `APP_ID` + `APP_PRIVATE_KEY` secrets.
-- [ ] Register the self-hosted runner on the Windows box (label `weft-local`).
-- [ ] Install OpenCode + Ollama + the chosen model on the runner; verify endpoint.
-- [ ] Write `AGENTS.md` mirroring `CLAUDE.md` conventions.
-- [ ] Write `.github/workflows/ai-implement.yml` (issue → branch → PR).
+- [ ] Write `.github/workflows/ai-implement.yml` (issue → branch → PR), owner-gated.
 - [ ] Write `.github/workflows/ai-review.yml` (PR → self-review → arm auto-merge).
 - [ ] Add `CODEOWNERS` protecting `.github/**`.
 - [ ] Configure branch protection on `main` (required checks, no direct push,
       review not required, auto-delete branches); decide signed-commits policy.
-- [ ] Set explicit `timeout-minutes` on both AI jobs.
-- [ ] Decide the review-model strategy (same / different-larger / CI-only).
+- [ ] Set `timeout-minutes` and `--max-turns` on both AI jobs.
 - [ ] Add state labels (`ai:working`, `ai:pr-open`, `needs-human`, `ai:gave-up`).
-- [ ] Dry-run on a scratch issue with auto-merge OFF; observe quality.
+- [ ] Verify the owner-only gate with a non-owner test issue.
+- [ ] Dry-run on a scratch issue with auto-merge OFF; observe quality and quota burn.
 - [ ] Enable auto-merge; monitor first real issues; tune retry cap N.
 - [ ] Move this doc to `documents/completed/` once the loop is live and trusted.
-```
