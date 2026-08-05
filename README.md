@@ -44,6 +44,16 @@ pnpm test:e2e    # builds, then drives the real Electron app (Playwright)
 
 PTYs live in the **main process**; the renderer is a detachable view. A UI reload, HMR update, or renderer crash **never** kills a session — the terminal re-attaches and replays its scrollback from a main-side ring buffer. Tear-off works the same way: the window moves, the PTY doesn't.
 
+## Automation labels
+
+Issues and PRs opened by the autonomous dev loop (`documents/ai-managed-repo.md`)
+carry a few state labels:
+
+- `ai:working` — an implement run is in progress on this issue; removed when it finishes.
+- `ai:pr-open` — the run finished and opened a PR.
+- `needs-human` — the implement run failed, or self-review requested changes; no
+  further automatic attempts are made.
+
 ## Documentation
 
 See [USAGE.md](USAGE.md) for the full manual and [DOSSIER.md](DOSSIER.md) for project status/decisions. The build spec lives in `documents/steiner-spec.md`.
