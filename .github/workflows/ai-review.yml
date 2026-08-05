@@ -89,8 +89,12 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PR: ${{ github.event.pull_request.number }}
         run: |
-          verdict=$(gh pr view "$PR" --json comments \
-            --jq '[.comments[] | select(.body | startswith("VERDICT:"))] | last | .body // ""' \
+          # The verdict lands as a PR REVIEW body (the prompt explicitly asks
+          # for a "COMMENT review"), not a plain issue/PR comment -- querying
+          # `comments` here always came back empty, so this could never detect
+          # a real APPROVE either, regardless of what Claude actually said.
+          verdict=$(gh pr view "$PR" --json reviews \
+            --jq '[.reviews[] | select(.body | startswith("VERDICT:"))] | last | .body // ""' \
             | head -n 1)
           echo "verdict line: $verdict"
           if [ "$verdict" = "VERDICT: APPROVE" ]; then
