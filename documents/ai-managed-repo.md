@@ -44,6 +44,14 @@
 > it), evidence the self-review step does real work, not just theater. None
 > of these five surfaced without an actual run — `gh workflow list` showing
 > "active" only means the YAML parsed.
+>
+> **The loop verified end-to-end on issue #20 → PR #21**, all five fixes in
+> place: implement opened the PR, self-review posted a genuine
+> `VERDICT: APPROVE`, auto-merge armed itself, CI went green, and GitHub
+> merged it and closed the issue with zero human action on the merge
+> decision itself. `show_full_output: true` is still on both jobs from
+> debugging — worth turning off once quota cost from verbose logging is a
+> concern (see Todo).
 
 ## Feature specification
 
@@ -332,16 +340,32 @@ self-hosted runner, no `AGENTS.md`, no API key.
 
 ## Todo list
 
-- [ ] Run `claude setup-token`; store `CLAUDE_CODE_OAUTH_TOKEN` as a repo secret.
-- [ ] Create a dedicated GitHub App; store `APP_ID` + `APP_PRIVATE_KEY` secrets.
-- [ ] Write `.github/workflows/ai-implement.yml` (issue → branch → PR), owner-gated.
-- [ ] Write `.github/workflows/ai-review.yml` (PR → self-review → arm auto-merge).
-- [ ] Add `CODEOWNERS` protecting `.github/**`.
-- [ ] Configure branch protection on `main` (required checks, no direct push,
-      review not required, auto-delete branches); decide signed-commits policy.
-- [ ] Set `timeout-minutes` and `--max-turns` on both AI jobs.
-- [ ] Add state labels (`ai:working`, `ai:pr-open`, `needs-human`, `ai:gave-up`).
-- [ ] Verify the owner-only gate with a non-owner test issue.
-- [ ] Dry-run on a scratch issue with auto-merge OFF; observe quality and quota burn.
-- [ ] Enable auto-merge; monitor first real issues; tune retry cap N.
-- [ ] Move this doc to `documents/completed/` once the loop is live and trusted.
+- [x] Run `claude setup-token`; store `CLAUDE_CODE_OAUTH_TOKEN` as a repo secret.
+- [x] Create a dedicated GitHub App; store `APP_ID` + `APP_PRIVATE_KEY` secrets.
+- [x] Write `.github/workflows/ai-implement.yml` (issue → branch → PR), owner-gated.
+- [x] Write `.github/workflows/ai-review.yml` (PR → self-review → arm auto-merge).
+- [x] Add `CODEOWNERS` protecting `.github/**`.
+- [x] Configure branch protection on `main` (required checks, no direct push,
+      review not required, auto-delete branches). Signed commits: not required.
+- [x] Set `timeout-minutes` and `--max-turns` on both AI jobs.
+- [x] Add state labels (`ai:working`, `ai:pr-open`, `needs-human`) — **`ai:gave-up`
+      exists as a label but nothing ever applies it; there's no retry loop to
+      trigger it.** See the retry-cap item below and the dry-run finding #1
+      (self-review caught exactly this gap once documented as if live).
+- [ ] Verify the owner-only gate with a genuine non-owner-opened issue (only
+      ever tested by construction — every test issue here was owner-opened).
+- [x] Dry-run on scratch issues before trusting the loop — done with auto-merge
+      **on** rather than off, across issues #13/#14/#16/#18/#20: found and
+      fixed five real bugs (token encoding, `windows-latest` unsupported,
+      missing `--allowedTools`, bot-authored-PR review guard, verdict read
+      from the wrong GitHub API field) before #20 → PR #21 completed the full
+      cycle — implement → PR → self-review APPROVE → CI green → auto-merge →
+      issue closed — with zero human action on the merge decision itself.
+- [x] Auto-merge is enabled. **Still open:** there is no retry loop at all (a
+      failed implement or a REQUEST_CHANGES review goes straight to
+      `needs-human` on the first attempt) — no cap to tune until one exists.
+- [ ] Turn off `show_full_output: true` on both jobs (left on for dry-run
+      debugging) once satisfied with quota cost from verbose logging.
+- [ ] Move this doc to `documents/completed/` once the owner-gate is verified
+      against a real non-owner issue and the retry-loop decision is made
+      (implement it, or explicitly decide "no retries" is the permanent design).
