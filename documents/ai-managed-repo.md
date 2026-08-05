@@ -9,6 +9,24 @@
 > and `AGENTS.md` from the design at no cost. The superseded local-model plan is
 > preserved in git history at `1d10b73`.
 
+> **Dry-run findings (2026-08-05/06, issues #13/#14).** The Testing strategy
+> section below calls for a scratch-issue dry run before trusting this loop —
+> it found three real bugs, in order: (1) the `CLAUDE_CODE_OAUTH_TOKEN` secret
+> was stored with a bad encoding (Windows PowerShell's `>` redirect doesn't
+> reliably write plain UTF-8), rejected at `startup_failure`; (2)
+> `anthropics/claude-code-action`'s installer refuses Windows runners outright
+> ("Windows is not supported by this script") — `ai-implement.yml` was fixed to
+> `ubuntu-latest`, which is all it ever needed since it only runs
+> `pnpm typecheck`/`test:cov`; (3) a headless run has no human to answer a
+> tool-use permission prompt, so every unlisted tool is silently denied rather
+> than asked about — a run "succeeded" (21 turns, real cost, `is_error: false`)
+> while producing nothing, with `permission_denials_count: 10` the only clue.
+> Fixed by adding `--allowedTools` to `claude_args` and setting `branch_prefix`
+> explicitly (the action's own branch-naming wins over anything the prompt
+> asks for, so `ai-review.yml`'s `startsWith(head_ref, 'ai/')` gate silently
+> never matched until this was pinned). None of these surfaced without an
+> actual run — `gh workflow list` showing "active" only means the YAML parsed.
+
 ## Feature specification
 
 Turn weft into a **fully AI-managed repository**. The maintainer's *only*
@@ -158,7 +176,14 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           github_token: ${{ steps.app-token.outputs.token }}
-          claude_args: "--max-turns 30"
+          # branch_prefix is the action's OWN branch-naming mechanism and wins
+          # over anything the prompt asks for -- set it, don't just ask for it.
+          branch_prefix: "ai/issue-${{ github.event.issue.number }}-"
+          # A headless run has no human to answer a tool-use prompt, so an
+          # unlisted tool is silently denied, not asked about. Without this,
+          # a dry run "succeeded" (21 turns, real cost) with 10 permission
+          # denials and no branch/PR/comment to show for it.
+          claude_args: "--max-turns 30 --allowedTools Bash,Read,Write,Edit,Glob,Grep"
           prompt: |
             Implement issue #${{ github.event.issue.number }}.
             Follow CLAUDE.md. Run pnpm typecheck and pnpm test:cov before

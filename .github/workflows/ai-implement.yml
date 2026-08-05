@@ -62,7 +62,20 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           github_token: ${{ steps.app-token.outputs.token }}
-          claude_args: "--max-turns 30"
+          # branch_prefix is the action's own branch-naming mechanism (it takes
+          # precedence over anything the prompt asks for) -- setting it here is
+          # what makes ai-review.yml's `startsWith(github.head_ref, 'ai/')` gate
+          # actually match.
+          branch_prefix: "ai/issue-${{ github.event.issue.number }}-"
+          # In a headless CI run there's no human to approve a tool-use prompt,
+          # so an unlisted tool is auto-denied rather than asked about. Without
+          # this, a dry run completed all 21 turns and reported success with
+          # 10 permission denials and no branch/PR/comment to show for it --
+          # every Bash/Edit call needed to actually do the work was refused.
+          claude_args: "--max-turns 30 --allowedTools Bash,Read,Write,Edit,Glob,Grep"
+          # Temporary: full transcript for this verification run. Revisit once
+          # the loop is trusted -- see documents/ai-managed-repo.md.
+          show_full_output: true
           prompt: |
             Implement GitHub issue #${{ github.event.issue.number }} in this repository.
 
@@ -80,7 +93,6 @@ jobs:
             - Run `pnpm typecheck` and `pnpm test:cov` and get them passing before
               opening a PR. The coverage gate is 95% statements/functions/lines
               and 90% branches.
-            - Work on a branch named `ai/issue-${{ github.event.issue.number }}-<short-slug>`.
             - Open a PR whose body contains exactly `Closes #${{ github.event.issue.number }}`.
             - Do not modify anything under `.github/`.
             - If the issue is too vague to implement without guessing, do NOT open

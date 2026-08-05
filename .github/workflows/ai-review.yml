@@ -38,7 +38,13 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           github_token: ${{ steps.app-token.outputs.token }}
-          claude_args: "--max-turns 15"
+          # See ai-implement.yml: an unlisted tool is auto-denied in a headless
+          # run, not prompted for. A reviewer needs Bash (git diff, gh) and
+          # read-only file tools -- deliberately no Write/Edit.
+          claude_args: "--max-turns 15 --allowedTools Bash,Read,Grep,Glob"
+          # Temporary: full transcript for this verification run. Revisit once
+          # the loop is trusted -- see documents/ai-managed-repo.md.
+          show_full_output: true
           prompt: |
             Review PR #${{ github.event.pull_request.number }} in this repository.
             You did not write this diff. Review it adversarially.
