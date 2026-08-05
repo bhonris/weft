@@ -30,9 +30,20 @@
 > bot ("Workflow initiated by non-human actor") — a deliberate guard against
 > bot-triggers-bot cascades, since every PR this loop reviews is by design
 > opened by its own App. Fixed with `allowed_bots: "weft-ai-loop"` (named
-> explicitly, not `'*'`, which would trust any bot's PR). None of these
-> surfaced without an actual run — `gh workflow list` showing "active" only
-> means the YAML parsed.
+> explicitly, not `'*'`, which would trust any bot's PR). A fifth, once review
+> itself finally ran (PR #19): (5) the auto-merge-arming script searched
+> `gh pr view --json comments` for the verdict, but the prompt explicitly asks
+> for a **review** ("Post it as a COMMENT review"), which lands in `.reviews[]`,
+> not `.comments[]` — the search always came back empty, so a real APPROVE
+> would have been just as invisible as the REQUEST_CHANGES it happened to
+> coincide with on PR #19. Fixed by querying `.reviews[]` instead. Worth
+> noting: the review itself was correct and useful *despite* this bug — it
+> caught a real, separate accuracy problem (PR #19 documented `ai:gave-up` as
+> a live label; no workflow has ever applied it, since no retry logic exists —
+> confirmed by grep and by the doc's own unchecked acceptance criterion for
+> it), evidence the self-review step does real work, not just theater. None
+> of these five surfaced without an actual run — `gh workflow list` showing
+> "active" only means the YAML parsed.
 
 ## Feature specification
 
