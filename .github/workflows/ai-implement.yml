@@ -21,7 +21,13 @@ jobs:
     # the account holder. Do not relax it without re-reading the Security
     # section of documents/ai-managed-repo.md.
     if: github.event.issue.user.login == github.repository_owner
-    runs-on: windows-latest
+    # anthropics/claude-code-action's installer does not support Windows
+    # runners ("Windows is not supported by this script") — confirmed by a
+    # startup_failure dry run. That's fine here: this job only runs
+    # `pnpm typecheck`/`pnpm test:cov` (per CLAUDE.md, native node-pty and
+    # e2e are excluded from the unit gate), so it never needs the Windows
+    # toolchain ci.yml's e2e job requires.
+    runs-on: ubuntu-latest
     # Bounds a runaway run's burn on the shared weekly quota.
     timeout-minutes: 30
     steps:

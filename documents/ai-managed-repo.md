@@ -87,7 +87,7 @@ autonomous run can waste quota but can never merge broken code.
 Owner opens issue
       │  on: issues:[opened]  +  if: author == repository_owner
       ▼
-GitHub-hosted runner (windows-latest)
+GitHub-hosted runner (ubuntu-latest)
   └─ anthropics/claude-code-action@v1
        auth: CLAUDE_CODE_OAUTH_TOKEN (subscription)
        reads CLAUDE.md natively; implements; runs pnpm typecheck / test:cov
@@ -113,6 +113,15 @@ red ──► retry (≤N) ──► else label needs-human, stop
 - **Host — GitHub-hosted runners.** `ci.yml` already runs `windows-latest` and an
   OS matrix, so no self-hosted runner is needed. This removes the fork-PR
   code-execution risk and the one-job-at-a-time queueing limit entirely.
+  **Both AI jobs specifically run on `ubuntu-latest`, not Windows** —
+  `anthropics/claude-code-action`'s installer hard-refuses Windows runners
+  ("Windows is not supported by this script"), confirmed by an actual
+  `startup_failure`→`failure` dry run. This is fine: neither job needs the
+  Windows-only toolchain (native node-pty, E2E) — they only run
+  `pnpm typecheck`/`pnpm test:cov`, which `CLAUDE.md`'s own coverage gate
+  already treats as OS-portable (native/IO adapters are excluded from the
+  unit gate and covered by E2E instead). `ci.yml` itself is untouched and
+  still runs its Windows E2E leg.
 - **Identity — a dedicated GitHub App** (not the default `GITHUB_TOKEN`) so that
   (a) PRs the bot opens **do** trigger CI, and (b) permissions are scoped
   (Contents/Issues/PRs RW; **no** Workflows write).
@@ -124,8 +133,9 @@ red ──► retry (≤N) ──► else label needs-human, stop
 - **No `AGENTS.md`.** `CLAUDE.md` is read directly, so the layer-boundary rules,
   the 95/90 coverage gate, pnpm, and the invariants are already in context. This
   also removes the "two files must not drift" problem from the original design.
-- The implement job runs `pnpm rebuild:native` before E2E-relevant work (Windows
-  node-pty), matching `ci.yml`.
+- The implement job does **not** run `pnpm rebuild:native` or E2E — those are
+  Windows/native-only and out of scope for what this job checks (see Host,
+  above). It mirrors `ci.yml`'s `ubuntu-latest` typecheck+unit leg only.
 
 **Sketch — `ai-implement.yml`**
 
@@ -136,7 +146,7 @@ on:
 jobs:
   implement:
     if: github.event.issue.user.login == github.repository_owner
-    runs-on: windows-latest
+    runs-on: ubuntu-latest  # claude-code-action's installer doesn't support Windows
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
