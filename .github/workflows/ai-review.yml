@@ -38,6 +38,12 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           github_token: ${{ steps.app-token.outputs.token }}
+          # claude-code-action refuses to run against a PR opened by a bot by
+          # default ("Workflow initiated by non-human actor") -- a deliberate
+          # guard against bot-triggers-bot cascades. Every PR this reviews was
+          # opened by ai-implement.yml's own App, so allowlist it by name
+          # rather than '*' (which would trust any bot's PR, e.g. Dependabot).
+          allowed_bots: "weft-ai-loop"
           # See ai-implement.yml: an unlisted tool is auto-denied in a headless
           # run, not prompted for. A reviewer needs Bash (git diff, gh) and
           # read-only file tools -- deliberately no Write/Edit.

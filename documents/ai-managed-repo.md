@@ -24,8 +24,15 @@
 > Fixed by adding `--allowedTools` to `claude_args` and setting `branch_prefix`
 > explicitly (the action's own branch-naming wins over anything the prompt
 > asks for, so `ai-review.yml`'s `startsWith(head_ref, 'ai/')` gate silently
-> never matched until this was pinned). None of these surfaced without an
-> actual run — `gh workflow list` showing "active" only means the YAML parsed.
+> never matched until this was pinned). A fourth surfaced once implement
+> finally worked end to end (issue #16 → PR #17, CI fully green): (4)
+> `claude-code-action` refuses by default to run against a PR opened by a
+> bot ("Workflow initiated by non-human actor") — a deliberate guard against
+> bot-triggers-bot cascades, since every PR this loop reviews is by design
+> opened by its own App. Fixed with `allowed_bots: "weft-ai-loop"` (named
+> explicitly, not `'*'`, which would trust any bot's PR). None of these
+> surfaced without an actual run — `gh workflow list` showing "active" only
+> means the YAML parsed.
 
 ## Feature specification
 
