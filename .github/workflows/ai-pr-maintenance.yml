@@ -1,0 +1,96 @@
+name: AI PR maintenance
+
+# Reconciles the autonomous loop's own open PRs when `main` moves out from
+# under them (documents/ai-managed-repo.md). Scoped ONLY to ai/* branches --
+# never touches a human-authored PR.
+#
+# Deliberately NOT a Claude Code job: "this PR's issue is already closed
+# elsewhere, so close it" and "rebase a still-relevant branch that fell
+# behind" are both mechanical, no judgment required. Reserve the model for
+# actual implementation work.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  maintain:
+    name: reconcile open ai/* PRs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Reconcile conflicting ai/* PRs
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "weft-ai-loop[bot]"
+          git config user.email "weft-ai-loop[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+
+          prs=$(gh pr list --state open --json number,headRefName,body,mergeable \
+            --jq '[.[] | select(.headRefName | startswith("ai/"))]')
+
+          echo "$prs" | jq -c '.[]' | while read -r pr; do
+            number=$(echo "$pr" | jq -r '.number')
+            branch=$(echo "$pr" | jq -r '.headRefName')
+            body=$(echo "$pr" | jq -r '.body')
+            mergeable=$(echo "$pr" | jq -r '.mergeable')
+
+            # `mergeable` is computed async by GitHub; a fresh push can leave
+            # it UNKNOWN for a few seconds. Give it one short chance to
+            # resolve, then move on -- the next push/synchronize re-checks it.
+            tries=0
+            while [ "$mergeable" = "UNKNOWN" ] && [ "$tries" -lt 6 ]; do
+              sleep 5
+              mergeable=$(gh pr view "$number" --json mergeable --jq '.mergeable')
+              tries=$((tries + 1))
+            done
+
+            if [ "$mergeable" != "CONFLICTING" ]; then
+              echo "PR #$number ($branch): mergeable=$mergeable, nothing to do"
+              continue
+            fi
+
+            issue=$(echo "$body" | grep -oE 'Closes #[0-9]+' | head -1 | grep -oE '[0-9]+' || true)
+            issue_state=""
+            if [ -n "$issue" ]; then
+              issue_state=$(gh issue view "$issue" --json state --jq '.state' 2>/dev/null || true)
+            fi
+
+            if [ "$issue_state" = "CLOSED" ]; then
+              echo "PR #$number ($branch): conflicting, but issue #$issue is already closed -- superseded"
+              gh pr comment "$number" --body "Closing: this PR's branch now conflicts with \`main\`, and issue #$issue is already closed (resolved by another PR). Superseded, not merging."
+              gh pr close "$number"
+              continue
+            fi
+
+            echo "PR #$number ($branch): conflicting, issue still open -- attempting a mechanical rebase"
+            git fetch origin "$branch" main
+            git checkout -B "$branch" "origin/$branch"
+            if git rebase origin/main; then
+              git push --force-with-lease origin "$branch"
+              gh pr comment "$number" --body "Rebased onto \`main\` automatically after a conflict was detected; CI and review will re-run."
+              echo "PR #$number: rebased and pushed"
+            else
+              git rebase --abort
+              gh pr edit "$number" --add-label "needs-human"
+              gh pr comment "$number" --body "This branch conflicts with \`main\` and an automatic rebase didn't apply cleanly -- needs a human to resolve."
+              echo "PR #$number: rebase failed, labeled needs-human"
+            fi
+          done

@@ -124,6 +124,9 @@ autonomous run can waste quota but can never merge broken code.
       drain the weekly quota.
 - [ ] The bot cannot modify `.github/workflows/**` or branch-protection settings.
 - [ ] Issue-body prompt-injection cannot exfiltrate secrets or reach outside the repo.
+- [x] A stale/superseded `ai/*` PR (its branch now conflicts with `main`) is
+      reconciled without a human noticing and closing it by hand: closed if its
+      issue is already resolved elsewhere, rebased if not. See `ai-pr-maintenance.yml`.
 
 ## Architecture & technical design
 
@@ -144,6 +147,11 @@ ci.yml (unchanged) runs on the PR
       │
 green + approved ──► gh pr merge --auto --squash ──► issue closes
 red ──► retry (≤N) ──► else label needs-human, stop
+
+Separately, any push to main:
+  ai-pr-maintenance.yml scans open ai/* PRs for ones main just orphaned
+    issue already closed elsewhere ──► close as superseded
+    issue still open ──► mechanical rebase; clean ──► push, else needs-human
 ```
 
 **Components**
@@ -170,8 +178,18 @@ red ──► retry (≤N) ──► else label needs-human, stop
   (a) PRs the bot opens **do** trigger CI, and (b) permissions are scoped
   (Contents/Issues/PRs RW; **no** Workflows write).
 - **Gate — existing `ci.yml`**, unchanged, promoted to required status checks.
-- **Two new workflows** — `ai-implement.yml` (issue → PR) and `ai-review.yml`
-  (PR → self-review → arm auto-merge).
+- **Three workflows** — `ai-implement.yml` (issue → PR), `ai-review.yml`
+  (PR → self-review → arm auto-merge), and `ai-pr-maintenance.yml` (on every
+  push to `main`: close or rebase `ai/*` PRs `main` just orphaned). The third
+  exists because of a real incident, not speculation: issue #16's PR #17 and
+  issue #20's PR #21 both implemented the same underlying task (a dry-run
+  artifact — see Testing strategy), #21 merged first, and #17 sat open,
+  conflicting and redundant, until a human noticed and closed it by hand —
+  precisely the manual step "fully AI-managed" isn't supposed to need.
+  Deliberately **not** a Claude Code job: closing a PR whose issue is already
+  resolved, or rebasing one that isn't, needs no judgment call, so it costs
+  no model quota and behaves deterministically. Scoped to `ai/*` branches only
+  — it never touches a human-authored PR.
 
 **Repo-specific integration**
 - **No `AGENTS.md`.** `CLAUDE.md` is read directly, so the layer-boundary rules,
@@ -366,6 +384,13 @@ self-hosted runner, no `AGENTS.md`, no API key.
       `needs-human` on the first attempt) — no cap to tune until one exists.
 - [ ] Turn off `show_full_output: true` on both jobs (left on for dry-run
       debugging) once satisfied with quota cost from verbose logging.
+- [x] Write `.github/workflows/ai-pr-maintenance.yml`: close/rebase orphaned
+      `ai/*` PRs on every push to `main`. **Written but not yet live-tested**
+      (unlike the other two workflows, which were debugged against five real
+      failures) — the PR #17/#21 collision that motivated it had already been
+      resolved by hand by the time this was written. Verify the next time two
+      `ai/*` PRs actually collide, or manufacture one deliberately.
 - [ ] Move this doc to `documents/completed/` once the owner-gate is verified
-      against a real non-owner issue and the retry-loop decision is made
-      (implement it, or explicitly decide "no retries" is the permanent design).
+      against a real non-owner issue, the retry-loop decision is made
+      (implement it, or explicitly decide "no retries" is the permanent
+      design), and `ai-pr-maintenance.yml` has handled a real conflict.
