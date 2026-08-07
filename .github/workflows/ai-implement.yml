@@ -62,10 +62,14 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           github_token: ${{ steps.app-token.outputs.token }}
-          # branch_prefix is the action's own branch-naming mechanism (it takes
-          # precedence over anything the prompt asks for) -- setting it here is
-          # what makes ai-review.yml's `startsWith(github.head_ref, 'ai/')` gate
-          # actually match.
+          # branch_prefix only intercepts the action's OWN structured git
+          # tooling. Confirmed on issue #23/PR #24: the agent instead ran raw
+          # `git checkout -b feat/...` via the Bash tool, which branch_prefix
+          # has no chance to touch -- the PR landed off the `ai/` prefix
+          # ai-review.yml's `startsWith(github.head_ref, 'ai/')` gate requires,
+          # so it could never be self-reviewed or auto-merged. Keep this AND
+          # the explicit prompt instruction below -- belt and suspenders,
+          # since neither alone has proven sufficient.
           branch_prefix: "ai/issue-${{ github.event.issue.number }}-"
           # In a headless CI run there's no human to approve a tool-use prompt,
           # so an unlisted tool is auto-denied rather than asked about. Without
@@ -102,6 +106,10 @@ jobs:
             - Run `pnpm typecheck` and `pnpm test:cov` and get them passing before
               opening a PR. The coverage gate is 95% statements/functions/lines
               and 90% branches.
+            - Work on a branch named `ai/issue-${{ github.event.issue.number }}-<short-slug>`
+              -- even if you create it yourself with `git checkout -b` rather than
+              through any built-in branch-naming feature. This exact prefix is
+              required for review and auto-merge to run on the resulting PR.
             - Open a PR whose body contains exactly `Closes #${{ github.event.issue.number }}`.
             - Do not modify anything under `.github/`.
             - If the issue is too vague to implement without guessing, do NOT open
@@ -122,10 +130,20 @@ jobs:
         shell: bash
         run: |
           gh issue edit "$NUMBER" --remove-label "ai:working" || true
-          if [ "$OUTCOME" = "success" ]; then
+          # steps.implement.outcome is a coarse success/failure signal. A run
+          # that fully finishes -- PR opened, tests passing -- but then runs
+          # out of turns before it can print a wrap-up message reports
+          # "failure" here even though real, mergeable work exists: confirmed
+          # on issue #23/PR #24, where `gh pr create` completed 4 seconds
+          # before error_max_turns fired, and this step's old logic labeled
+          # the issue "did not complete" regardless. Check for an actual PR
+          # referencing this issue before trusting OUTCOME.
+          pr_number=$(gh pr list --state open --json number,body --jq \
+            --arg n "$NUMBER" '[.[] | select(.body // "" | test("Closes #" + $n + "(\\D|$)"))] | .[0].number // empty')
+          if [ -n "$pr_number" ] || [ "$OUTCOME" = "success" ]; then
             gh issue edit "$NUMBER" --add-label "ai:pr-open" || true
           else
             gh issue edit "$NUMBER" --add-label "needs-human" || true
             gh issue comment "$NUMBER" --body \
-              "The autonomous implement run did not complete. See the [run log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}). Labeled \`needs-human\`; no further automatic attempts."
+              "The autonomous implement run did not complete, and no PR was found referencing this issue. See the [run log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}). Labeled \`needs-human\`; no further automatic attempts."
           fi
