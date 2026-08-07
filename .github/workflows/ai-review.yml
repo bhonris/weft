@@ -47,7 +47,12 @@ jobs:
           # See ai-implement.yml: an unlisted tool is auto-denied in a headless
           # run, not prompted for. A reviewer needs Bash (git diff, gh) and
           # read-only file tools -- deliberately no Write/Edit.
-          claude_args: "--max-turns 15 --allowedTools Bash,Read,Grep,Glob"
+          # 15 was tuned against a one-line README diff and wasn't enough to
+          # review a real multi-file feature: PR #25 hit error_max_turns
+          # without posting any verdict at all. Bumped; still well under
+          # implement's 75 since reviewing is read-only, no write/test/commit
+          # cycle to burn turns on.
+          claude_args: "--max-turns 40 --allowedTools Bash,Read,Grep,Glob"
           # Temporary: full transcript for this verification run. Revisit once
           # the loop is trusted -- see documents/ai-managed-repo.md.
           show_full_output: true
@@ -83,12 +88,27 @@ jobs:
       # Arm auto-merge only on an APPROVE verdict. GitHub holds the merge until
       # the required status checks from ci.yml are green, so a passing verdict
       # alone can never merge a red PR.
+      #
+      # always() rather than gating on steps.review.outcome: the old gate
+      # meant an outright review failure (e.g. error_max_turns, confirmed on
+      # PR #25) skipped this step entirely -- no label, no comment, nothing.
+      # A PR the review step crashed on looked identical to one nobody had
+      # looked at yet. Now an outright failure gets its own explicit signal,
+      # distinct from a real REQUEST_CHANGES verdict.
       - name: Arm auto-merge on approval
-        if: steps.review.outcome == 'success'
+        if: always()
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PR: ${{ github.event.pull_request.number }}
+          REVIEW_OUTCOME: ${{ steps.review.outcome }}
         run: |
+          if [ "$REVIEW_OUTCOME" != "success" ]; then
+            gh pr edit "$PR" --add-label "needs-human"
+            gh pr comment "$PR" --body \
+              "The self-review run did not complete (see the [run log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})). Labeled \`needs-human\`; auto-merge was not armed."
+            echo "review step failed outright -- labeled needs-human"
+            exit 0
+          fi
           # The verdict lands as a PR REVIEW body (the prompt explicitly asks
           # for a "COMMENT review"), not a plain issue/PR comment -- querying
           # `comments` here always came back empty, so this could never detect
