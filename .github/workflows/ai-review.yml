@@ -56,32 +56,14 @@ jobs:
           # Temporary: full transcript for this verification run. Revisit once
           # the loop is trusted -- see documents/ai-managed-repo.md.
           show_full_output: true
+          # Full checklist (correctness/testing, security, dead code, UI,
+          # architecture) lives in .claude/skills/pr-review/SKILL.md --
+          # documents/pr-review-skill.md is the design doc behind it.
           prompt: |
-            Review PR #${{ github.event.pull_request.number }} in this repository.
-            You did not write this diff. Review it adversarially.
+            /pr-review
 
-            Read the diff with:
-              git diff origin/${{ github.base_ref }}...HEAD
-
-            Judge it against CLAUDE.md, specifically:
-            - The layer boundary: no Electron imports in src/core/, no business
-              rules baked into IPC handlers, decisions pure and unit-tested.
-            - The listed invariants (renderer reload must not kill a PTY, status
-              is hook-driven not scraped, no WebGL xterm renderer, path guards on
-              every mutating channel, etc.).
-            - Tests accompany the change; a bug fix has a regression test.
-            - Nothing under `.github/` was modified.
-
-            Then post ONE review comment on the PR whose FIRST line is exactly
-            one of:
-              VERDICT: APPROVE
-              VERDICT: REQUEST_CHANGES
-            followed by your reasoning.
-
-            Post it as a COMMENT review, not an approval — the App that opened
-            this PR cannot formally approve it.
-
-            Default to REQUEST_CHANGES when uncertain.
+            PR number: ${{ github.event.pull_request.number }}
+            Base branch: ${{ github.base_ref }}
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
