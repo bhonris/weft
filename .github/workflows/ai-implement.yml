@@ -72,7 +72,16 @@ jobs:
           # this, a dry run completed all 21 turns and reported success with
           # 10 permission denials and no branch/PR/comment to show for it --
           # every Bash/Edit call needed to actually do the work was refused.
-          claude_args: "--max-turns 30 --allowedTools Bash,Read,Write,Edit,Glob,Grep"
+          # 30 was enough for a single-file doc change (13-21 turns observed)
+          # but not for a real feature spanning persistence/main/renderer/UI:
+          # issue #22 hit error_max_turns one tool call after finishing just
+          # the persistence-layer slice (schema + migration + defaults +
+          # tests), having never touched the actual service/wiring/UI layers.
+          # It wasn't flailing -- it read broadly and correctly, sanity-checked
+          # with typecheck, then implemented that slice cleanly -- it simply
+          # ran out of runway. Bumped to give a multi-layer feature a real
+          # chance; still bounded against genuine runaway loops.
+          claude_args: "--max-turns 75 --allowedTools Bash,Read,Write,Edit,Glob,Grep"
           # Temporary: full transcript for this verification run. Revisit once
           # the loop is trusted -- see documents/ai-managed-repo.md.
           show_full_output: true

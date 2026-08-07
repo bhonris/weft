@@ -323,6 +323,24 @@ constraint of the subscription-only design.
 - **Staged rollout:** first run with auto-merge OFF (human clicks merge) to observe
   quality, then enable auto-merge once trustworthy.
 
+**First real-feature test (2026-08-07, issue #22).** All five dry-run bugs
+above were found on a disposable, single-file README edit. The first attempt
+at an actual multi-layer feature (a new toggleable setting spanning
+persistence + main + renderer + UI + tests, modeled closely on the existing
+notifications toggle) hit `error_max_turns` one tool call after finishing
+just the persistence-layer slice (schema + migration + defaults + tests) —
+it never reached the core service, `container.ts` wiring, or the UI. The
+transcript (`show_full_output: true`) showed this wasn't the agent flailing:
+it read broadly and correctly (including finding `core/commands/registry.ts`
+on its own, unprompted), sanity-checked with `pnpm typecheck`, then
+implemented that slice cleanly — it simply ran out of turns. `--max-turns`
+was tuned against a doc-edit workload (13–21 turns observed) and doesn't hold
+for a real cross-layer feature. Bumped 30 → 75; retrying on a fresh issue.
+**Open question this raises:** is a bigger turn budget the right fix long
+term, or should genuinely large features get broken into a chain of smaller
+issues (one per layer) instead of asked for as one shot? Worth revisiting
+once a few more real features have gone through the loop.
+
 ## Dependencies
 
 - **A Claude subscription** and `claude setup-token` to mint `CLAUDE_CODE_OAUTH_TOKEN`.
