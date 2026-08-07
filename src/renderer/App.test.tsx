@@ -39,6 +39,7 @@ const emptyWorkspace: WorkspaceState = {
   theme: 'system',
   resumeEnabled: false,
   notificationsEnabled: true,
+  autoMaximizeEnabled: false,
   keymapOverrides: {},
   dock: { position: 'bottom', size: 0.4 }
 }
@@ -450,6 +451,27 @@ describe('App status commands', () => {
     const btn = await screen.findByLabelText('notifications: on')
     fireEvent.click(btn)
     await waitFor(() => expect(useSessionStore.getState().notificationsEnabled).toBe(false))
+  })
+
+  it('toggles auto-maximize from the palette', async () => {
+    act(() => useSessionStore.setState({ autoMaximizeEnabled: false }))
+    render(<App />)
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'P', ctrlKey: true, shiftKey: true }))
+    })
+    fireEvent.change(await screen.findByRole('combobox'), {
+      target: { value: 'toggle auto-maximize' }
+    })
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' })
+    await waitFor(() => expect(useSessionStore.getState().autoMaximizeEnabled).toBe(true))
+  })
+
+  it('toggles auto-maximize from the status-bar button', async () => {
+    act(() => useSessionStore.setState({ autoMaximizeEnabled: false }))
+    render(<App />)
+    const btn = await screen.findByLabelText('auto-maximize: off')
+    fireEvent.click(btn)
+    await waitFor(() => expect(useSessionStore.getState().autoMaximizeEnabled).toBe(true))
   })
 
   it('cycles the CLI dock position from the palette', async () => {

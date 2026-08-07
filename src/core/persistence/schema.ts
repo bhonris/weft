@@ -2,7 +2,7 @@ import { z } from 'zod'
 import type { WorkspaceState } from '@shared/ipc/api-contract'
 
 /** Current persisted schema version. Bump when the shape changes. */
-export const WORKSPACE_VERSION = 7
+export const WORKSPACE_VERSION = 8
 
 export const tabStateSchema = z.object({
   tabId: z.string(),
@@ -45,6 +45,9 @@ export const workspaceStateSchema = z.object({
   terminalFontSize: z.number().finite(),
   editorFontSize: z.number().finite(),
   uiZoom: z.number().finite(),
+  // v8: auto-maximize the window on waiting/done while unfocused (sibling
+  // toggle to notificationsEnabled). Defaults off — see default-workspace.ts.
+  autoMaximizeEnabled: z.boolean(),
   windowBounds: windowBoundsSchema.optional()
 })
 

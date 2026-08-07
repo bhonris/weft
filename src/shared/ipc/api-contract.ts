@@ -58,6 +58,8 @@ export interface WorkspaceState {
   editorFontSize: number
   /** v7: whole-window zoom factor (1 = 100%), applied on top of the font sizes. */
   uiZoom: number
+  /** v8: auto-restore + maximize the window on unfocused waiting/done (default false). */
+  autoMaximizeEnabled: boolean
   windowBounds?: { x: number; y: number; width: number; height: number }
 }
 
