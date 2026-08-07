@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    ignore:
+      # xlsx installs from a hardcoded CDN URL (cdn.sheetjs.com), not npm's
+      # registry -- SheetJS's actively-maintained CE build isn't published
+      # there (see CLAUDE.md). Dependabot's lockfile updater doesn't preserve
+      # the integrity hash for this dependency shape when it regenerates
+      # pnpm-lock.yaml for an unrelated bump, breaking `pnpm install
+      # --frozen-lockfile` on every PR it touches -- confirmed to recur even
+      # after a fresh `@dependabot rebase` against a main with a known-good
+      # hash. Update this dependency manually.
+      - dependency-name: "xlsx"
