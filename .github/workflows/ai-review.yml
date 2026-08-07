@@ -1,6 +1,7 @@
 name: AI review
 
-# Self-review pass over an autonomous PR (documents/ai-managed-repo.md).
+# Self-review pass over an autonomous PR (documents/ai-managed-repo.md,
+# documents/pr-review-skill.md).
 #
 # This is a CHEAP FILTER, not the merge gate. A model reviewing a diff produced
 # by the same model has a self-approval bias, so ci.yml + branch protection stay
@@ -10,6 +11,14 @@ name: AI review
 on:
   pull_request:
     types: [opened, synchronize]
+
+env:
+  # Total rejections tolerated (including the one that triggers give-up),
+  # so this allows exactly 3 revise attempts: reject 1 -> revise -> reject 2
+  # -> revise -> reject 3 -> revise -> reject 4 -> give up. ~4x a single
+  # review pass in quota for a PR that never converges -- see
+  # documents/pr-review-skill.md's Performance & quota considerations.
+  MAX_REVISE_ATTEMPTS: 3
 
 permissions:
   contents: read
@@ -21,6 +30,8 @@ jobs:
     if: startsWith(github.head_ref, 'ai/')
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      should_revise: ${{ steps.arm.outputs.should_revise }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -78,12 +89,14 @@ jobs:
       # looked at yet. Now an outright failure gets its own explicit signal,
       # distinct from a real REQUEST_CHANGES verdict.
       - name: Arm auto-merge on approval
+        id: arm
         if: always()
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PR: ${{ github.event.pull_request.number }}
           REVIEW_OUTCOME: ${{ steps.review.outcome }}
         run: |
+          echo "should_revise=false" >> "$GITHUB_OUTPUT"
           if [ "$REVIEW_OUTCOME" != "success" ]; then
             gh pr edit "$PR" --add-label "needs-human"
             gh pr comment "$PR" --body \
@@ -101,8 +114,130 @@ jobs:
           echo "verdict line: $verdict"
           if [ "$verdict" = "VERDICT: APPROVE" ]; then
             gh pr merge "$PR" --auto --squash
+            gh pr edit "$PR" --remove-label "ai:revising" || true
             echo "auto-merge armed"
-          else
-            gh pr edit "$PR" --add-label "needs-human"
-            echo "not approved — auto-merge not armed"
+            exit 0
           fi
+          # Not approved. Count every REQUEST_CHANGES review this PR has ever
+          # received, including the one just posted -- at count 1 this is the
+          # first rejection (revise attempt 1 follows), at count
+          # MAX_REVISE_ATTEMPTS+1 the cap is exhausted (see the env comment
+          # above for the exact arithmetic).
+          rejection_count=$(gh pr view "$PR" --json reviews \
+            --jq '[.reviews[] | select(.body | startswith("VERDICT: REQUEST_CHANGES"))] | length')
+          echo "rejection count: $rejection_count"
+          if [ "$rejection_count" -le "$MAX_REVISE_ATTEMPTS" ]; then
+            gh pr edit "$PR" --add-label "ai:revising" || true
+            echo "should_revise=true" >> "$GITHUB_OUTPUT"
+            echo "within revise cap -- revise job will attempt a fix"
+          else
+            gh pr edit "$PR" --remove-label "ai:revising" || true
+            gh pr edit "$PR" --add-label "ai:gave-up"
+            message=$(printf 'Exhausted %s revise attempts without reaching approval. Latest feedback:\n\n%s\n\nLabeled `ai:gave-up`; no further automatic attempts. A human needs to either fix this manually or close the PR.' "$MAX_REVISE_ATTEMPTS" "$verdict")
+            gh pr comment "$PR" --body "$message"
+            echo "revise cap exhausted -- labeled ai:gave-up"
+          fi
+
+  revise:
+    name: revise on feedback
+    needs: review
+    if: needs.review.outputs.should_revise == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      # Explicitly the PR's own head branch, not whatever pull_request's
+      # default merge-ref checkout would give -- the fix has to land as a
+      # commit on the actual branch under review, not a detached/merged ref.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Gather issue + latest review feedback
+        id: context
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          body=$(gh pr view "$PR" --json body --jq '.body')
+          issue=$(echo "$body" | grep -oE 'Closes #[0-9]+' | head -1 | grep -oE '[0-9]+' || true)
+          {
+            echo "issue_text<<EOF_ISSUE"
+            if [ -n "$issue" ]; then
+              gh issue view "$issue" --json title,body --jq '"Title: \(.title)\n\n\(.body)"'
+            else
+              echo "(No issue number found in the PR body -- work from the PR body and diff alone.)"
+            fi
+            echo "EOF_ISSUE"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "feedback_text<<EOF_FEEDBACK"
+            gh pr view "$PR" --json reviews \
+              --jq '[.reviews[] | select(.body | startswith("VERDICT: REQUEST_CHANGES"))] | last | .body'
+            echo "EOF_FEEDBACK"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Revise
+        id: revise
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ steps.app-token.outputs.token }}
+          allowed_bots: "weft-ai-loop"
+          # Write/edit tools, same as implement -- distinct from review's
+          # read-only set. The reviewer must never gain write access; the
+          # reviser is a genuinely different role with genuinely different
+          # permissions (documents/pr-review-skill.md's Security section).
+          claude_args: "--max-turns 75 --allowedTools Bash,Read,Write,Edit,Glob,Grep"
+          show_full_output: true
+          prompt: |
+            You are revising an existing pull request in response to review feedback.
+            You are already checked out on the PR's own branch
+            (`${{ github.event.pull_request.head.ref }}`).
+
+            Original issue:
+            ${{ steps.context.outputs.issue_text }}
+
+            Review feedback to address:
+            ${{ steps.context.outputs.feedback_text }}
+
+            Requirements:
+            - Address ONLY what the feedback raises. Do not expand scope beyond it.
+            - Do NOT create a new branch. Do NOT run `git checkout -b` or similar.
+              You are already on the correct branch -- commit directly to it.
+            - Re-run `pnpm typecheck` and `pnpm test:cov` and confirm they pass
+              before pushing.
+            - Push your commit to this same branch:
+              `git push origin HEAD:${{ github.event.pull_request.head.ref }}`
+            - Do not modify anything under `.github/`.
+            - If the feedback is not actually actionable (contradictory, or
+              asks for something outside this repo's scope), say so in a PR
+              comment explaining why, and still push whatever partial
+              improvement you can make rather than nothing.
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+      # The push above fires `synchronize` on this same PR, which re-triggers
+      # this workflow's `review` job fresh -- no bespoke re-trigger needed.
+      # If revise itself fails outright (not "disagreed with the feedback,"
+      # an actual crash/timeout), that's a distinct failure mode from
+      # ai:gave-up (which means "tried repeatedly and couldn't converge") --
+      # see documents/pr-review-skill.md's Acceptance criteria.
+      - name: Label outright revise failure
+        if: always() && steps.revise.outcome != 'success'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr edit "$PR" --remove-label "ai:revising" || true
+          gh pr edit "$PR" --add-label "needs-human" || true
+          gh pr comment "$PR" --body \
+            "The revise attempt did not complete (see the [run log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})). Labeled \`needs-human\` -- distinct from \`ai:gave-up\`, since this is the revise mechanism failing outright, not the loop exhausting its attempts on genuine disagreement."
