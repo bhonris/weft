@@ -199,8 +199,8 @@ then self-reviews via the `.claude/skills/pr-review/SKILL.md` skill
 (`documents/pr-review-skill.md`) and arms auto-merge on approval. `ci.yml`
 remains the actual merge gate either way. The two loops don't interact — this
 one never touches `reading-steiner.md` or the other `/dmail` state files.
-A third workflow, `ai-pr-maintenance.yml`, runs hourly on a schedule to close
-or rebase any `ai/*` PR that `main` has orphaned.
+A third workflow, `ai-pr-maintenance.yml`, runs on every push to `main` to
+close or rebase any `ai/*` PR that `main` has orphaned.
 
 Human feature docs follow the global New Feature Workflow: created under
 `documents/`, moved to `documents/completed/` when done (e.g.
