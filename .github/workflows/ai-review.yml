@@ -112,7 +112,7 @@ jobs:
             --jq '[.reviews[] | select(.body | startswith("VERDICT:"))] | last | .body // ""' \
             | head -n 1)
           echo "verdict line: $verdict"
-          # Defense in depth: confirm the latest verdict review's commit_id
+          # Defense in depth: confirm the latest verdict review's commit
           # actually matches the commit this run is reviewing. Confirmed on
           # PR #29 that the skill can believe it "posted the review" while
           # actually leaving a plain comment instead (invisible to the query
@@ -120,9 +120,16 @@ jobs:
           # STALE verdict from a previous commit and acting on it as if it
           # were fresh, triggering a pointless extra revise cycle against an
           # objection that was already fixed.
+          #
+          # `gh pr view --json reviews` is GraphQL-backed and exposes the
+          # commit as `.commit.oid`, NOT the REST API's flat `.commit_id` --
+          # confirmed the hard way: the first version of this check used
+          # `.commit_id`, which is silently absent from this schema (jq's
+          # `// ""` fallback made it look like a stale-verdict match every
+          # time, mislabeling a genuinely fresh APPROVE as needs-human).
           head_sha="${{ github.event.pull_request.head.sha }}"
           verdict_commit=$(gh pr view "$PR" --json reviews \
-            --jq '[.reviews[] | select(.body | startswith("VERDICT:"))] | last | .commit_id // ""')
+            --jq '[.reviews[] | select(.body | startswith("VERDICT:"))] | last | .commit.oid // ""')
           if [ -n "$verdict" ] && [ "$verdict_commit" != "$head_sha" ]; then
             gh pr edit "$PR" --add-label "needs-human"
             gh pr comment "$PR" --body \
