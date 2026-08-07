@@ -104,14 +104,32 @@ jobs:
             echo "review step failed outright -- labeled needs-human"
             exit 0
           fi
-          # The verdict lands as a PR REVIEW body (the prompt explicitly asks
-          # for a "COMMENT review"), not a plain issue/PR comment -- querying
-          # `comments` here always came back empty, so this could never detect
-          # a real APPROVE either, regardless of what Claude actually said.
+          # The verdict lands as a PR REVIEW body (the skill is instructed to
+          # use `gh pr review`, not `gh pr comment`) -- querying `comments`
+          # here always came back empty, so this could never detect a real
+          # APPROVE either, regardless of what Claude actually said.
           verdict=$(gh pr view "$PR" --json reviews \
             --jq '[.reviews[] | select(.body | startswith("VERDICT:"))] | last | .body // ""' \
             | head -n 1)
           echo "verdict line: $verdict"
+          # Defense in depth: confirm the latest verdict review's commit_id
+          # actually matches the commit this run is reviewing. Confirmed on
+          # PR #29 that the skill can believe it "posted the review" while
+          # actually leaving a plain comment instead (invisible to the query
+          # above) -- when that happens, this step was silently re-finding a
+          # STALE verdict from a previous commit and acting on it as if it
+          # were fresh, triggering a pointless extra revise cycle against an
+          # objection that was already fixed.
+          head_sha="${{ github.event.pull_request.head.sha }}"
+          verdict_commit=$(gh pr view "$PR" --json reviews \
+            --jq '[.reviews[] | select(.body | startswith("VERDICT:"))] | last | .commit_id // ""')
+          if [ -n "$verdict" ] && [ "$verdict_commit" != "$head_sha" ]; then
+            gh pr edit "$PR" --add-label "needs-human"
+            gh pr comment "$PR" --body \
+              "The self-review step completed without posting a fresh verdict for the current commit ($head_sha) -- the most recent verdict review is against $verdict_commit instead. Labeled \`needs-human\`; auto-merge was not armed. See the [run log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
+            echo "verdict is stale (commit $verdict_commit != head $head_sha) -- labeled needs-human, not acting on it"
+            exit 0
+          fi
           if [ "$verdict" = "VERDICT: APPROVE" ]; then
             gh pr merge "$PR" --auto --squash
             gh pr edit "$PR" --remove-label "ai:revising" || true
