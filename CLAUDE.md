@@ -192,6 +192,14 @@ This project is built via the `/dmail` autonomous loop. Some markdown files are
 - `STEINER_LOG.md` — running log, newest on top.
 - `DOSSIER.md` — status + acceptance snapshot. `USAGE.md` — operating manual.
 
+**A separate, issue-driven autonomous loop** also exists alongside `/dmail`
+(`documents/ai-managed-repo.md`): an owner-opened GitHub issue triggers
+`ai-implement.yml`, which runs Claude Code headless to open a PR; `ai-review.yml`
+then self-reviews via the `.claude/skills/pr-review/SKILL.md` skill
+(`documents/pr-review-skill.md`) and arms auto-merge on approval. `ci.yml`
+remains the actual merge gate either way. The two loops don't interact — this
+one never touches `reading-steiner.md` or the other `/dmail` state files.
+
 Human feature docs follow the global New Feature Workflow: created under
 `documents/`, moved to `documents/completed/` when done (e.g.
 `documents/completed/design-doc.md`, `documents/completed/tab-state-colors.md`).
