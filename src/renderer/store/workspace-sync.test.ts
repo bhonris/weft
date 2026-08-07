@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { buildWorkspaceState, restoreWorkspace } from './workspace-sync'
 import type { Tab } from './session-store'
 import type { LiveSession, WorkspaceState } from '@shared/ipc/api-contract'
+import { DEFAULT_FONT } from '@core/workspace/font'
 
 const tab = (id: string, over: Partial<Tab> = {}): Tab => ({
   tabId: id,
@@ -15,7 +16,7 @@ const tab = (id: string, over: Partial<Tab> = {}): Tab => ({
 describe('buildWorkspaceState', () => {
   it('serializes tabs, order, and defaults at the current version', () => {
     const ws = buildWorkspaceState([tab('a'), tab('b', { command: 'shell' })])
-    expect(ws.version).toBe(7)
+    expect(ws.version).toBe(8)
     expect(ws.tabs).toEqual([
       {
         tabId: 'a',
@@ -49,6 +50,8 @@ describe('buildWorkspaceState', () => {
     expect(ws.terminalFontSize).toBe(15)
     expect(ws.editorFontSize).toBe(14)
     expect(ws.uiZoom).toBe(1)
+    // Auto-maximize defaults off when the caller doesn't specify.
+    expect(ws.autoMaximizeEnabled).toBe(false)
   })
 
   it('serializes an explicit font override', () => {
@@ -82,6 +85,21 @@ describe('buildWorkspaceState', () => {
     expect(buildWorkspaceState([], 'cyberpunk', false, true, overrides).keymapOverrides).toEqual(
       overrides
     )
+  })
+
+  it('persists an explicit auto-maximize-on choice', () => {
+    const ws = buildWorkspaceState(
+      [],
+      'cyberpunk',
+      false,
+      true,
+      {},
+      { position: 'bottom', size: 0.4 },
+      'explorer',
+      DEFAULT_FONT,
+      true
+    )
+    expect(ws.autoMaximizeEnabled).toBe(true)
   })
 })
 

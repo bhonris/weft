@@ -128,6 +128,7 @@ describe('actionForCommand (inverse — for rebinding)', () => {
     for (const id of [
       'general.cycleTheme',
       'general.toggleResume',
+      'general.toggleAutoMaximize',
       'tab.rename',
       'viewer.save',
       // Whole-window zoom is palette-only now (Ctrl+= family drives terminal font).

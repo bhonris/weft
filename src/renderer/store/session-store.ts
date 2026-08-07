@@ -44,6 +44,9 @@ export interface SessionState {
   /** Raise OS toasts for unfocused waiting/done sessions (on by default). */
   notificationsEnabled: boolean
   setNotificationsEnabled: (enabled: boolean) => void
+  /** Auto-restore + maximize the window on unfocused waiting/done (off by default). */
+  autoMaximizeEnabled: boolean
+  setAutoMaximizeEnabled: (enabled: boolean) => void
   /** User keybinding overrides, `chord → command id` (empty = built-in chords). */
   keymapOverrides: Record<string, string>
   setKeymapOverrides: (overrides: Record<string, string>) => void
@@ -81,6 +84,8 @@ export const useSessionStore = create<SessionState>((set) => ({
   setResumeEnabled: (resumeEnabled) => set({ resumeEnabled }),
   notificationsEnabled: true,
   setNotificationsEnabled: (notificationsEnabled) => set({ notificationsEnabled }),
+  autoMaximizeEnabled: false,
+  setAutoMaximizeEnabled: (autoMaximizeEnabled) => set({ autoMaximizeEnabled }),
   keymapOverrides: {},
   setKeymapOverrides: (keymapOverrides) => set({ keymapOverrides }),
   renameTick: 0,
