@@ -118,9 +118,29 @@ was actually followed.
 
 ## Output contract
 
-Post exactly ONE review on the PR, as a **comment review** — not a formal
-approval (the app posting it cannot approve its own org's PR) — whose body's
-FIRST LINE is exactly one of:
+Post your verdict using **exactly this command shape** — a real PR review
+object via `gh pr review`, NOT `gh pr comment` or `gh issue comment`. The
+workflow that arms auto-merge queries the PR's **reviews** list specifically;
+a plain comment is invisible to it and silently breaks the whole automation,
+even though the PR looks fine to a human reading it on GitHub:
+
+```
+gh pr review <PR number> --comment --body "$(cat <<'EOF'
+VERDICT: APPROVE
+
+<your reasoning>
+EOF
+)"
+```
+
+(`--comment` posts it as a COMMENT-type review, not a formal approval — the
+app posting this cannot approve its own org's PR.) Use `VERDICT:
+REQUEST_CHANGES` in place of `VERDICT: APPROVE` when rejecting. Post exactly
+ONE review per invocation — do not also post a plain PR/issue comment with
+the same content; that would be redundant and risks the automation reading
+the wrong one.
+
+The verdict must be the FIRST LINE of the body, exactly one of:
 
 ```
 VERDICT: APPROVE
@@ -137,3 +157,13 @@ specific feedback is the difference between it converging and it stalling.
 Note explicitly which categories don't apply to this diff (e.g. "no UI
 changes in this PR" for a pure backend fix) rather than silently omitting
 them — that distinguishes "checked, not applicable" from "forgot to check."
+
+Before finishing, verify your review actually landed as a review object, not
+a comment:
+
+```
+gh pr view <PR number> --json reviews --jq '.reviews[-1].body' | head -1
+```
+
+should print your `VERDICT:` line. If it doesn't, something went wrong —
+retry with `gh pr review`, don't just leave a comment as a fallback.
