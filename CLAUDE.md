@@ -177,6 +177,8 @@ pnpm is the package manager (not npm).
   per-test override, so the suite is hermetic even when run **inside a live
   weft/Claude Code session** (which used to leak a real `CLAUDE_IDE_TAB` and fail
   the null-stdin case). Keep that delete when editing `runRelay`.
+- `documents/pr-review-skill.md` documents the review skill and is the reference
+  for both retry loops (see below).
 
 ## Documents & the /dmail "Steiner" workflow
 
