@@ -228,7 +228,12 @@ jobs:
           # this issue before trusting OUTCOME -- this also means a failure
           # that DID produce a PR never reaches the retry logic below, since
           # there's a real PR for revise/review to work with already.
-          pr_number=$(gh pr list --state open --json number,body --jq \
+          # `gh pr list --jq` does NOT support `--arg` at all (confirmed via
+          # `gh pr list --help`: no such flag) -- passing one causes "unknown
+          # arguments", which fails this whole step outright under bash -e.
+          # Piping into a real jq (present on ubuntu-latest) instead, where
+          # --arg is properly supported.
+          pr_number=$(gh pr list --state open --json number,body | jq -r \
             --arg n "$NUMBER" '[.[] | select(.body // "" | test("Closes #" + $n + "(\\D|$)"))] | .[0].number // empty')
           if [ -n "$pr_number" ] || [ "$OUTCOME" = "success" ]; then
             gh issue edit "$NUMBER" --add-label "ai:pr-open" || true
