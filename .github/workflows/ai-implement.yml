@@ -1,12 +1,39 @@
 name: AI implement
 
-# Issue-driven autonomous development (documents/ai-managed-repo.md).
-# An owner-opened issue triggers Claude Code headless, which implements the
-# change per CLAUDE.md and opens a PR. ci.yml is the merge gate, not this job.
+# Issue-driven autonomous development (documents/ai-managed-repo.md,
+# documents/pr-review-skill.md).
+#
+# Two ways in:
+#   1. issues: [opened] -- an owner-opened issue, attempt 1.
+#   2. workflow_dispatch -- this job's own retry-dispatch (below), for a
+#      subsequent attempt after an outright failure produced no PR.
+# ci.yml is the merge gate either way, not this job.
 
 on:
   issues:
     types: [opened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Issue number to implement"
+        required: true
+      attempt:
+        description: "Attempt number (1 = first try)"
+        required: false
+        default: "1"
+      previous_run_id:
+        description: "run ID of the previous failed attempt, if any"
+        required: false
+        default: ""
+
+env:
+  # Each attempt costs roughly a full implement run -- more expensive than a
+  # revise pass (full exploration + implementation + test cycle each time,
+  # not a scoped fix to existing feedback) -- so this starts lower than
+  # ai-review.yml's MAX_REVISE_ATTEMPTS. See documents/pr-review-skill.md's
+  # Performance & quota considerations: this compounds with the revise loop,
+  # not just adds to it.
+  MAX_IMPLEMENT_ATTEMPTS: 2
 
 # Least privilege: the job reads the repo with GITHUB_TOKEN and does all writes
 # with the scoped App token, which is what makes ci.yml run on the bot's commits.
@@ -16,11 +43,19 @@ permissions:
 jobs:
   implement:
     name: implement issue
-    # The owner gate is load-bearing. It keeps a third party from triggering a
-    # run, and keeps the subscription credential in the secret spendable only by
-    # the account holder. Do not relax it without re-reading the Security
-    # section of documents/ai-managed-repo.md.
-    if: github.event.issue.user.login == github.repository_owner
+    # Two trigger shapes, two different legitimacy checks:
+    # - issues: the owner-gate is load-bearing -- it keeps a third party from
+    #   triggering a run at all, and keeps the subscription credential in the
+    #   secret spendable only by the account holder. Do not relax it without
+    #   re-reading the Security section of documents/ai-managed-repo.md.
+    # - workflow_dispatch: GitHub itself already restricts who can dispatch a
+    #   workflow to repo collaborators with write access -- on this repo,
+    #   that's the owner and the App the owner controls. A github.actor check
+    #   here would be the WRONG gate: a retry dispatched via the App token
+    #   would show the App's bot identity as the actor, not the human owner,
+    #   so comparing against repository_owner would incorrectly reject the
+    #   loop's own legitimate retries.
+    if: (github.event_name == 'issues' && github.event.issue.user.login == github.repository_owner) || github.event_name == 'workflow_dispatch'
     # anthropics/claude-code-action's installer does not support Windows
     # runners ("Windows is not supported by this script") — confirmed by a
     # startup_failure dry run. That's fine here: this job only runs
@@ -42,6 +77,56 @@ jobs:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
+      # Normalizes the two trigger shapes into one set of outputs everything
+      # downstream reads. `workflow_dispatch` only carries the issue NUMBER
+      # as an input, not the full issue object `issues` gives for free, so
+      # this always re-fetches title/body via the API rather than branching
+      # steps on event type throughout the rest of the job.
+      - name: Resolve issue + attempt context
+        id: resolve
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          ISSUES_NUMBER: ${{ github.event.issue.number }}
+          DISPATCH_NUMBER: ${{ github.event.inputs.issue_number }}
+          DISPATCH_ATTEMPT: ${{ github.event.inputs.attempt }}
+          DISPATCH_PREVIOUS_RUN: ${{ github.event.inputs.previous_run_id }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            number="$DISPATCH_NUMBER"
+            attempt="${DISPATCH_ATTEMPT:-1}"
+            previous_run="$DISPATCH_PREVIOUS_RUN"
+          else
+            number="$ISSUES_NUMBER"
+            attempt="1"
+            previous_run=""
+          fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+          echo "attempt=$attempt" >> "$GITHUB_OUTPUT"
+          echo "previous_run=$previous_run" >> "$GITHUB_OUTPUT"
+
+          state=$(gh issue view "$number" --json state --jq '.state')
+          echo "issue_state=$state" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "title<<EOF_TITLE"
+            gh issue view "$number" --json title --jq '.title'
+            echo "EOF_TITLE"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "body<<EOF_BODY"
+            gh issue view "$number" --json body --jq '.body'
+            echo "EOF_BODY"
+          } >> "$GITHUB_OUTPUT"
+
+      # A human may have closed the issue between a failed attempt and its
+      # retry -- don't implement against a target that's no longer live.
+      - name: Stop if the issue was closed
+        if: steps.resolve.outputs.issue_state != 'OPEN'
+        run: |
+          echo "Issue #${{ steps.resolve.outputs.number }} is ${{ steps.resolve.outputs.issue_state }}, not OPEN -- cancelling this retry."
+          exit 1
+
       # Mirrors ci.yml so the agent's local gate matches the one that judges it.
       - uses: pnpm/action-setup@v4
         with:
@@ -55,7 +140,7 @@ jobs:
       - name: Mark issue as in progress
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: gh issue edit ${{ github.event.issue.number }} --add-label "ai:working"
+        run: gh issue edit "${{ steps.resolve.outputs.number }}" --add-label "ai:working"
 
       - name: Implement
         id: implement
@@ -70,7 +155,7 @@ jobs:
           # so it could never be self-reviewed or auto-merged. Keep this AND
           # the explicit prompt instruction below -- belt and suspenders,
           # since neither alone has proven sufficient.
-          branch_prefix: "ai/issue-${{ github.event.issue.number }}-"
+          branch_prefix: "ai/issue-${{ steps.resolve.outputs.number }}-"
           # In a headless CI run there's no human to approve a tool-use prompt,
           # so an unlisted tool is auto-denied rather than asked about. Without
           # this, a dry run completed all 21 turns and reported success with
@@ -90,12 +175,14 @@ jobs:
           # the loop is trusted -- see documents/ai-managed-repo.md.
           show_full_output: true
           prompt: |
-            Implement GitHub issue #${{ github.event.issue.number }} in this repository.
+            Implement GitHub issue #${{ steps.resolve.outputs.number }} in this repository.
 
-            Title: ${{ github.event.issue.title }}
+            Title: ${{ steps.resolve.outputs.title }}
 
             Body:
-            ${{ github.event.issue.body }}
+            ${{ steps.resolve.outputs.body }}
+
+            ${{ steps.resolve.outputs.attempt != '1' && format('This is attempt {0} of {1}. A previous attempt on this issue failed to produce a PR (ran out of turns, crashed, or similar) without committing anything -- there is no partial work to resume, but if it would help you work more efficiently this time (e.g. to avoid re-exploring files as thoroughly), you can inspect its transcript with: gh run view {2} --log', steps.resolve.outputs.attempt, env.MAX_IMPLEMENT_ATTEMPTS, steps.resolve.outputs.previous_run) || '' }}
 
             Requirements:
             - Follow CLAUDE.md exactly, especially the layer boundary
@@ -106,11 +193,11 @@ jobs:
             - Run `pnpm typecheck` and `pnpm test:cov` and get them passing before
               opening a PR. The coverage gate is 95% statements/functions/lines
               and 90% branches.
-            - Work on a branch named `ai/issue-${{ github.event.issue.number }}-<short-slug>`
+            - Work on a branch named `ai/issue-${{ steps.resolve.outputs.number }}-<short-slug>`
               -- even if you create it yourself with `git checkout -b` rather than
               through any built-in branch-naming feature. This exact prefix is
               required for review and auto-merge to run on the resulting PR.
-            - Open a PR whose body contains exactly `Closes #${{ github.event.issue.number }}`.
+            - Open a PR whose body contains exactly `Closes #${{ steps.resolve.outputs.number }}`.
             - Do not modify anything under `.github/`.
             - If the issue is too vague to implement without guessing, do NOT open
               a PR. Post a comment on the issue asking the specific question that
@@ -120,14 +207,16 @@ jobs:
           # documents/ai-managed-repo.md.
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-      # Reflect the outcome in labels so issue state is visible at a glance.
-      - name: Label outcome
+      # Reflect the outcome in labels so issue state is visible at a glance,
+      # and retry via workflow_dispatch on an outright failure that produced
+      # no PR at all.
+      - name: Label outcome / retry
         if: always()
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          NUMBER: ${{ github.event.issue.number }}
+          NUMBER: ${{ steps.resolve.outputs.number }}
+          ATTEMPT: ${{ steps.resolve.outputs.attempt }}
           OUTCOME: ${{ steps.implement.outcome }}
-        shell: bash
         run: |
           gh issue edit "$NUMBER" --remove-label "ai:working" || true
           # steps.implement.outcome is a coarse success/failure signal. A run
@@ -135,15 +224,27 @@ jobs:
           # out of turns before it can print a wrap-up message reports
           # "failure" here even though real, mergeable work exists: confirmed
           # on issue #23/PR #24, where `gh pr create` completed 4 seconds
-          # before error_max_turns fired, and this step's old logic labeled
-          # the issue "did not complete" regardless. Check for an actual PR
-          # referencing this issue before trusting OUTCOME.
+          # before error_max_turns fired. Check for an actual PR referencing
+          # this issue before trusting OUTCOME -- this also means a failure
+          # that DID produce a PR never reaches the retry logic below, since
+          # there's a real PR for revise/review to work with already.
           pr_number=$(gh pr list --state open --json number,body --jq \
             --arg n "$NUMBER" '[.[] | select(.body // "" | test("Closes #" + $n + "(\\D|$)"))] | .[0].number // empty')
           if [ -n "$pr_number" ] || [ "$OUTCOME" = "success" ]; then
             gh issue edit "$NUMBER" --add-label "ai:pr-open" || true
+            echo "PR #$pr_number exists (or outcome=success) -- done"
+            exit 0
+          fi
+          if [ "$ATTEMPT" -lt "$MAX_IMPLEMENT_ATTEMPTS" ]; then
+            next=$((ATTEMPT + 1))
+            gh workflow run ai-implement.yml \
+              -f issue_number="$NUMBER" \
+              -f attempt="$next" \
+              -f previous_run_id="${{ github.run_id }}"
+            echo "no PR produced, attempt $ATTEMPT/$MAX_IMPLEMENT_ATTEMPTS -- dispatched attempt $next"
           else
-            gh issue edit "$NUMBER" --add-label "needs-human" || true
+            gh issue edit "$NUMBER" --add-label "ai:gave-up" || true
             gh issue comment "$NUMBER" --body \
-              "The autonomous implement run did not complete, and no PR was found referencing this issue. See the [run log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}). Labeled \`needs-human\`; no further automatic attempts."
+              "Exhausted $MAX_IMPLEMENT_ATTEMPTS implement attempts without producing a PR. Latest run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. Labeled \`ai:gave-up\`; no further automatic attempts."
+            echo "exhausted $MAX_IMPLEMENT_ATTEMPTS attempts -- labeled ai:gave-up"
           fi
