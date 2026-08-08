@@ -445,38 +445,71 @@ under `.claude/skills/`.
 
 ## Todo list
 
-- [ ] Write `.claude/skills/pr-review/SKILL.md` with the checklist above.
-- [ ] Point `ai-review.yml`'s review job at the skill; verify on a scratch PR
-      that the verdict format (`VERDICT: APPROVE`/`REQUEST_CHANGES` as a
-      comment review) is unchanged.
-- [ ] Add the `revise` job: attempt-count gate, write/edit permissions,
+- [x] Write `.claude/skills/pr-review/SKILL.md` with the checklist above.
+- [x] Point `ai-review.yml`'s review job at the skill; verified on PR #27
+      (isolated skill test) that the verdict format is unchanged and the
+      skill's own instructions are genuinely followed (it cited its own
+      documentation-accuracy note verbatim while reviewing).
+- [x] Add the `revise` job: attempt-count gate, write/edit permissions,
       prompt combining issue + latest review feedback, push to same branch.
-- [ ] Confirm a push from `revise` correctly re-triggers `ai-review.yml` via
-      `synchronize`.
-- [ ] Implement the `ai:gave-up` label application once the attempt cap is
-      hit, with a comment summarizing unresolved feedback.
-- [ ] Add the distinct `needs-human` path for a `revise` job that errors
-      outright (vs. one that ran but didn't converge).
+- [x] Confirmed a push from `revise` correctly re-triggers `ai-review.yml`
+      via `synchronize` (PR #29).
+- [x] Implement the `ai:gave-up` label application once the attempt cap is
+      hit, with a comment summarizing unresolved feedback. **Code path
+      written; the actual exhaustion case (3 rejections in a row) has not
+      been exercised by a real run** — PR #29 converged on the first revise
+      attempt, it never got tested going all the way to giving up.
+- [x] Add the distinct `needs-human` path for a `revise` job that errors
+      outright (vs. one that ran but didn't converge). Written, not yet
+      exercised by a real revise-job failure.
 - [ ] Run the skill-validation test set (known-good/known-bad diffs per
-      category) before trusting it on a real issue.
-- [ ] Run the revise-loop test set (one convergent, one exhausts the cap).
-- [ ] Re-verify the review job's tool permissions still exclude Write/Edit
-      after wiring the skill.
-- [ ] Add `workflow_dispatch` to `ai-implement.yml` with `issue_number`,
-      `attempt`, `previous_failure_context` inputs; add the `gh issue view`
-      step so title/body are available under either trigger shape.
-- [ ] Update the owner gate to hold under both trigger shapes (`github.actor`
-      check for `workflow_dispatch`, not a blanket bypass).
-- [ ] Wire the "Label outcome" step to dispatch a retry via `gh workflow run`
+      category) — not done; PR #27/#29's real reviews are evidence the
+      skill works, not a substitute for the structured category-by-category
+      validation this item describes.
+- [x] Run the revise-loop test set — **partially**: one convergent case
+      confirmed (PR #29, and it took three additional real bugs to get
+      there: verdict posted as a plain comment instead of a review object,
+      the stale-verdict guard using the wrong GraphQL field name, and a
+      stale `needs-human` label not clearing on later success — all fixed).
+      The cap-exhaustion case is still untested.
+- [x] Re-verified the review job's tool permissions still exclude Write/Edit
+      after wiring the skill (unchanged: `Bash,Read,Grep,Glob`).
+- [x] Add `workflow_dispatch` to `ai-implement.yml` with `issue_number`,
+      `attempt`, `previous_run_id` inputs (renamed from `previous_failure_context`
+      in the original design -- passing the run ID and letting the retry
+      inspect the log itself via `gh run view` turned out simpler and more
+      robust than trying to pre-summarize the failure); a "Resolve issue +
+      attempt context" step makes title/body available under either trigger
+      shape via `gh issue view`, uniformly.
+- [x] Update the owner gate to hold under both trigger shapes. **Different
+      from the original plan**: rather than a `github.actor` comparison
+      (which would incorrectly reject a retry dispatched via the App token,
+      since the actor would be the App's bot identity, not the human owner),
+      `workflow_dispatch` relies on GitHub's own native restriction to
+      write-access collaborators.
+- [x] Wire the "Label outcome" step to dispatch a retry via `gh workflow run`
       when outright-failed with no PR and `attempt < MAX_IMPLEMENT_ATTEMPTS`;
-      exhaustion labels `ai:gave-up`, not `needs-human`.
-- [ ] Test the implement-retry loop: one issue that converges on attempt 2,
-      one that exhausts `MAX_IMPLEMENT_ATTEMPTS` and correctly lands on
-      `ai:gave-up` with a comment distinguishing turn-limit exhaustion from
-      a genuine recurring error.
-- [ ] Move to `documents/completed/` once a real issue has gone through both
-      loops end to end: an implement retry that converges, and a
-      `REQUEST_CHANGES` → revise → `APPROVE` cycle.
+      exhaustion labels `ai:gave-up`, not `needs-human`. Required adding
+      Actions: Read and write to the App's permissions (not originally
+      scoped) — `gh workflow run` needs it and the App never had it.
+- [x] Tested the `workflow_dispatch` trigger itself directly (issue #30,
+      manually dispatched at attempt 2): the trigger, owner-gate, and
+      resolve-step all confirmed working, and it surfaced one more real bug
+      along the way — `gh pr list --jq` silently doesn't support `--arg` at
+      all (confirmed via `--help`), which had been broken since the
+      PR-detection fix was first written. Every earlier "confirmed working"
+      claim about that exact check was verified by running `gh pr list`
+      manually in-session, never by observing the workflow's own execution
+      succeed — a real gap in verification rigor, corrected here by piping
+      into a real `jq` instead of relying on `gh`'s `--jq` wrapper.
+      **Not yet tested**: an actual implement failure triggering an
+      *automatic* retry dispatch (this test dispatched attempt 2 manually
+      to isolate the trigger mechanism, rather than waiting for a genuine
+      attempt-1 failure), and the `MAX_IMPLEMENT_ATTEMPTS` exhaustion path.
+- [ ] Move to `documents/completed/` once the two remaining untested paths
+      above (revise-cap exhaustion, implement-retry cap exhaustion, and a
+      genuine automatic — not manually dispatched — implement retry) have
+      each been exercised by a real run.
 - [ ] **Future, blocked on macOS/Linux support existing:** revisit
       screenshot-based visual UI review (review skill, E2E, or both) once
       weft actually ships on a platform a Linux CI runner can legitimately
