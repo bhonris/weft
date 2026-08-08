@@ -139,7 +139,13 @@ jobs:
           fi
           if [ "$verdict" = "VERDICT: APPROVE" ]; then
             gh pr merge "$PR" --auto --squash
+            # Clear any state left over from an earlier failed/stale run on
+            # this same PR (confirmed possible on PR #29: a real APPROVE can
+            # land after a prior run mislabeled needs-human) -- a PR sailing
+            # toward auto-merge shouldn't still show a label implying it's
+            # stuck waiting on a person.
             gh pr edit "$PR" --remove-label "ai:revising" || true
+            gh pr edit "$PR" --remove-label "needs-human" || true
             echo "auto-merge armed"
             exit 0
           fi
