@@ -142,6 +142,20 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: gh issue edit "${{ steps.resolve.outputs.number }}" --add-label "ai:working"
 
+      # Baseline so the label/retry step below can tell "the agent posted a
+      # clarifying comment and stopped on purpose" (issue too vague -- see the
+      # prompt's last requirement) apart from "the agent just didn't finish."
+      # Comparing counts, not the run's own gh calls, since the agent's PR/
+      # comment actions aren't otherwise visible to this step.
+      - name: Capture issue comment count before implement
+        id: pre-comments
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          NUMBER: ${{ steps.resolve.outputs.number }}
+        run: |
+          count=$(gh issue view "$NUMBER" --json comments --jq '.comments | length')
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
       - name: Implement
         id: implement
         uses: anthropics/claude-code-action@v1
@@ -217,17 +231,25 @@ jobs:
           NUMBER: ${{ steps.resolve.outputs.number }}
           ATTEMPT: ${{ steps.resolve.outputs.attempt }}
           OUTCOME: ${{ steps.implement.outcome }}
+          COMMENTS_BEFORE: ${{ steps.pre-comments.outputs.count }}
         run: |
           gh issue edit "$NUMBER" --remove-label "ai:working" || true
-          # steps.implement.outcome is a coarse success/failure signal. A run
-          # that fully finishes -- PR opened, tests passing -- but then runs
-          # out of turns before it can print a wrap-up message reports
-          # "failure" here even though real, mergeable work exists: confirmed
-          # on issue #23/PR #24, where `gh pr create` completed 4 seconds
-          # before error_max_turns fired. Check for an actual PR referencing
-          # this issue before trusting OUTCOME -- this also means a failure
-          # that DID produce a PR never reaches the retry logic below, since
-          # there's a real PR for revise/review to work with already.
+          # steps.implement.outcome is NOT trusted as a proxy for "a PR
+          # exists" in either direction:
+          # - false negative: a run that fully finishes -- PR opened, tests
+          #   passing -- but then runs out of turns before it can print a
+          #   wrap-up message reports "failure" even though real, mergeable
+          #   work exists. Confirmed on issue #23/PR #24, where `gh pr create`
+          #   completed 4 seconds before error_max_turns fired.
+          # - false positive: a run can report "success" (the CLI call
+          #   itself didn't error) after doing nothing but launching a
+          #   background sub-agent it never rejoins -- confirmed on issue
+          #   #34, where the entire "implementation" was one message saying
+          #   an exploration agent was running in the background, no branch
+          #   or PR ever created, yet outcome=success. Trusting that here
+          #   labeled the issue ai:pr-open with nothing to back it up, and
+          #   skipped the retry that would have actually fixed it.
+          # So: check for an actual PR referencing this issue, full stop.
           # `gh pr list --jq` does NOT support `--arg` at all (confirmed via
           # `gh pr list --help`: no such flag) -- passing one causes "unknown
           # arguments", which fails this whole step outright under bash -e.
@@ -235,21 +257,35 @@ jobs:
           # --arg is properly supported.
           pr_number=$(gh pr list --state open --json number,body | jq -r \
             --arg n "$NUMBER" '[.[] | select(.body // "" | test("Closes #" + $n + "(\\D|$)"))] | .[0].number // empty')
-          if [ -n "$pr_number" ] || [ "$OUTCOME" = "success" ]; then
+          if [ -n "$pr_number" ]; then
             gh issue edit "$NUMBER" --add-label "ai:pr-open" || true
-            echo "PR #$pr_number exists (or outcome=success) -- done"
+            echo "PR #$pr_number exists -- done"
             exit 0
           fi
+
+          # No PR. Before retrying, tell apart "the agent deliberately
+          # stopped and asked a clarifying question" (per the Implement
+          # prompt's last requirement -- an intentional, correct outcome that
+          # a retry would just repeat) from "the agent didn't finish" (a real
+          # failure worth retrying). A new comment on the issue during this
+          # run is the signal for the former.
+          comments_after=$(gh issue view "$NUMBER" --json comments --jq '.comments | length')
+          if [ "$comments_after" -gt "${COMMENTS_BEFORE:-0}" ]; then
+            gh issue edit "$NUMBER" --add-label "needs-human" || true
+            echo "no PR, but the agent commented on the issue (outcome=$OUTCOME) -- likely asked for clarification; labeled needs-human, not retrying"
+            exit 0
+          fi
+
           if [ "$ATTEMPT" -lt "$MAX_IMPLEMENT_ATTEMPTS" ]; then
             next=$((ATTEMPT + 1))
             gh workflow run ai-implement.yml \
               -f issue_number="$NUMBER" \
               -f attempt="$next" \
               -f previous_run_id="${{ github.run_id }}"
-            echo "no PR produced, attempt $ATTEMPT/$MAX_IMPLEMENT_ATTEMPTS -- dispatched attempt $next"
+            echo "no PR produced (outcome=$OUTCOME), attempt $ATTEMPT/$MAX_IMPLEMENT_ATTEMPTS -- dispatched attempt $next"
           else
             gh issue edit "$NUMBER" --add-label "ai:gave-up" || true
             gh issue comment "$NUMBER" --body \
               "Exhausted $MAX_IMPLEMENT_ATTEMPTS implement attempts without producing a PR. Latest run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. Labeled \`ai:gave-up\`; no further automatic attempts."
-            echo "exhausted $MAX_IMPLEMENT_ATTEMPTS attempts -- labeled ai:gave-up"
+            echo "exhausted $MAX_IMPLEMENT_ATTEMPTS attempts (outcome=$OUTCOME) -- labeled ai:gave-up"
           fi

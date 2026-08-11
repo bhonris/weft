@@ -52,6 +52,23 @@
 > decision itself. `show_full_output: true` is still on both jobs from
 > debugging — worth turning off once quota cost from verbose logging is a
 > concern (see Todo).
+>
+> **A sixth bug surfaced on issue #34 (2026-08-11):** the implement run's
+> entire turn was spawning a background exploration sub-agent and reporting
+> that it would "continue once it reports back" — then the run ended there,
+> `terminal_reason: completed`, `subtype: success`, no branch or PR ever
+> created. `ai-implement.yml`'s "Label outcome / retry" step trusted
+> `steps.implement.outcome == 'success'` as a stand-in for "a PR exists" (the
+> mirror-image mistake of the #23/PR #24 case documented above, where
+> `outcome == 'failure'` was wrongly trusted as "no PR exists") — so it labeled
+> the issue `ai:pr-open` with nothing behind it and never retried. Fixed by
+> dropping the `outcome`-based fallback entirely: the step now decides purely
+> on whether a PR referencing the issue actually exists, and — to keep the
+> now-mandatory retry from looping pointlessly against a genuinely-too-vague
+> issue where the agent correctly declined and asked a clarifying question
+> instead — a new comment on the issue during the run (checked against a
+> comment count captured just before the Implement step) is treated as an
+> intentional stop and labeled `needs-human` rather than retried.
 
 ## Feature specification
 
