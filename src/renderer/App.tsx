@@ -304,6 +304,8 @@ export function App(): React.ReactElement {
   const setResumeEnabled = useSessionStore((s) => s.setResumeEnabled)
   const notificationsEnabled = useSessionStore((s) => s.notificationsEnabled)
   const setNotificationsEnabled = useSessionStore((s) => s.setNotificationsEnabled)
+  const autoMaximizeEnabled = useSessionStore((s) => s.autoMaximizeEnabled)
+  const setAutoMaximizeEnabled = useSessionStore((s) => s.setAutoMaximizeEnabled)
   const keymapOverrides = useSessionStore((s) => s.keymapOverrides)
   const setKeymapOverrides = useSessionStore((s) => s.setKeymapOverrides)
   // In-project split: the editor area shows only when a file is open AND the CLI
@@ -481,6 +483,9 @@ export function App(): React.ReactElement {
         break
       case 'general.toggleNotifications':
         s.setNotificationsEnabled(!s.notificationsEnabled)
+        break
+      case 'general.toggleAutoMaximize':
+        s.setAutoMaximizeEnabled(!s.autoMaximizeEnabled)
         break
       case 'general.keybindings':
         setOverlay('keybindings')
@@ -743,6 +748,7 @@ export function App(): React.ReactElement {
         useSessionStore.getState().setTheme(saved.theme)
         useSessionStore.getState().setResumeEnabled(saved.resumeEnabled)
         useSessionStore.getState().setNotificationsEnabled(saved.notificationsEnabled)
+        useSessionStore.getState().setAutoMaximizeEnabled(saved.autoMaximizeEnabled)
         useSessionStore.getState().setKeymapOverrides(saved.keymapOverrides)
         useDockStore.getState().restore(saved.dock)
         useActivityStore.getState().setActive(saved.activePanel)
@@ -776,7 +782,8 @@ export function App(): React.ReactElement {
             terminalFontSize: font.terminalFontSize,
             editorFontSize: font.editorFontSize,
             uiZoom: font.uiZoom
-          }
+          },
+          s.autoMaximizeEnabled
         )
       )
     }
@@ -786,6 +793,7 @@ export function App(): React.ReactElement {
         state.theme !== prev.theme ||
         state.resumeEnabled !== prev.resumeEnabled ||
         state.notificationsEnabled !== prev.notificationsEnabled ||
+        state.autoMaximizeEnabled !== prev.autoMaximizeEnabled ||
         state.keymapOverrides !== prev.keymapOverrides
       ) {
         persist()
@@ -1126,6 +1134,15 @@ export function App(): React.ReactElement {
             onClick={() => setNotificationsEnabled(!notificationsEnabled)}
           >
             {notificationsEnabled ? '🔔 notify on' : '🔕 notify off'}
+          </button>
+          <button
+            type="button"
+            className="status-bar__theme"
+            aria-label={`auto-maximize: ${autoMaximizeEnabled ? 'on' : 'off'}`}
+            title="Auto-restore and maximize the window when an unfocused session needs you or finishes (opt-in — off by default)"
+            onClick={() => setAutoMaximizeEnabled(!autoMaximizeEnabled)}
+          >
+            {autoMaximizeEnabled ? '🗖 auto-max on' : '🗗 auto-max off'}
           </button>
           <button
             type="button"

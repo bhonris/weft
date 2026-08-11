@@ -11,6 +11,7 @@ import { NodePtyFactory } from './services/pty-factory'
 import { FsService } from './services/fs-service'
 import { StatusServer } from './services/status-server'
 import { NotificationService } from './services/notification-service'
+import { AutoMaximizeService } from './services/auto-maximize-service'
 import { writeForwarder } from './services/hook-forwarder'
 import { NetTransport } from './platform/net-transport'
 import { statusEndpointPath } from '@core/pipe/pipe-name'
@@ -121,6 +122,19 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
     }
   })
 
+  // Sibling opt-in feature (default off): pull the main window back into view
+  // on the same waiting/done-while-unfocused trigger notifications use.
+  const autoMaximize = new AutoMaximizeService({
+    isEnabled: () => workspaceStore.load().autoMaximizeEnabled,
+    isAppFocused: () => BrowserWindow.getAllWindows().some((w) => w.isFocused()),
+    restoreAndMaximize: () => {
+      const win = getMainWindow()
+      if (!win) return
+      if (win.isMinimized()) win.restore()
+      win.maximize()
+    }
+  })
+
   const statusServer = new StatusServer({
     transport: new NetTransport(),
     endpointPath: endpoint,
@@ -130,6 +144,7 @@ export async function wireApp(wireDeps: WireAppDeps): Promise<{
         win.webContents.send(CH.sessionStatus, change)
       }
       notifications.handleStatus(change)
+      autoMaximize.handleStatus(change)
     },
     onDrop: (reason) => console.warn(`[weft-status] dropped payload: ${reason}`)
   })

@@ -20,6 +20,8 @@ describe('defaultWorkspace', () => {
     expect(ws.terminalFontSize).toBe(15)
     expect(ws.editorFontSize).toBe(14)
     expect(ws.uiZoom).toBe(1)
+    // Auto-maximize ships off by default (opt-in, unlike notifications).
+    expect(ws.autoMaximizeEnabled).toBe(false)
   })
 
   // Regression guard: cyberpunk is the out-of-the-box default theme. A fresh

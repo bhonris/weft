@@ -25,6 +25,9 @@ export function defaultWorkspace(): WorkspaceState {
     // 100% zoom); the user adjusts via status-bar buttons and Ctrl+= / - / 0.
     terminalFontSize: DEFAULT_FONT.terminalFontSize,
     editorFontSize: DEFAULT_FONT.editorFontSize,
-    uiZoom: DEFAULT_FONT.uiZoom
+    uiZoom: DEFAULT_FONT.uiZoom,
+    // Off by default — a window suddenly maximizing itself is disruptive;
+    // unlike notifications, this is opt-in.
+    autoMaximizeEnabled: false
   }
 }

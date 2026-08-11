@@ -6,16 +6,17 @@ import { v3ToV4 } from './v3-to-v4'
 import { v4ToV5 } from './v4-to-v5'
 import { v5ToV6 } from './v5-to-v6'
 import { v6ToV7 } from './v6-to-v7'
+import { v7ToV8 } from './v7-to-v8'
 
 describe('migrate', () => {
   it('returns the same blob when already current', () => {
-    const blob = { version: 7, tabs: [] }
-    expect(migrate(blob, 7)).toBe(blob)
+    const blob = { version: 8, tabs: [] }
+    expect(migrate(blob, 8)).toBe(blob)
   })
 
   it('runs the full chain for a legacy blob', () => {
     const out = migrate({ theme: 'dark' }, 0)
-    expect(out['version']).toBe(7) // full chain: v0 -> ... -> v7
+    expect(out['version']).toBe(8) // full chain: v0 -> ... -> v8
     expect(out['resumeEnabled']).toBe(false)
     expect(out['notificationsEnabled']).toBe(true)
     expect(out['keymapOverrides']).toEqual({})
@@ -24,6 +25,7 @@ describe('migrate', () => {
     expect(out['terminalFontSize']).toBe(15)
     expect(out['editorFontSize']).toBe(14)
     expect(out['uiZoom']).toBe(1)
+    expect(out['autoMaximizeEnabled']).toBe(false)
   })
 
   it('throws when a migration step is missing', () => {
@@ -145,6 +147,17 @@ describe('v6ToV7', () => {
       terminalFontSize: 15,
       editorFontSize: 14,
       uiZoom: 1
+    })
+  })
+})
+
+describe('v7ToV8', () => {
+  it('adds autoMaximizeEnabled (off) and bumps the version, preserving other fields', () => {
+    expect(v7ToV8({ version: 7, terminalFontSize: 15, theme: 'dark' })).toEqual({
+      version: 8,
+      terminalFontSize: 15,
+      theme: 'dark',
+      autoMaximizeEnabled: false
     })
   })
 })
