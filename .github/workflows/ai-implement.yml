@@ -161,6 +161,14 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           github_token: ${{ steps.app-token.outputs.token }}
+          # Retry dispatches (workflow_dispatch, see "Label outcome / retry"
+          # below) are triggered by the loop's own App token, so the actor is
+          # weft-ai-loop[bot]. Hasn't bitten this workflow yet -- the
+          # non-human-actor guard seems scoped to authored-content events
+          # (pull_request, issue_comment, ...), not workflow_dispatch -- but
+          # allowlist it anyway for consistency with ai-review.yml, which
+          # hits this for real (every PR here is bot-authored).
+          allowed_bots: "weft-ai-loop"
           # branch_prefix only intercepts the action's OWN structured git
           # tooling. Confirmed on issue #23/PR #24: the agent instead ran raw
           # `git checkout -b feat/...` via the Bash tool, which branch_prefix
@@ -184,7 +192,15 @@ jobs:
           # with typecheck, then implemented that slice cleanly -- it simply
           # ran out of runway. Bumped to give a multi-layer feature a real
           # chance; still bounded against genuine runaway loops.
-          claude_args: "--max-turns 75 --allowedTools Bash,Read,Write,Edit,Glob,Grep"
+          # --disallowedTools Agent: confirmed on issue #34 (both its
+          # attempts) -- the model spawned a background Explore subagent via
+          # the Agent tool, said "I'll wait for it to report back", and ended
+          # its turn. That notification never arrives: this is a single
+          # non-interactive process with no persistent harness behind it, so
+          # the run just completes having touched nothing. Burned both retry
+          # attempts on it. Force exploration to happen synchronously
+          # (Bash/Read/Glob/Grep) instead of via a background agent.
+          claude_args: "--max-turns 75 --allowedTools Bash,Read,Write,Edit,Glob,Grep --disallowedTools Agent"
           # Temporary: full transcript for this verification run. Revisit once
           # the loop is trusted -- see documents/ai-managed-repo.md.
           show_full_output: true
@@ -196,7 +212,13 @@ jobs:
             Body:
             ${{ steps.resolve.outputs.body }}
 
-            ${{ steps.resolve.outputs.attempt != '1' && format('This is attempt {0} of {1}. A previous attempt on this issue failed to produce a PR (ran out of turns, crashed, or similar) without committing anything -- there is no partial work to resume, but if it would help you work more efficiently this time (e.g. to avoid re-exploring files as thoroughly), you can inspect its transcript with: gh run view {2} --log', steps.resolve.outputs.attempt, env.MAX_IMPLEMENT_ATTEMPTS, steps.resolve.outputs.previous_run) || '' }}
+            ${{ steps.resolve.outputs.attempt != '1' && format('This is attempt {0} of {1}. A previous attempt on this issue failed to produce a PR (ran out of turns, crashed, or similar). Check first with `git branch -r | grep issue-{3}-` -- if a branch exists, it may hold pushed partial progress worth continuing rather than restarting from scratch. Either way, if it would help you work more efficiently this time (e.g. to avoid re-exploring files as thoroughly), you can inspect the previous run''s transcript with: gh run view {2} --log', steps.resolve.outputs.attempt, env.MAX_IMPLEMENT_ATTEMPTS, steps.resolve.outputs.previous_run, steps.resolve.outputs.number) || '' }}
+
+            This is a single non-interactive run: there is no persistent
+            session behind it. If you were to spawn a background agent and
+            wait to be notified when it finishes, that notification would
+            never arrive and this run would end having done nothing -- do
+            all exploration yourself, synchronously.
 
             Requirements:
             - Follow CLAUDE.md exactly, especially the layer boundary
@@ -212,6 +234,10 @@ jobs:
               through any built-in branch-naming feature. This exact prefix is
               required for review and auto-merge to run on the resulting PR.
             - Open a PR whose body contains exactly `Closes #${{ steps.resolve.outputs.number }}`.
+            - Commit and push as you go (small logical commits per slice),
+              not only once everything is finished. If you run out of turns
+              mid-implementation, a pushed branch with partial progress is
+              far more useful to the next attempt than nothing.
             - Do not modify anything under `.github/`.
             - If the issue is too vague to implement without guessing, do NOT open
               a PR. Post a comment on the issue asking the specific question that
